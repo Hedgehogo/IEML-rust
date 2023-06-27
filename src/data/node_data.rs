@@ -1,83 +1,76 @@
 use std::{
-	collections::HashMap,
-	path::Path,
+    collections::HashMap,
+    path::Path,
 };
-use crate::anchor_keeper::{AnchorKeeper};
+use crate::anchor_keeper::AnchorKeeper;
 use super::{
-	node::Node,
-	node_type::NodeType
+    node_type::NodeType,
+    mark::Mark
 };
 
-pub type RawData = String;
+pub type RawCell = String;
 
-pub type StringData = String;
+pub type StringCell = String;
 
-pub type ListData<'a> = Vec<Node<'a>>;
+pub type ListCell = Vec<usize>;
 
-pub type MapData<'a> = HashMap<String, Node<'a>>;
+pub type MapCell = HashMap<String, usize>;
 
 pub type Tag = String;
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct TagData<'a> {
-	pub data: Box<Node<'a>>,
-	pub tag: Tag,
+pub struct TagCell {
+    pub cell_index: usize,
+    pub tag: Tag,
 }
 
-#[derive(Clone, Eq)]
-pub struct FileData<'a> {
-	pub data: Box<Node<'a>>,
-	pub file_path: Box<Path>,
-	pub anchor_keeper: AnchorKeeper<'a>,
+#[derive(Clone, PartialEq, Eq)]
+pub struct FileCell {
+    pub cell_index: usize,
+    pub path: Box<Path>,
+    pub anchor_keeper: AnchorKeeper,
 }
 
-impl PartialEq for FileData<'_> {
-	fn eq(&self, other: &Self) -> bool {
-		return
-			self.data == other.data &&
-			self.file_path == other.file_path &&
-			self.anchor_keeper == other.anchor_keeper
-	}
+#[derive(Clone, PartialEq, Eq)]
+pub struct AnchorCell {
+    pub name: String,
+    pub cell_index: usize,
 }
 
-#[derive(Clone, Eq)]
-pub struct AnchorData<'a> {
-	pub name: String,
-	pub keeper: &'a AnchorKeeper<'a>,
+#[derive(Clone, PartialEq, Eq, Default)]
+pub enum DataCell {
+    #[default]
+    Null,
+    Raw(RawCell),
+    String(StringCell),
+    List(ListCell),
+    Map(MapCell),
+    Tag(TagCell),
+    File(FileCell),
+    TakeAnchor(AnchorCell),
+    GetAnchor(AnchorCell),
 }
 
-impl PartialEq for AnchorData<'_> {
-	fn eq(&self, other: &Self) -> bool {
-		return self.name == other.name;
-	}
+impl DataCell {
+    pub(crate) fn get_node_type(&self) -> NodeType {
+        match self {
+            DataCell::Null => NodeType::Null,
+            DataCell::Raw(_) => NodeType::Raw,
+            DataCell::String(_) => NodeType::String,
+            DataCell::List(_) => NodeType::List,
+            DataCell::Map(_) => NodeType::Map,
+            DataCell::Tag(_) => NodeType::Tag,
+            DataCell::File(_) => NodeType::File,
+            DataCell::TakeAnchor(_) => NodeType::TakeAnchor,
+            DataCell::GetAnchor(_) => NodeType::GetAnchor,
+        }
+    }
 }
 
-#[derive(Clone, Default, PartialEq, Eq)]
-pub enum NodeData<'a> {
-	#[default]
-	Null,
-	Raw(RawData),
-	String(StringData),
-	List(ListData<'a>),
-	Map(MapData<'a>),
-	Tag(TagData<'a>),
-	File(FileData<'a>),
-	TakeAnchor(AnchorData<'a>),
-	GetAnchor(AnchorData<'a>),
+#[derive(Clone, PartialEq, Eq, Default)]
+pub struct MarkedDataCell {
+    pub cell: DataCell,
+    pub mark: Mark,
 }
 
-impl NodeData<'_> {
-	pub(crate) fn get_node_type(&self) -> NodeType {
-		match self {
-			NodeData::Null => NodeType::Null,
-			NodeData::Raw(_) => NodeType::Raw,
-			NodeData::String(_) => NodeType::String,
-			NodeData::List(_) => NodeType::List,
-			NodeData::Map(_) => NodeType::Map,
-			NodeData::Tag(_) => NodeType::Tag,
-			NodeData::File(_) => NodeType::File,
-			NodeData::TakeAnchor(_) => NodeType::TakeAnchor,
-			NodeData::GetAnchor(_) => NodeType::GetAnchor,
-		}
-	}
-}
+pub(crate) type Data = HashMap<usize, MarkedDataCell>;
