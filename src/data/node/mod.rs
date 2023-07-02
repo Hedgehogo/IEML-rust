@@ -409,7 +409,7 @@ mod tests {
     }
     
     #[test]
-    fn list_iter_next() {
+    fn test_list_iter_next() {
         let data = test_data();
         let list = vec![2_usize, 3];
         let mut list_iter = ListIter::new(&data, list.iter());
@@ -426,7 +426,7 @@ mod tests {
     }
     
     #[test]
-    fn map_iter_next() {
+    fn test_map_iter_next() {
         let data = test_data();
         let map = HashMap::<String, usize>::from([
             ("first".into(), 1),

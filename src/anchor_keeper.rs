@@ -75,7 +75,7 @@ mod tests {
     use super::*;
     
     #[test]
-    fn add_test() {
+    fn test_add() {
         let mut data = Data::default();
         let mut anchor_keeper = AnchorKeeper::new(None);
         assert!(anchor_keeper.add(&mut data, "key".to_string(), Default::default()));
@@ -83,7 +83,7 @@ mod tests {
     }
     
     #[test]
-    fn add_to_file_test() {
+    fn test_add_to_file() {
         let mut data = Data::default();
         let mut anchor_keeper = AnchorKeeper::new(None);
         assert!(anchor_keeper.add_to_file(&mut data, "key".to_string(), Default::default()));
