@@ -6,7 +6,6 @@ use super::{
     mark::Mark,
     node_type::NodeType,
     data_cell::{
-        MarkedDataCell,
         DataCell,
         RawCell,
         StringCell,
@@ -95,10 +94,6 @@ pub struct Node<'a> {
 impl<'a> Node<'a> {
     pub fn new(cell_index: usize, data: &'a Data) -> Node {
         return Self { cell_index, data };
-    }
-    
-    fn marked_cell(&self) -> &'a MarkedDataCell {
-        &self.data.get(&self.cell_index).expect("Incorrect document structure, Cell does not exist.")
     }
     
     fn cell(&self) -> &'a DataCell {
@@ -395,7 +390,7 @@ impl<'a> Node<'a> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use crate::data::data_cell::TagCell;
+    use super::super::data_cell::{TagCell, MarkedDataCell};
     use super::*;
     
     fn test_data() -> Data {

@@ -1,4 +1,3 @@
-use std::convert::Into;
 use crate::data::mark::Mark;
 use nom::{
     *,

@@ -2,13 +2,9 @@ use crate::helpers::blank_lines::match_blank_line;
 pub use super::number::*;
 use nom::{
     *,
-    branch::{Alt, alt},
+    branch::alt,
     combinator::value,
-    multi::*,
     bytes::complete::*,
-    character::complete::*,
-    sequence::Tuple,
-    error::ParseError,
 };
 
 pub fn to_bool(input: &str) -> Option<bool> {

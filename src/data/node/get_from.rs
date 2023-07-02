@@ -61,10 +61,10 @@ pub trait GetFromStepType {
 
 macro_rules! impl_get_from_step_type {
 	($($name:ident)*) => {
-		impl<$($name : GetFromStep),*> GetFromStepType for ($($name),*) {
-			fn get(cell: &DataCell) -> Option<usize> {
+		impl<$($name : GetFromStep),*> GetFromStepType for ($($name, )*) {
+			fn get(_cell: &DataCell) -> Option<usize> {
 				$(
-					if let Some(i) = $name::get(cell) {
+					if let Some(i) = $name::get(_cell) {
 						return Some(i)
 					}
 				)*
