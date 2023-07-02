@@ -81,11 +81,11 @@ impl_get_from_step_type!(A B C);
 impl_get_from_step_type!(A B C D);
 
 pub(crate) fn get_from_step<T: GetFromStepType>(node: Node) -> Option<Node> {
-    T::get(node.get_cell()).map(|i| Node::new(i, node.data))
+    T::get(node.cell()).map(|i| Node::new(i, node.data))
 }
 
 pub(crate) fn get_from<T: GetFromStepType>(node: Node) -> Node {
-    match T::get(node.get_cell()) {
+    match T::get(node.cell()) {
         Some(i) => get_from::<T>(Node::new(i, node.data)),
         None => node,
     }

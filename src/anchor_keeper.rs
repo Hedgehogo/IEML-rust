@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use crate::data::{
     node::{Node, MapIter},
-    node_data::{Data, MarkedDataCell},
+    data_cell::{Data, MarkedDataCell},
 };
-use crate::data::node_data::DataCell;
+use crate::data::data_cell::DataCell;
 
 #[derive(Clone, Default, Eq)]
 pub struct AnchorKeeper {

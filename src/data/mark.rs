@@ -7,6 +7,6 @@ pub struct Mark {
 impl Mark {
     pub fn enter(&mut self) {
         self.line += 1;
-        self.symbol += 1;
+        self.symbol = 0;
     }
 }

@@ -5,7 +5,7 @@ use std::{
 use crate::anchor_keeper::AnchorKeeper;
 use super::{
     node_type::NodeType,
-    mark::Mark
+    mark::Mark,
 };
 
 pub type RawCell = String;

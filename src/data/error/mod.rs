@@ -1,12 +1,12 @@
 pub mod with_mark;
 pub mod node;
 pub mod node_another_type;
-pub mod failed_decode_data;
+pub mod failed_decode;
 pub mod invalid_index;
 pub mod invalid_key;
 
 pub type NodeAnotherTypeError = node_another_type::Error;
-pub type FailedDecodeDataError = failed_decode_data::Error;
+pub type FailedDecodeError = failed_decode::Error;
 pub type InvalidIndexError = invalid_index::Error;
 pub type InvalidKeyError = invalid_key::Error;
 
@@ -14,7 +14,7 @@ pub mod marked {
     pub type Error<T> = super::with_mark::Error<T>;
     
     pub type NodeAnotherTypeError = Error<super::NodeAnotherTypeError>;
-    pub type FailedDecodeDataError = Error<super::FailedDecodeDataError>;
+    pub type FailedDecodeError = Error<super::FailedDecodeError>;
     pub type InvalidIndexError = Error<super::InvalidIndexError>;
     pub type InvalidKeyError = Error<super::InvalidKeyError>;
     
@@ -56,8 +56,9 @@ pub mod marked {
         NodeAnotherType(NodeAnotherTypeError),
         InvalidIndex(InvalidIndexError),
         InvalidKey(InvalidKeyError),
-        FailedDecodeData(FailedDecodeDataError),
-        Failed(Box<dyn std::error::Error>),
+        FailedDecode(FailedDecodeError),
+        Other(Box<dyn std::error::Error>),
+        Failed,
     }
     
     impl From<NodeAnotherTypeError> for DecodeError {
@@ -78,9 +79,9 @@ pub mod marked {
         }
     }
     
-    impl From<FailedDecodeDataError> for DecodeError {
-        fn from(value: FailedDecodeDataError) -> Self {
-            DecodeError::FailedDecodeData(value)
+    impl From<FailedDecodeError> for DecodeError {
+        fn from(value: FailedDecodeError) -> Self {
+            DecodeError::FailedDecode(value)
         }
     }
     
@@ -104,7 +105,7 @@ pub mod marked {
     
     impl From<Box<dyn std::error::Error>> for DecodeError {
         fn from(value: Box<dyn std::error::Error>) -> Self {
-            DecodeError::Failed(value)
+            DecodeError::Other(value)
         }
     }
 }
