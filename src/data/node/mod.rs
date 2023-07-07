@@ -20,6 +20,7 @@ use super::{
         DataCell,
         MarkedDataCell,
         Data,
+        equal_data
     },
     error::{
         AnotherTypeError,
@@ -34,7 +35,7 @@ use index::NodeIndex;
 use iter::{BasicListIter, BasicMapIter};
 use anchors::Anchors;
 
-#[derive(PartialEq, Eq)]
+#[derive(Eq)]
 pub struct BasicNode<'a, E: Error + PartialEq + Eq> {
     cell: &'a MarkedDataCell,
     data: &'a Data,
@@ -52,6 +53,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
         &self.cell.cell
     }
     
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.cell.mark
     }
@@ -370,3 +372,9 @@ impl<'a, E: Error + PartialEq + Eq> Clone for BasicNode<'a, E> {
 }
 
 impl<'a, E: Error + PartialEq + Eq> Copy for BasicNode<'a, E> {}
+
+impl <'a, E: Error + PartialEq + Eq> PartialEq for BasicNode<'a, E> {
+    fn eq(&self, other: &Self) -> bool {
+        equal_data(self.cell(), self.data, other.cell(), other.data)
+    }
+}
