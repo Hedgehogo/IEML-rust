@@ -1,5 +1,8 @@
-mod get_from;
-mod decode;
+mod clear;
+mod index;
+pub mod decode;
+pub mod iter;
+pub mod anchors;
 
 use std::{
     marker::PhantomData,
@@ -11,11 +14,11 @@ use super::{
     mark::Mark,
     node_type::NodeType,
     data_cell::{
-        MarkedDataCell,
-        DataCell,
+        Tag,
         RawCell,
         StringCell,
-        Tag,
+        DataCell,
+        MarkedDataCell,
         Data,
     },
     error::{
@@ -27,89 +30,13 @@ use super::{
     },
 };
 use decode::Decode;
-use crate::anchor_keeper::AnchorKeeper;
-
-pub trait NodeIndex<'a, E: Error + PartialEq + Eq> {
-    type Error;
-    
-    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error>;
-}
-
-impl<'a, E: Error + PartialEq + Eq> NodeIndex<'a, E> for usize {
-    type Error = marked::ListError;
-    
-    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error> {
-        node.at_index(index)
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> NodeIndex<'a, E> for &str {
-    type Error = marked::MapError;
-    
-    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error> {
-        node.at_key(index)
-    }
-}
-
-pub struct BasicListIter<'a, E: Error + PartialEq + Eq> {
-    data: &'a Data,
-    iter: std::slice::Iter<'a, usize>,
-    phantom: PhantomData<E>,
-}
-
-type ListIter<'a> = BasicListIter<'a, Infallible>;
-
-impl<'a, E: Error + PartialEq + Eq> BasicListIter<'a, E> {
-    pub fn new(data: &'a Data, iter: std::slice::Iter<'a, usize>) -> Self {
-        Self { data, iter, phantom: Default::default() }
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Clone for BasicListIter<'a, E> {
-    fn clone(&self) -> Self {
-        Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Iterator for BasicListIter<'a, E> {
-    type Item = BasicNode<'a, E>;
-    
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| BasicNode::new(*i, self.data))
-    }
-}
-
-pub struct BasicMapIter<'a, E: Error + PartialEq + Eq> {
-    data: &'a Data,
-    iter: std::collections::hash_map::Iter<'a, String, usize>,
-    phantom: PhantomData<E>,
-}
-
-type MapIter<'a> = BasicMapIter<'a, Infallible>;
-
-impl<'a, E: Error + PartialEq + Eq> BasicMapIter<'a, E> {
-    pub fn new(data: &'a Data, iter: std::collections::hash_map::Iter<'a, String, usize>) -> Self {
-        Self { data, iter, phantom: Default::default() }
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Clone for BasicMapIter<'a, E> {
-    fn clone(&self) -> Self {
-        Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Iterator for BasicMapIter<'a, E> {
-    type Item = (&'a String, BasicNode<'a, E>);
-    
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| (i.0, BasicNode::new(*i.1, self.data)))
-    }
-}
+use index::NodeIndex;
+use iter::{BasicListIter, BasicMapIter};
+use anchors::Anchors;
 
 #[derive(PartialEq, Eq)]
 pub struct BasicNode<'a, E: Error + PartialEq + Eq> {
-    cell_index: usize,
+    cell: &'a MarkedDataCell,
     data: &'a Data,
     phantom: PhantomData<E>,
 }
@@ -117,16 +44,16 @@ pub struct BasicNode<'a, E: Error + PartialEq + Eq> {
 type Node<'a> = BasicNode<'a, Infallible>;
 
 impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
-    pub fn new(cell_index: usize, data: &'a Data) -> Self {
-        return Self { cell_index, data, phantom: Default::default() };
+    pub(crate) fn new(cell: &'a MarkedDataCell, data: &'a Data) -> Self {
+        return Self { cell, data, phantom: Default::default() };
     }
     
-    fn cell(&self) -> &'a DataCell {
-        &self.data.get(&self.cell_index).expect("Incorrect document structure, Cell does not exist.").cell
+    pub(crate) fn cell(&self) -> &'a DataCell {
+        &self.cell.cell
     }
     
     pub fn mark(&self) -> Mark {
-        self.data.get(&self.cell_index).expect("Incorrect document structure, Cell does not exist.").mark
+        self.cell.mark
     }
     
     /// Gets the node type.
@@ -161,74 +88,110 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     
     /// Returns whether the node is Tag.
     pub fn is_tag(&self) -> bool {
-        use get_from::*;
-        matches!(self.clear_advanced::<(TagData, TakeAnchorData, GetAnchorData)>().cell(), DataCell::Tag(_))
+        use clear::*;
+        matches!(self.clear_advanced::<(Tag, TakeAnchor, GetAnchor)>().cell(), DataCell::Tag(_))
     }
     
     /// Returns whether the node is File.
     pub fn is_file(&self) -> bool {
-        use get_from::*;
-        matches!(self.clear_advanced::<(FileData, TakeAnchorData, GetAnchorData)>().cell(), DataCell::File(_))
+        use clear::*;
+        matches!(self.clear_advanced::<(File, TakeAnchor, GetAnchor)>().cell(), DataCell::File(_))
     }
     
     /// Returns whether the node is TakeAnchor.
     pub fn is_take_anchor(&self) -> bool {
-        use get_from::*;
-        matches!(self.clear_advanced::<(TagData, FileData, GetAnchorData)>().cell(), DataCell::TakeAnchor(_))
+        use clear::*;
+        matches!(self.clear_advanced::<(Tag, File, GetAnchor)>().cell(), DataCell::TakeAnchor(_))
     }
     
     /// Returns whether the node is GetAnchor.
     pub fn is_get_anchor(&self) -> bool {
-        use get_from::*;
-        matches!(self.clear_advanced::<(TagData, FileData, TakeAnchorData)>().cell(), DataCell::GetAnchor(_))
+        use clear::*;
+        matches!(self.clear_advanced::<(Tag, File, TakeAnchor)>().cell(), DataCell::GetAnchor(_))
+    }
+    
+    /// Gets a child node if the node type is Tag.
+    pub fn clear_step_tag(&self) -> Option<Self> {
+        if let DataCell::Tag(tag_cell) = &self.cell() {
+            Some(Self::new(self.data.get(tag_cell.cell_index), self.data))
+        } else {
+            None
+        }
+    }
+    
+    /// Gets a child node if the node type is File.
+    pub fn clear_step_file(&self) -> Option<Self> {
+        if let DataCell::File(file_cell) = &self.cell() {
+            Some(Self::new(self.data.get(file_cell.cell_index), self.data))
+        } else {
+            None
+        }
+    }
+    
+    /// Gets a child node if the node type is TakeAnchor.
+    pub fn clear_step_take_anchor(&self) -> Option<Self> {
+        if let DataCell::TakeAnchor(take_anchor_cell) = &self.cell() {
+            Some(Self::new(self.data.get(take_anchor_cell.cell_index), self.data))
+        } else {
+            None
+        }
+    }
+    
+    /// Gets a child node if the node type is GetAnchor.
+    pub fn clear_step_get_anchor(&self) -> Option<Self> {
+        if let DataCell::GetAnchor(get_anchor_cell) = &self.cell() {
+            Some(Self::new(self.data.get(get_anchor_cell.cell_index), self.data))
+        } else {
+            None
+        }
+    }
+    
+    /// Gets a child node if the node type is Tag, File, TakeAnchor or GetAnchor.
+    pub fn clear_step(&self) -> Option<Self> {
+        use clear::*;
+        clear_step::<E, (Tag, File, TakeAnchor, GetAnchor)>(*self)
+    }
+    
+    /// Gets a child node if the node type is T.
+    pub fn clear_step_advanced<T: clear::ClearStepType<E>>(&self) -> Option<Self> {
+        use clear::*;
+        clear_step::<E, T>(*self)
     }
     
     /// Recursively gets a child node, excluding Tag, File, TakeAnchor and GetAnchor data.
-    pub fn clear(&self) -> Self<> {
-        use get_from::*;
-        get_from::<(TagData, FileData, TakeAnchorData, GetAnchorData), E>(*self)
+    pub fn clear(&self) -> Self {
+        use clear::*;
+        clear::<E, (Tag, File, TakeAnchor, GetAnchor)>(*self)
     }
     
     /// Recursively gets a child node, excluding T.
-    pub fn clear_advanced<T: get_from::GetFromStepType>(&self) -> Self {
-        use get_from::*;
-        get_from::<T, E>(*self)
-    }
-    
-    /// Gets a child node if the node type is Tag, File, TakeAnchor or GetAnchor, otherwise the current node.
-    pub fn clear_data(&self) -> Option<Self> {
-        use get_from::*;
-        get_from_step::<(TagData, FileData, TakeAnchorData, GetAnchorData), E>(*self)
-    }
-    
-    /// Gets a child node if the node type is T, otherwise the current node.
-    pub fn clear_data_advanced<T: get_from::GetFromStepType>(&self) -> Option<Self> {
-        use get_from::*;
-        get_from_step::<T, E>(*self)
+    pub fn clear_advanced<T: clear::ClearStepType<E>>(&self) -> Self {
+        use clear::*;
+        clear::<E, T>(*self)
     }
     
     /// Gets the node under the Tag if the node type is with the Tag, otherwise the current node.
     pub fn clear_tag(&self) -> Self {
-        use get_from::*;
-        get_from_step::<(FileData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
+        use clear::*;
+        clear_step::<E, (File, TakeAnchor, GetAnchor)>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the File, if the node type is a File, otherwise the current node.
     pub fn clear_file(&self) -> Self {
-        use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
+        use clear::*;
+        clear_step::<E, (Tag, TakeAnchor, GetAnchor)>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the Anchor if the node type is TakeAnchor, otherwise the current node
     pub fn clear_take_anchor(&self) -> Self {
-        use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
+        use clear::*;
+        clear_step::<E, (Tag, File, GetAnchor)>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the Anchor if the node type is GetAnchor, otherwise the current node
     pub fn clear_get_anchor(&self) -> Self {
-        use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
+        use clear::*;
+        clear_step::<E, (Tag, TakeAnchor, GetAnchor)>(*self).unwrap_or(*self)
     }
     
     fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
@@ -256,9 +219,9 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     }
     
     /// Gets the file anchor keeper.
-    pub fn file_anchor_keeper(&self) -> Result<&AnchorKeeper, marked::AnotherTypeError> {
+    pub fn file_anchor_keeper(&self) -> Result<Anchors<E>, marked::AnotherTypeError> {
         match self.cell() {
-            DataCell::File(i) => Ok(&i.anchor_keeper),
+            DataCell::File(i) => Ok(Anchors::new(i, self.data)),
             _ => Err(self.make_another_type_error(NodeType::File)),
         }
     }
@@ -349,37 +312,33 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
         }
     }
     
-    /// Gets a node from the list by index.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` Index.
-    pub fn at_index(&self, index: usize) -> Result<Self, marked::ListError> {
+    pub(crate) fn at_index(&self, index: usize) -> Result<Self, marked::ListError> {
         match self.cell() {
             DataCell::List(i) => match i.get(index) {
-                Some(i) => Ok(Self { cell_index: *i, data: self.data, phantom: Default::default() }),
+                Some(i) => Ok(Self::new(
+                    self.data.get(*i),
+                    self.data,
+                )),
                 None => Err(marked::ListError::InvalidIndex(self.make_error(InvalidIndexError::new(index, i.len()))))
             }
             _ => Err(marked::ListError::NodeAnotherType(self.make_another_type_error(NodeType::List))),
         }
     }
     
-    /// Gets a node from the map by key.
-    ///
-    /// # Arguments
-    ///
-    /// * `key` Key.
-    pub fn at_key(&self, key: &str) -> Result<Self, marked::MapError> {
+    pub(crate) fn at_key(&self, key: &str) -> Result<Self, marked::MapError> {
         match self.cell() {
             DataCell::Map(i) => match i.get(key) {
-                Some(i) => Ok(Self { cell_index: *i, data: self.data, phantom: Default::default() }),
+                Some(i) => Ok(Self::new(
+                    self.data.get(*i),
+                    self.data,
+                )),
                 None => Err(marked::MapError::InvalidKey(self.make_error(InvalidKeyError::new(key.to_string()))))
             }
             _ => Err(marked::MapError::NodeAnotherType(self.make_another_type_error(NodeType::Map))),
         }
     }
     
-    ///Gets the node by the index.
+    /// Gets the node by the index.
     ///
     /// # Generic arguments
     ///
@@ -406,70 +365,8 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
 
 impl<'a, E: Error + PartialEq + Eq> Clone for BasicNode<'a, E> {
     fn clone(&self) -> Self {
-        Self {
-            cell_index: self.cell_index,
-            data: self.data,
-            phantom: Default::default(),
-        }
+        Self::new(self.cell, self.data)
     }
 }
 
 impl<'a, E: Error + PartialEq + Eq> Copy for BasicNode<'a, E> {}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use crate::data::data_cell::TagCell;
-    use super::*;
-    
-    fn test_data() -> Data {
-        Data::from([
-            (0, MarkedDataCell { cell: DataCell::Null, mark: Default::default() }),
-            (1, MarkedDataCell { cell: DataCell::Null, mark: Default::default() }),
-            (2, MarkedDataCell { cell: DataCell::String("hello".into()), mark: Default::default() }),
-            (3, MarkedDataCell { cell: DataCell::Raw("hello".into()), mark: Default::default() }),
-            (4, MarkedDataCell { cell: DataCell::Tag(TagCell { cell_index: 0, tag: "tag".into() }), mark: Default::default() }),
-        ])
-    }
-    
-    #[test]
-    fn test_list_iter_next() {
-        let data = test_data();
-        let list = vec![2_usize, 3];
-        let mut list_iter = ListIter::new(&data, list.iter());
-        
-        let first = list_iter.next().unwrap();
-        assert_eq!(first.node_type(), NodeType::String);
-        assert_eq!(*first.get_string().unwrap(), "hello".to_string());
-        
-        let second = list_iter.next().unwrap();
-        assert_eq!(second.node_type(), NodeType::Raw);
-        assert_eq!(*second.get_raw().unwrap(), "hello".to_string());
-        
-        assert!(list_iter.next().is_none());
-    }
-    
-    #[test]
-    fn test_map_iter_next() {
-        let data = test_data();
-        let map = HashMap::<String, usize>::from([
-            ("first".into(), 1),
-            ("second".into(), 4),
-        ]);
-        let map_iter = MapIter::new(&data, map.iter());
-        let mut collected_map = map_iter.collect::<Vec<(&String, Node)>>();
-        collected_map.sort_by(|a, b| a.0.cmp(&b.0));
-        assert_eq!(collected_map.len(), 2);
-        
-        let first = &collected_map[0];
-        assert_eq!(*first.0, "first");
-        assert_eq!(first.1.node_type(), NodeType::Null);
-        
-        let second = &collected_map[1];
-        assert_eq!(*second.0, "second");
-        assert_eq!(second.1.node_type(), NodeType::Tag);
-        if let Ok(i) = second.1.get_raw() {
-            assert_eq!(*i, "hello".to_string());
-        }
-    }
-}

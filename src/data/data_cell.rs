@@ -2,43 +2,44 @@ use std::{
     collections::HashMap,
     path::Path,
 };
-use crate::anchor_keeper::AnchorKeeper;
 use super::{
     node_type::NodeType,
     mark::Mark,
 };
 
-pub type RawCell = String;
+pub(crate) type RawCell = String;
 
-pub type StringCell = String;
+pub(crate) type StringCell = String;
 
-pub type ListCell = Vec<usize>;
+pub(crate) type ListCell = Vec<usize>;
 
-pub type MapCell = HashMap<String, usize>;
+pub(crate) type MapCell = HashMap<String, usize>;
 
-pub type Tag = String;
+pub(crate) type Tag = String;
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct TagCell {
-    pub cell_index: usize,
-    pub tag: Tag,
+pub(crate) struct TagCell {
+    pub(crate) cell_index: usize,
+    pub(crate) tag: Tag,
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct FileCell {
-    pub cell_index: usize,
-    pub path: Box<Path>,
-    pub anchor_keeper: AnchorKeeper,
+pub(crate) struct FileCell {
+    pub(crate) cell_index: usize,
+    pub(crate) path: Box<Path>,
+    pub(crate) anchors: HashMap<String, usize>,
+    pub(crate) file_anchors: HashMap<String, usize>,
+    pub(crate) parent: Option<usize>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct AnchorCell {
+pub(crate) struct AnchorCell {
     pub name: String,
     pub cell_index: usize,
 }
 
 #[derive(Clone, PartialEq, Eq, Default)]
-pub enum DataCell {
+pub(crate) enum DataCell {
     #[default]
     Null,
     Raw(RawCell),
@@ -68,9 +69,24 @@ impl DataCell {
 }
 
 #[derive(Clone, PartialEq, Eq, Default)]
-pub struct MarkedDataCell {
+pub(crate) struct MarkedDataCell {
     pub cell: DataCell,
     pub mark: Mark,
 }
 
-pub(crate) type Data = HashMap<usize, MarkedDataCell>;
+#[derive(Clone, PartialEq, Eq, Default)]
+pub struct Data {
+    pub(crate) data: HashMap<usize, MarkedDataCell>,
+}
+
+impl Data {
+    pub(crate) fn get(&self, index: usize) -> &MarkedDataCell {
+        self.data.get(&index).expect("Incorrect document structure, Cell does not exist.")
+    }
+}
+
+impl<const N: usize> From<[(usize, MarkedDataCell); N]> for Data {
+    fn from(arr: [(usize, MarkedDataCell); N]) -> Self {
+        Self { data: HashMap::<usize, MarkedDataCell>::from(arr)}
+    }
+}
