@@ -1,12 +1,12 @@
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug)]
-pub struct Error {
+#[derive(PartialEq, Eq, Debug)]
+pub struct InvalidIndexError {
     requested_index: usize,
     list_size: usize,
 }
 
-impl Error {
+impl InvalidIndexError {
     pub fn new(requested_index: usize, list_size: usize) -> Self {
         Self { requested_index, list_size }
     }
@@ -20,10 +20,10 @@ impl Error {
     }
 }
 
-impl Display for Error {
+impl Display for InvalidIndexError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "It is not possible to get an item outside the list boundary. Item index: {}. List size: {}.", self.requested_index, self.list_size)
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for InvalidIndexError {}

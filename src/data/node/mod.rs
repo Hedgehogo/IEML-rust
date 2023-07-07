@@ -1,7 +1,12 @@
 mod get_from;
 mod decode;
 
-use std::path::Path;
+use std::{
+    marker::PhantomData,
+    path::Path,
+    error::Error,
+    convert::Infallible,
+};
 use super::{
     mark::Mark,
     node_type::NodeType,
@@ -14,7 +19,7 @@ use super::{
         Data,
     },
     error::{
-        NodeAnotherTypeError,
+        AnotherTypeError,
         FailedDecodeError,
         InvalidIndexError,
         InvalidKeyError,
@@ -24,81 +29,96 @@ use super::{
 use decode::Decode;
 use crate::anchor_keeper::AnchorKeeper;
 
-pub trait NodeIndex<'a> {
+pub trait NodeIndex<'a, E: Error + PartialEq + Eq> {
     type Error;
     
-    fn at(node: Node<'a>, index: Self) -> Result<Node<'a>, Self::Error>;
+    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error>;
 }
 
-impl<'a> NodeIndex<'a> for usize {
+impl<'a, E: Error + PartialEq + Eq> NodeIndex<'a, E> for usize {
     type Error = marked::ListError;
     
-    fn at(node: Node<'a>, index: Self) -> Result<Node<'a>, Self::Error> {
+    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error> {
         node.at_index(index)
     }
 }
 
-impl<'a> NodeIndex<'a> for &str {
+impl<'a, E: Error + PartialEq + Eq> NodeIndex<'a, E> for &str {
     type Error = marked::MapError;
     
-    fn at(node: Node<'a>, index: Self) -> Result<Node<'a>, Self::Error> {
+    fn at(node: BasicNode<'a, E>, index: Self) -> Result<BasicNode<'a, E>, Self::Error> {
         node.at_key(index)
     }
 }
 
-#[derive(Clone)]
-pub struct ListIter<'a> {
+pub struct BasicListIter<'a, E: Error + PartialEq + Eq> {
     data: &'a Data,
     iter: std::slice::Iter<'a, usize>,
+    phantom: PhantomData<E>,
 }
 
-impl<'a> ListIter<'a> {
+type ListIter<'a> = BasicListIter<'a, Infallible>;
+
+impl<'a, E: Error + PartialEq + Eq> BasicListIter<'a, E> {
     pub fn new(data: &'a Data, iter: std::slice::Iter<'a, usize>) -> Self {
-        Self { data, iter }
+        Self { data, iter, phantom: Default::default() }
     }
 }
 
-impl<'a> Iterator for ListIter<'a> {
-    type Item = Node<'a>;
+impl<'a, E: Error + PartialEq + Eq> Clone for BasicListIter<'a, E> {
+    fn clone(&self) -> Self {
+        Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
+    }
+}
+
+impl<'a, E: Error + PartialEq + Eq> Iterator for BasicListIter<'a, E> {
+    type Item = BasicNode<'a, E>;
     
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| Node::new(*i, self.data))
+        self.iter.next().map(|i| BasicNode::new(*i, self.data))
     }
 }
 
-#[derive(Clone)]
-pub struct MapIter<'a> {
+pub struct BasicMapIter<'a, E: Error + PartialEq + Eq> {
     data: &'a Data,
     iter: std::collections::hash_map::Iter<'a, String, usize>,
+    phantom: PhantomData<E>,
 }
 
-impl<'a> MapIter<'a> {
+type MapIter<'a> = BasicMapIter<'a, Infallible>;
+
+impl<'a, E: Error + PartialEq + Eq> BasicMapIter<'a, E> {
     pub fn new(data: &'a Data, iter: std::collections::hash_map::Iter<'a, String, usize>) -> Self {
-        Self { data, iter }
+        Self { data, iter, phantom: Default::default() }
     }
 }
 
-impl<'a> Iterator for MapIter<'a> {
-    type Item = (&'a String, Node<'a>);
+impl<'a, E: Error + PartialEq + Eq> Clone for BasicMapIter<'a, E> {
+    fn clone(&self) -> Self {
+        Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
+    }
+}
+
+impl<'a, E: Error + PartialEq + Eq> Iterator for BasicMapIter<'a, E> {
+    type Item = (&'a String, BasicNode<'a, E>);
     
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| (i.0, Node::new(*i.1, self.data)))
+        self.iter.next().map(|i| (i.0, BasicNode::new(*i.1, self.data)))
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Node<'a> {
+#[derive(PartialEq, Eq)]
+pub struct BasicNode<'a, E: Error + PartialEq + Eq> {
     cell_index: usize,
     data: &'a Data,
+    phantom: PhantomData<E>,
 }
 
-impl<'a> Node<'a> {
-    pub fn new(cell_index: usize, data: &'a Data) -> Node {
-        return Self { cell_index, data };
-    }
-    
-    fn marked_cell(&self) -> &'a MarkedDataCell {
-        &self.data.get(&self.cell_index).expect("Incorrect document structure, Cell does not exist.")
+type Node<'a> = BasicNode<'a, Infallible>;
+
+impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
+    pub fn new(cell_index: usize, data: &'a Data) -> Self {
+        return Self { cell_index, data, phantom: Default::default() };
     }
     
     fn cell(&self) -> &'a DataCell {
@@ -164,63 +184,63 @@ impl<'a> Node<'a> {
     }
     
     /// Recursively gets a child node, excluding Tag, File, TakeAnchor and GetAnchor data.
-    pub fn clear(&self) -> Node<'a> {
+    pub fn clear(&self) -> Self<> {
         use get_from::*;
-        get_from::<(TagData, FileData, TakeAnchorData, GetAnchorData)>(*self)
+        get_from::<(TagData, FileData, TakeAnchorData, GetAnchorData), E>(*self)
     }
     
     /// Recursively gets a child node, excluding T.
-    pub fn clear_advanced<T: get_from::GetFromStepType>(&self) -> Node<'a> {
+    pub fn clear_advanced<T: get_from::GetFromStepType>(&self) -> Self {
         use get_from::*;
-        get_from::<T>(*self)
+        get_from::<T, E>(*self)
     }
     
     /// Gets a child node if the node type is Tag, File, TakeAnchor or GetAnchor, otherwise the current node.
-    pub fn clear_data(&self) -> Option<Node<'a>> {
+    pub fn clear_data(&self) -> Option<Self> {
         use get_from::*;
-        get_from_step::<(TagData, FileData, TakeAnchorData, GetAnchorData)>(*self)
+        get_from_step::<(TagData, FileData, TakeAnchorData, GetAnchorData), E>(*self)
     }
     
     /// Gets a child node if the node type is T, otherwise the current node.
-    pub fn clear_data_advanced<T: get_from::GetFromStepType>(&self) -> Option<Node<'a>> {
+    pub fn clear_data_advanced<T: get_from::GetFromStepType>(&self) -> Option<Self> {
         use get_from::*;
-        get_from_step::<T>(*self)
+        get_from_step::<T, E>(*self)
     }
     
     /// Gets the node under the Tag if the node type is with the Tag, otherwise the current node.
-    pub fn clear_tag(&self) -> Node<'a> {
+    pub fn clear_tag(&self) -> Self {
         use get_from::*;
-        get_from_step::<(FileData, TakeAnchorData, GetAnchorData)>(*self).unwrap_or(*self)
+        get_from_step::<(FileData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the File, if the node type is a File, otherwise the current node.
-    pub fn clear_file(&self) -> Node<'a> {
+    pub fn clear_file(&self) -> Self {
         use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData)>(*self).unwrap_or(*self)
+        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the Anchor if the node type is TakeAnchor, otherwise the current node
-    pub fn clear_take_anchor(&self) -> Node<'a> {
+    pub fn clear_take_anchor(&self) -> Self {
         use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData)>(*self).unwrap_or(*self)
+        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
     }
     
     /// Gets the node contained in the Anchor if the node type is GetAnchor, otherwise the current node
-    pub fn clear_get_anchor(&self) -> Node<'a> {
+    pub fn clear_get_anchor(&self) -> Self {
         use get_from::*;
-        get_from_step::<(TagData, TakeAnchorData, GetAnchorData)>(*self).unwrap_or(*self)
+        get_from_step::<(TagData, TakeAnchorData, GetAnchorData), E>(*self).unwrap_or(*self)
     }
     
-    fn make_error<T: std::error::Error>(&self, error: T) -> marked::Error<T> {
-        marked::Error::<T>::new(error, self.mark())
+    fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
+        marked::WithMarkError::<T>::new(error, self.mark())
     }
     
-    fn make_another_type_error(&self, requested_type: NodeType) -> marked::NodeAnotherTypeError {
-        self.make_error(NodeAnotherTypeError::new(requested_type, self.node_type()))
+    fn make_another_type_error(&self, requested_type: NodeType) -> marked::AnotherTypeError {
+        self.make_error(AnotherTypeError::new(requested_type, self.node_type()))
     }
     
     /// Gets the tag.
-    pub fn tag(&self) -> Result<&Tag, marked::NodeAnotherTypeError> {
+    pub fn tag(&self) -> Result<&Tag, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::Tag(i) => Ok(&i.tag),
             _ => Err(self.make_another_type_error(NodeType::Tag)),
@@ -228,7 +248,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the file path.
-    pub fn file_path(&self) -> Result<&Path, marked::NodeAnotherTypeError> {
+    pub fn file_path(&self) -> Result<&Path, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::File(i) => Ok(&i.path),
             _ => Err(self.make_another_type_error(NodeType::File)),
@@ -236,7 +256,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the file anchor keeper.
-    pub fn file_anchor_keeper(&self) -> Result<&AnchorKeeper, marked::NodeAnotherTypeError> {
+    pub fn file_anchor_keeper(&self) -> Result<&AnchorKeeper, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::File(i) => Ok(&i.anchor_keeper),
             _ => Err(self.make_another_type_error(NodeType::File)),
@@ -244,7 +264,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the take anchor name.
-    pub fn take_anchor_name(&self) -> Result<&String, marked::NodeAnotherTypeError> {
+    pub fn take_anchor_name(&self) -> Result<&String, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::TakeAnchor(i) => Ok(&i.name),
             _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
@@ -252,7 +272,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the get anchor name.
-    pub fn get_anchor_name(&self) -> Result<&String, marked::NodeAnotherTypeError> {
+    pub fn get_anchor_name(&self) -> Result<&String, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::GetAnchor(i) => Ok(&i.name),
             _ => Err(self.make_another_type_error(NodeType::GetAnchor)),
@@ -260,7 +280,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the anchor name.
-    pub fn anchor_name(&self) -> Result<&String, marked::NodeAnotherTypeError> {
+    pub fn anchor_name(&self) -> Result<&String, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::TakeAnchor(i) => Ok(&i.name),
             DataCell::GetAnchor(i) => Ok(&i.name),
@@ -269,7 +289,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the list size.
-    pub fn get_list_size(&self) -> Result<usize, marked::NodeAnotherTypeError> {
+    pub fn get_list_size(&self) -> Result<usize, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::List(i) => Ok(i.len()),
             _ => Err(self.make_another_type_error(NodeType::List)),
@@ -277,7 +297,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the map size.
-    pub fn get_map_size(&self) -> Result<usize, marked::NodeAnotherTypeError> {
+    pub fn get_map_size(&self) -> Result<usize, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::Map(i) => Ok(i.len()),
             _ => Err(self.make_another_type_error(NodeType::Map)),
@@ -285,7 +305,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the size.
-    pub fn get_size(&self) -> Result<usize, marked::NodeAnotherTypeError> {
+    pub fn get_size(&self) -> Result<usize, marked::AnotherTypeError> {
         match self.cell() {
             DataCell::List(i) => Ok(i.len()),
             DataCell::Map(i) => Ok(i.len()),
@@ -294,7 +314,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the raw data.
-    pub fn get_raw(&self) -> Result<&'a RawCell, marked::NodeAnotherTypeError> {
+    pub fn get_raw(&self) -> Result<&'a RawCell, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
             DataCell::Raw(i) => Ok(i),
@@ -303,7 +323,7 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the string data.
-    pub fn get_string(&self) -> Result<&'a StringCell, marked::NodeAnotherTypeError> {
+    pub fn get_string(&self) -> Result<&'a StringCell, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
             DataCell::String(i) => Ok(i),
@@ -312,19 +332,19 @@ impl<'a> Node<'a> {
     }
     
     /// Gets the list data.
-    pub fn get_list_iter(&self) -> Result<ListIter<'a>, marked::NodeAnotherTypeError> {
+    pub fn get_list_iter(&self) -> Result<BasicListIter<'a, E>, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::List(i) => Ok(ListIter::new(self.data, i.into_iter())),
+            DataCell::List(i) => Ok(BasicListIter::new(self.data, i.into_iter())),
             _ => Err(clear.make_another_type_error(NodeType::List)),
         }
     }
     
     /// Gets the map data.
-    pub fn get_map_iter(&self) -> Result<MapIter<'a>, marked::NodeAnotherTypeError> {
+    pub fn get_map_iter(&self) -> Result<BasicMapIter<'a, E>, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::Map(i) => Ok(MapIter::new(self.data, i.into_iter())),
+            DataCell::Map(i) => Ok(BasicMapIter::new(self.data, i.into_iter())),
             _ => Err(clear.make_another_type_error(NodeType::List)),
         }
     }
@@ -334,10 +354,10 @@ impl<'a> Node<'a> {
     /// # Arguments
     ///
     /// * `index` Index.
-    pub fn at_index(&self, index: usize) -> Result<Node<'a>, marked::ListError> {
+    pub fn at_index(&self, index: usize) -> Result<Self, marked::ListError> {
         match self.cell() {
             DataCell::List(i) => match i.get(index) {
-                Some(i) => Ok(Node { cell_index: *i, data: self.data }),
+                Some(i) => Ok(Self { cell_index: *i, data: self.data, phantom: Default::default() }),
                 None => Err(marked::ListError::InvalidIndex(self.make_error(InvalidIndexError::new(index, i.len()))))
             }
             _ => Err(marked::ListError::NodeAnotherType(self.make_another_type_error(NodeType::List))),
@@ -349,10 +369,10 @@ impl<'a> Node<'a> {
     /// # Arguments
     ///
     /// * `key` Key.
-    pub fn at_key(&self, key: &str) -> Result<Node<'a>, marked::MapError> {
+    pub fn at_key(&self, key: &str) -> Result<Self, marked::MapError> {
         match self.cell() {
             DataCell::Map(i) => match i.get(key) {
-                Some(i) => Ok(Node { cell_index: *i, data: self.data }),
+                Some(i) => Ok(Self { cell_index: *i, data: self.data, phantom: Default::default() }),
                 None => Err(marked::MapError::InvalidKey(self.make_error(InvalidKeyError::new(key.to_string()))))
             }
             _ => Err(marked::MapError::NodeAnotherType(self.make_another_type_error(NodeType::Map))),
@@ -368,7 +388,7 @@ impl<'a> Node<'a> {
     /// # Arguments
     ///
     /// * `index` Index.
-    pub fn at<T: NodeIndex<'a>>(&self, index: T) -> Result<Node<'a>, T::Error> {
+    pub fn at<T: NodeIndex<'a, E>>(&self, index: T) -> Result<Self, T::Error> {
         T::at(*self, index)
     }
     
@@ -377,20 +397,24 @@ impl<'a> Node<'a> {
     /// # Generic arguments
     ///
     /// * `T` Value type.
-    pub fn decode<T: Decode<'a>>(&self) -> Result<T, marked::FailedDecodeError> {
-        T::decode(*self).or_else(|e| {
-            let error_box: Box<dyn std::error::Error> = match e {
-                marked::DecodeError::NodeAnotherType(e) => Box::new(e),
-                marked::DecodeError::InvalidIndex(e) => Box::new(e),
-                marked::DecodeError::InvalidKey(e) => Box::new(e),
-                marked::DecodeError::FailedDecode(e) => Box::new(e),
-                marked::DecodeError::Other(e) => e,
-                marked::DecodeError::Failed => return Err(self.make_error(FailedDecodeError::new::<T>(None))),
-            };
-            Err(self.make_error(FailedDecodeError::new::<T>(Some(error_box))))
+    pub fn decode<T: Decode<'a, E>>(&self) -> Result<T, marked::FailedDecodeError<E>> {
+        T::decode(*self).map_err(|e| {
+            self.make_error(FailedDecodeError::new::<T>(Box::new(e)))
         })
     }
 }
+
+impl<'a, E: Error + PartialEq + Eq> Clone for BasicNode<'a, E> {
+    fn clone(&self) -> Self {
+        Self {
+            cell_index: self.cell_index,
+            data: self.data,
+            phantom: Default::default(),
+        }
+    }
+}
+
+impl<'a, E: Error + PartialEq + Eq> Copy for BasicNode<'a, E> {}
 
 #[cfg(test)]
 mod tests {

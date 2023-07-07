@@ -1,5 +1,6 @@
+use std::error::Error;
 use super::{
-    Node,
+    BasicNode,
     DataCell,
 };
 
@@ -61,10 +62,10 @@ pub trait GetFromStepType {
 
 macro_rules! impl_get_from_step_type {
 	($($name:ident)*) => {
-		impl<$($name : GetFromStep),*> GetFromStepType for ($($name),*) {
-			fn get(cell: &DataCell) -> Option<usize> {
+		impl<$($name : GetFromStep),*> GetFromStepType for ($($name, )*) {
+			fn get(_cell: &DataCell) -> Option<usize> {
 				$(
-					if let Some(i) = $name::get(cell) {
+					if let Some(i) = $name::get(_cell) {
 						return Some(i)
 					}
 				)*
@@ -80,13 +81,13 @@ impl_get_from_step_type!(A B);
 impl_get_from_step_type!(A B C);
 impl_get_from_step_type!(A B C D);
 
-pub(crate) fn get_from_step<T: GetFromStepType>(node: Node) -> Option<Node> {
-    T::get(node.cell()).map(|i| Node::new(i, node.data))
+pub(crate) fn get_from_step<T: GetFromStepType, E: Error + PartialEq + Eq>(node: BasicNode<E>) -> Option<BasicNode<E>> {
+    T::get(node.cell()).map(|i| BasicNode::new(i, node.data))
 }
 
-pub(crate) fn get_from<T: GetFromStepType>(node: Node) -> Node {
+pub(crate) fn get_from<T: GetFromStepType, E: Error + PartialEq + Eq>(node: BasicNode<E>) -> BasicNode<E> {
     match T::get(node.cell()) {
-        Some(i) => get_from::<T>(Node::new(i, node.data)),
+        Some(i) => get_from::<T, E>(BasicNode::new(i, node.data)),
         None => node,
     }
 }

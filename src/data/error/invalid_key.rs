@@ -1,11 +1,11 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug)]
-pub struct Error {
+#[derive(PartialEq, Eq, Debug)]
+pub struct InvalidKeyError {
     requested_key: String,
 }
 
-impl Error {
+impl InvalidKeyError {
     pub fn new(requested_key: String) -> Self {
         Self { requested_key }
     }
@@ -15,10 +15,10 @@ impl Error {
     }
 }
 
-impl Display for Error {
+impl Display for InvalidKeyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "A key named '{}' does not exist in the map.", self.requested_key)
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for InvalidKeyError {}

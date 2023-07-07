@@ -1,30 +1,35 @@
 pub mod with_mark;
-pub mod node;
-pub mod node_another_type;
+pub mod another_type;
 pub mod failed_decode;
 pub mod invalid_index;
 pub mod invalid_key;
 
-pub type NodeAnotherTypeError = node_another_type::Error;
-pub type FailedDecodeError = failed_decode::Error;
-pub type InvalidIndexError = invalid_index::Error;
-pub type InvalidKeyError = invalid_key::Error;
+pub use another_type::AnotherTypeError;
+pub use failed_decode::FailedDecodeError;
+pub use invalid_index::InvalidIndexError;
+pub use invalid_key::InvalidKeyError;
 
 pub mod marked {
-    pub type Error<T> = super::with_mark::Error<T>;
+    use std::{
+        fmt::{Debug, Display, Formatter},
+        error::Error,
+    };
     
-    pub type NodeAnotherTypeError = Error<super::NodeAnotherTypeError>;
-    pub type FailedDecodeError = Error<super::FailedDecodeError>;
-    pub type InvalidIndexError = Error<super::InvalidIndexError>;
-    pub type InvalidKeyError = Error<super::InvalidKeyError>;
+    pub use super::with_mark::WithMarkError;
     
+    pub type AnotherTypeError = WithMarkError<super::AnotherTypeError>;
+    pub type FailedDecodeError<E> = WithMarkError<super::FailedDecodeError<E>>;
+    pub type InvalidIndexError = WithMarkError<super::InvalidIndexError>;
+    pub type InvalidKeyError = WithMarkError<super::InvalidKeyError>;
+    
+    #[derive(PartialEq, Eq, Debug)]
     pub enum ListError {
-        NodeAnotherType(NodeAnotherTypeError),
+        NodeAnotherType(AnotherTypeError),
         InvalidIndex(InvalidIndexError),
     }
     
-    impl From<NodeAnotherTypeError> for ListError {
-        fn from(value: NodeAnotherTypeError) -> Self {
+    impl From<AnotherTypeError> for ListError {
+        fn from(value: AnotherTypeError) -> Self {
             ListError::NodeAnotherType(value)
         }
     }
@@ -35,13 +40,14 @@ pub mod marked {
         }
     }
     
+    #[derive(PartialEq, Eq, Debug)]
     pub enum MapError {
-        NodeAnotherType(NodeAnotherTypeError),
+        NodeAnotherType(AnotherTypeError),
         InvalidKey(InvalidKeyError),
     }
     
-    impl From<NodeAnotherTypeError> for MapError {
-        fn from(value: NodeAnotherTypeError) -> Self {
+    impl From<AnotherTypeError> for MapError {
+        fn from(value: AnotherTypeError) -> Self {
             MapError::NodeAnotherType(value)
         }
     }
@@ -52,40 +58,54 @@ pub mod marked {
         }
     }
     
-    pub enum DecodeError {
-        NodeAnotherType(NodeAnotherTypeError),
+    #[derive(PartialEq, Eq, Debug)]
+    pub enum DecodeError<E: Error + PartialEq + Eq> {
+        NodeAnotherType(AnotherTypeError),
         InvalidIndex(InvalidIndexError),
         InvalidKey(InvalidKeyError),
-        FailedDecode(FailedDecodeError),
-        Other(Box<dyn std::error::Error>),
+        FailedDecode(FailedDecodeError<E>),
+        Other(E),
         Failed,
     }
     
-    impl From<NodeAnotherTypeError> for DecodeError {
-        fn from(value: NodeAnotherTypeError) -> Self {
+    impl<E: Error + PartialEq + Eq> Display for DecodeError<E> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            match self {
+                DecodeError::NodeAnotherType(e) => write!(f, "{}", e),
+                DecodeError::InvalidIndex(e) => write!(f, "{}", e),
+                DecodeError::InvalidKey(e) => write!(f, "{}", e),
+                DecodeError::FailedDecode(e) => write!(f, "{}", e),
+                DecodeError::Other(e) => write!(f, "{}", e),
+                DecodeError::Failed => write!(f, "")
+            }
+        }
+    }
+    
+    impl<E: Error + PartialEq + Eq> From<AnotherTypeError> for DecodeError<E> {
+        fn from(value: AnotherTypeError) -> Self {
             DecodeError::NodeAnotherType(value)
         }
     }
     
-    impl From<InvalidIndexError> for DecodeError {
+    impl<E: Error + PartialEq + Eq> From<InvalidIndexError> for DecodeError<E> {
         fn from(value: InvalidIndexError) -> Self {
             DecodeError::InvalidIndex(value)
         }
     }
     
-    impl From<InvalidKeyError> for DecodeError {
+    impl<E: Error + PartialEq + Eq> From<InvalidKeyError> for DecodeError<E> {
         fn from(value: InvalidKeyError) -> Self {
             DecodeError::InvalidKey(value)
         }
     }
     
-    impl From<FailedDecodeError> for DecodeError {
-        fn from(value: FailedDecodeError) -> Self {
+    impl<E: Error + PartialEq + Eq> From<FailedDecodeError<E>> for DecodeError<E> {
+        fn from(value: FailedDecodeError<E>) -> Self {
             DecodeError::FailedDecode(value)
         }
     }
     
-    impl From<ListError> for DecodeError {
+    impl<E: Error + PartialEq + Eq> From<ListError> for DecodeError<E> {
         fn from(value: ListError) -> Self {
             match value {
                 ListError::NodeAnotherType(i) => DecodeError::NodeAnotherType(i),
@@ -94,18 +114,12 @@ pub mod marked {
         }
     }
     
-    impl From<MapError> for DecodeError {
+    impl<E: Error + PartialEq + Eq> From<MapError> for DecodeError<E> {
         fn from(value: MapError) -> Self {
             match value {
                 MapError::NodeAnotherType(i) => DecodeError::NodeAnotherType(i),
                 MapError::InvalidKey(i) => DecodeError::InvalidKey(i),
             }
-        }
-    }
-    
-    impl From<Box<dyn std::error::Error>> for DecodeError {
-        fn from(value: Box<dyn std::error::Error>) -> Self {
-            DecodeError::Other(value)
         }
     }
 }

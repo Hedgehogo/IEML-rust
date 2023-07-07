@@ -1,13 +1,13 @@
 use std::fmt::{Debug, Display, Formatter};
 use super::super::node_type::NodeType;
 
-#[derive(Debug)]
-pub struct Error {
+#[derive(PartialEq, Eq, Debug)]
+pub struct AnotherTypeError {
     requested_type: NodeType,
     node_type: NodeType,
 }
 
-impl Error {
+impl AnotherTypeError {
     pub fn new(requested_type: NodeType, node_type: NodeType) -> Self {
         Self { requested_type, node_type }
     }
@@ -21,10 +21,10 @@ impl Error {
     }
 }
 
-impl Display for Error {
+impl Display for AnotherTypeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Node of the '{:?}' type cannot be converted to a value of the '{:?}' type.", self.node_type, self.requested_type)
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for AnotherTypeError {}

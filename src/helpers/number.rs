@@ -1,5 +1,4 @@
-use num::pow;
-use crate::helpers::blank_lines::{match_blank_line, skip_blank_line};
+use crate::helpers::blank_lines::{match_blank_line};
 use super::number_traits::Number;
 
 pub trait ToNumber: Number {
@@ -75,7 +74,7 @@ pub fn to_digit(input: char, radix: u8) -> Option<u8> {
 
 pub fn parse_number_part<T: Number>(input: &str, radix: u8) -> Option<(&str, (T, T))> {
     let mut chars = input.chars();
-    let mut new_input = input;
+    let mut new_input;
     let mut value = T::from(0);
     let mut factor: T = T::from(1);
     loop {

@@ -1,5 +1,5 @@
 use std::ops::*;
-use num::{Bounded, FromPrimitive, One, PrimInt, ToPrimitive};
+use num::{Bounded, FromPrimitive, One, ToPrimitive};
 
 pub trait U8Cast {
     fn from(value: u8) -> Self;

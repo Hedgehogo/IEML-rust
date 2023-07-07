@@ -1,6 +1,9 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    error::Error,
+};
 use crate::data::{
-    node::{Node, MapIter},
+    node::{BasicNode, BasicMapIter},
     data_cell::{Data, MarkedDataCell},
 };
 use crate::data::data_cell::DataCell;
@@ -40,12 +43,12 @@ impl AnchorKeeper {
         self.file_anchors.insert(key, cell_index).is_none()
     }
     
-    pub fn get_anchors_iter<'a>(&'a self, data: &'a Data) -> MapIter<'a> {
-        MapIter::new(data, self.anchors.iter())
+    pub fn get_anchors_iter<'a, E: Error + PartialEq + Eq>(&'a self, data: &'a Data) -> BasicMapIter<'a, E> {
+        BasicMapIter::new(data, self.anchors.iter())
     }
     
-    pub fn get_file_anchors_iter<'a>(&'a self, data: &'a Data) -> MapIter<'a> {
-        MapIter::new(data, self.file_anchors.iter())
+    pub fn get_file_anchors_iter<'a, E: Error + PartialEq + Eq>(&'a self, data: &'a Data) -> BasicMapIter<'a, E> {
+        BasicMapIter::new(data, self.file_anchors.iter())
     }
     
     pub fn get_parent<'a>(&'a self, data: &'a Data) -> Option<&'a AnchorKeeper> {
@@ -65,8 +68,8 @@ impl AnchorKeeper {
         }
     }
     
-    pub fn get<'a>(&'a self, data: &'a Data, key: &str) -> Option<Node> {
-        self.get_index(data, key).map(|i| Node::new(i, data))
+    pub fn get<'a, E: Error + PartialEq + Eq>(&'a self, data: &'a Data, key: &str) -> Option<BasicNode<E>> {
+        self.get_index(data, key).map(|i| BasicNode::new(i, data))
     }
 }
 

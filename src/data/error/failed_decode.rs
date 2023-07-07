@@ -1,16 +1,18 @@
 use std::{
     any::type_name,
     fmt::{Debug, Display, Formatter},
+    error::Error,
 };
+use crate::data::error::marked;
 
-#[derive(Debug)]
-pub struct Error {
+#[derive(PartialEq, Eq, Debug)]
+pub struct FailedDecodeError<E: Error + PartialEq + Eq> {
     type_name: &'static str,
-    reason: Option<Box<dyn std::error::Error>>,
+    reason: Box<marked::DecodeError<E>>,
 }
 
-impl Error {
-    pub fn new<T>(reason: Option<Box<dyn std::error::Error>>) -> Error {
+impl<E: Error + PartialEq + Eq> FailedDecodeError<E> {
+    pub fn new<T>(reason: Box<marked::DecodeError<E>>) -> Self {
         Self { type_name: type_name::<T>(), reason }
     }
     
@@ -18,19 +20,18 @@ impl Error {
         self.type_name
     }
     
-    pub fn get_reason(&self) -> &Option<Box<dyn std::error::Error>> {
+    pub fn get_reason(&self) -> &Box<marked::DecodeError<E>> {
         &self.reason
     }
 }
 
-impl Display for Error {
+impl<E: Error + PartialEq + Eq> Display for FailedDecodeError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(i) = &self.reason {
-            write!(f, "Failed to convert node to '{}', because:\n{}", self.get_type_name(), i)
-        } else {
-            write!(f, "Failed to convert node to '{}'.", self.get_type_name())
+        match *self.reason {
+            marked::DecodeError::Failed => write!(f, "Failed to convert node to '{}'.", self.get_type_name()),
+            _ => write!(f, "Failed to convert node to '{}', because:\n{}", self.get_type_name(), *self.reason),
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl<E: Error + PartialEq + Eq> Error for FailedDecodeError<E> {}
