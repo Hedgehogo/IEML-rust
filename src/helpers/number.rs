@@ -1,4 +1,4 @@
-use crate::helpers::blank_lines::{match_blank_line};
+use crate::helpers::blank_lines::match_blank_line;
 use super::number_traits::Number;
 
 pub trait ToNumber: Number {
