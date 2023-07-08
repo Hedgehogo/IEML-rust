@@ -4,7 +4,7 @@ use std::{
     marker::PhantomData
 };
 use super::{BasicNode, iter::BasicMapIter};
-use super::super::data_cell::{Data, DataCell, FileCell};
+use super::super::cell::{Data, DataCell, FileCell};
 
 #[derive(Eq)]
 pub struct Anchors<'a, E: Error + PartialEq + Eq> {

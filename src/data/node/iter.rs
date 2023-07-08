@@ -3,7 +3,8 @@ use std::{
     error::Error,
     marker::PhantomData,
 };
-use super::super::data_cell::Data;
+use std::fmt::{Debug, Formatter};
+use super::super::cell::Data;
 use super::BasicNode;
 
 pub struct BasicListIter<'a, E: Error + PartialEq + Eq> {
@@ -11,8 +12,6 @@ pub struct BasicListIter<'a, E: Error + PartialEq + Eq> {
     iter: std::slice::Iter<'a, usize>,
     phantom: PhantomData<E>,
 }
-
-type ListIter<'a> = BasicListIter<'a, Infallible>;
 
 impl<'a, E: Error + PartialEq + Eq> BasicListIter<'a, E> {
     pub fn new(data: &'a Data, iter: std::slice::Iter<'a, usize>) -> Self {
@@ -23,6 +22,12 @@ impl<'a, E: Error + PartialEq + Eq> BasicListIter<'a, E> {
 impl<'a, E: Error + PartialEq + Eq> Clone for BasicListIter<'a, E> {
     fn clone(&self) -> Self {
         Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
+    }
+}
+
+impl<'a, E: Error + PartialEq + Eq> Debug for BasicListIter<'a, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{current: {:?}}}",  self.clone().next())
     }
 }
 
@@ -40,8 +45,6 @@ pub struct BasicMapIter<'a, E: Error + PartialEq + Eq> {
     phantom: PhantomData<E>,
 }
 
-type MapIter<'a> = BasicMapIter<'a, Infallible>;
-
 impl<'a, E: Error + PartialEq + Eq> BasicMapIter<'a, E> {
     pub fn new(data: &'a Data, iter: std::collections::hash_map::Iter<'a, String, usize>) -> Self {
         Self { data, iter, phantom: Default::default() }
@@ -51,6 +54,12 @@ impl<'a, E: Error + PartialEq + Eq> BasicMapIter<'a, E> {
 impl<'a, E: Error + PartialEq + Eq> Clone for BasicMapIter<'a, E> {
     fn clone(&self) -> Self {
         Self { data: self.data, iter: self.iter.clone(), phantom: Default::default() }
+    }
+}
+
+impl<'a, E: Error + PartialEq + Eq> Debug for BasicMapIter<'a, E> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{current: {:?}}}",  self.clone().next())
     }
 }
 
@@ -66,11 +75,14 @@ impl<'a, E: Error + PartialEq + Eq> Iterator for BasicMapIter<'a, E> {
 mod tests {
     use std::collections::HashMap;
     use super::super::super::{
-        data_cell::{DataCell, MarkedDataCell, TagCell},
+        cell::{DataCell, MarkedDataCell, TagCell},
         node_type::NodeType,
     };
     use super::super::Node;
     use super::*;
+    
+    type ListIter<'a> = BasicListIter<'a, Infallible>;
+    type MapIter<'a> = BasicMapIter<'a, Infallible>;
     
     fn test_data() -> Data {
         Data::from([
@@ -90,11 +102,11 @@ mod tests {
         
         let first = list_iter.next().unwrap();
         assert_eq!(first.node_type(), NodeType::String);
-        assert_eq!(*first.get_string().unwrap(), "hello".to_string());
+        assert_eq!(*first.string().unwrap(), "hello".to_string());
         
         let second = list_iter.next().unwrap();
         assert_eq!(second.node_type(), NodeType::Raw);
-        assert_eq!(*second.get_raw().unwrap(), "hello".to_string());
+        assert_eq!(*second.raw().unwrap(), "hello".to_string());
         
         assert!(list_iter.next().is_none());
     }
@@ -118,7 +130,7 @@ mod tests {
         let second = &collected_map[1];
         assert_eq!(*second.0, "second");
         assert_eq!(second.1.node_type(), NodeType::Tag);
-        if let Ok(i) = second.1.get_raw() {
+        if let Ok(i) = second.1.raw() {
             assert_eq!(*i, "hello".to_string());
         }
     }
