@@ -6,12 +6,12 @@ use super::super::mark::Mark;
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct WithMarkError<T: Error + PartialEq + Eq> {
-    pub data: T,
     pub mark: Mark,
+    pub data: T,
 }
 
 impl<T: Error + PartialEq + Eq> WithMarkError<T> {
-    pub fn new(data: T, mark: Mark) -> Self {
+    pub fn new(mark: Mark, data: T) -> Self {
         Self { data, mark }
     }
 }
@@ -22,4 +22,9 @@ impl<T: Error + PartialEq + Eq> Display for WithMarkError<T> {
     }
 }
 
-impl<T: Error + PartialEq + Eq> Error for WithMarkError<T> {}
+// Add after specializations appear
+/*impl<F, I: From<F>> From<WithMarkError<F>> for WithMarkError<I> {
+    fn from(value: WithMarkError<F>) -> Self {
+        WithMarkError::new(value.mark, value.data.into())
+    }
+}*/

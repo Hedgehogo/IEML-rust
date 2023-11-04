@@ -30,7 +30,7 @@ impl<'a, E: Error + PartialEq + Eq> Anchors<'a, E> {
     }
     
     fn file_anchors(&self) -> &'a HashMap<String, usize> {
-        &self.cell.anchors
+        &self.cell.file_anchors
     }
     
     pub fn parent(&self) -> Option<Anchors<'a, E>> {
@@ -48,14 +48,16 @@ impl<'a, E: Error + PartialEq + Eq> Anchors<'a, E> {
         BasicMapIter::new(self.data, self.file_anchors().iter())
     }
     
+    pub(crate) fn get_index(&self, key: &str) -> Option<usize> {
+        self.anchors().get(key).copied().or_else(|| {
+            self.file_anchors().get(key).copied().or_else(|| {
+                self.parent().and_then(|i| i.get_index(key))
+            })
+        })
+    }
+    
     pub fn get(&self, key: &str) -> Option<BasicNode<'a, E>> {
-        match self.file_anchors().get(key) {
-            Some(i) => Some(BasicNode::new(self.data.get(*i), self.data)),
-            None => match self.anchors().get(key) {
-                Some(i) => Some(BasicNode::new(self.data.get(*i), self.data)),
-                None => self.parent().and_then(|i| i.get(key)),
-            },
-        }
+        self.get_index(key).map(|i| BasicNode::new(self.data.get(i), self.data))
     }
 }
 
@@ -66,8 +68,3 @@ impl<'a, E: Error + PartialEq + Eq> Clone for Anchors<'a, E> {
 }
 
 impl<'a, E: Error + PartialEq + Eq> Copy for Anchors<'a, E> {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

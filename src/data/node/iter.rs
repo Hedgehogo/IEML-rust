@@ -85,7 +85,7 @@ mod tests {
     type MapIter<'a> = BasicMapIter<'a, Infallible>;
     
     fn test_data() -> Data {
-        Data::from([
+        Data::new(4, [
             (0, MarkedDataCell { cell: DataCell::Null, mark: Default::default() }),
             (1, MarkedDataCell { cell: DataCell::Null, mark: Default::default() }),
             (2, MarkedDataCell { cell: DataCell::String("hello".into()), mark: Default::default() }),
@@ -102,11 +102,11 @@ mod tests {
         
         let first = list_iter.next().unwrap();
         assert_eq!(first.node_type(), NodeType::String);
-        assert_eq!(*first.string().unwrap(), "hello".to_string());
+        assert_eq!(first.string().unwrap(), "hello".to_string());
         
         let second = list_iter.next().unwrap();
         assert_eq!(second.node_type(), NodeType::Raw);
-        assert_eq!(*second.raw().unwrap(), "hello".to_string());
+        assert_eq!(second.raw(), Ok("hello"));
         
         assert!(list_iter.next().is_none());
     }
@@ -130,8 +130,6 @@ mod tests {
         let second = &collected_map[1];
         assert_eq!(*second.0, "second");
         assert_eq!(second.1.node_type(), NodeType::Tag);
-        if let Ok(i) = second.1.raw() {
-            assert_eq!(*i, "hello".to_string());
-        }
+        assert_eq!(second.1.tag(), Ok("tag"));
     }
 }

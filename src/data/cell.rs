@@ -19,22 +19,22 @@ pub(crate) type MapCell = HashMap<String, usize>;
 
 pub(crate) type Tag = String;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub(crate) struct TagCell {
-    pub(crate) cell_index: usize,
     pub(crate) tag: Tag,
+    pub(crate) cell_index: usize,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub(crate) struct FileCell {
-    pub(crate) cell_index: usize,
     pub(crate) path: PathBuf,
+    pub(crate) cell_index: usize,
     pub(crate) anchors: HashMap<String, usize>,
     pub(crate) file_anchors: HashMap<String, usize>,
     pub(crate) parent: Option<usize>,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub(crate) struct AnchorCell {
     pub name: String,
     pub cell_index: usize,
@@ -126,9 +126,9 @@ pub(crate) fn equal_file<'a, 'b>(this: (&'a FileCell, &'a Data), other: (&'b Fil
 }
 
 pub(crate) fn debug_file<'a, 'b>(this: (&'a FileCell, &'a Data), f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "file-path: {:?}, anchors: ", this.0.path.clone().into_os_string().into_string())?;
+    write!(f, "file-path: {:?}, anchors: ", this.0.path)?;
     debug_map((&this.0.file_anchors, this.1), f)?;
-    write!(f, "cell: {:?}", Node::new(this.1.get(this.0.cell_index), this.1))
+    write!(f, ", cell: {:?}", Node::new(this.1.get(this.0.cell_index), this.1))
 }
 
 pub(crate) fn equal_take_anchor<'a, 'b>(this: (&'a AnchorCell, &'a Data), other: (&'b AnchorCell, &'b Data)) -> bool {
@@ -204,16 +204,23 @@ pub(crate) fn debug_data<'a, 'b>(this: (&'a DataCell, &'a Data), f: &mut Formatt
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Data {
     pub(crate) data: HashMap<usize, MarkedDataCell>,
+    pub(crate) index: usize,
 }
 
 impl Data {
+    pub(crate) fn new<const N: usize>(index: usize, arr: [(usize, MarkedDataCell); N]) -> Self {
+        Self { data: HashMap::<usize, MarkedDataCell>::from(arr), index }
+    }
+    
     pub(crate) fn get(&self, index: usize) -> &MarkedDataCell {
         self.data.get(&index).expect("Incorrect document structure, Cell does not exist.")
     }
-}
-
-impl<const N: usize> From<[(usize, MarkedDataCell); N]> for Data {
-    fn from(arr: [(usize, MarkedDataCell); N]) -> Self {
-        Self { data: HashMap::<usize, MarkedDataCell>::from(arr)}
+    
+    pub(crate) fn get_mut(&mut self, index: usize) -> &mut MarkedDataCell {
+        self.data.get_mut(&index).expect("Incorrect document structure, Cell does not exist.")
+    }
+    
+    pub fn node(&self) -> Node {
+        Node::new(self.get(self.index), self)
     }
 }

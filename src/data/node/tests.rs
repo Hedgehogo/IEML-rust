@@ -3,7 +3,7 @@ use super::super::cell::{DataCell, MarkedDataCell, MapCell, TagCell, FileCell, A
 use super::*;
 
 fn test_data() -> Data {
-    Data::from([
+    Data::new(6, [
         (0, MarkedDataCell { cell: DataCell::Null, mark: Mark { line: 2, symbol: 5 } }),
         (1, MarkedDataCell { cell: DataCell::Raw("hello".into()), mark: Default::default() }),
         (2, MarkedDataCell { cell: DataCell::String("hello".into()), mark: Default::default() }),
@@ -37,7 +37,7 @@ fn test_data() -> Data {
 }
 
 fn make_another_type_error(node_type: NodeType, requested_type: NodeType, mark: Mark) -> marked::AnotherTypeError {
-    marked::AnotherTypeError::new(AnotherTypeError::new(requested_type, node_type), mark)
+    marked::AnotherTypeError::new(mark, AnotherTypeError::new(requested_type, node_type))
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn test_list() {
     
     assert_eq!(node.at(0).unwrap().node_type(), NodeType::Null);
     assert_eq!(node.at(1).unwrap().node_type(), NodeType::Raw);
-    assert_eq!(node.at(2), Err(marked::ListError::InvalidIndex(marked::InvalidIndexError::new(InvalidIndexError::new(2, 2), mark))));
+    assert_eq!(node.at(2), Err(marked::ListError::InvalidIndex(marked::InvalidIndexError::new(mark, InvalidIndexError::new(2, 2)))));
     
     assert_eq!(node.map_iter().unwrap_err(), make_another_type_error(NodeType::List, NodeType::Map, mark));
     assert_eq!(node.at("key"), Err(marked::MapError::NodeAnotherType(make_another_type_error(NodeType::List, NodeType::Map, mark))));
@@ -240,7 +240,7 @@ fn test_map() {
     assert_eq!(node.at("first").unwrap().node_type(), NodeType::String);
     assert_eq!(node.at("second").unwrap().node_type(), NodeType::List);
     assert_eq!(node.at("third").unwrap().node_type(), NodeType::GetAnchor);
-    assert_eq!(node.at("key"), Err(marked::MapError::InvalidKey(marked::InvalidKeyError::new(InvalidKeyError::new("key".to_string()), mark))));
+    assert_eq!(node.at("key"), Err(marked::MapError::InvalidKey(marked::InvalidKeyError::new(mark, InvalidKeyError::new("key".to_string())))));
 }
 
 #[test]

@@ -196,7 +196,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     }
     
     fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
-        marked::WithMarkError::<T>::new(error, self.mark())
+        marked::WithMarkError::<T>::new(self.mark(), error)
     }
     
     fn make_another_type_error(&self, requested_type: NodeType) -> marked::AnotherTypeError {
