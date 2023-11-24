@@ -1,19 +1,15 @@
-pub mod maker;
 pub mod error;
 mod init;
+pub mod maker;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    error::Error,
-};
 use super::{
+    cell::{AnchorCell, Data, DataCell, FileCell, TagCell},
     mark::Mark,
-    cell::{TagCell, FileCell, AnchorCell, DataCell, Data},
 };
-use maker::Maker;
-use init::init;
 use error::*;
+use init::init;
+use maker::Maker;
+use std::{error::Error, path::PathBuf};
 
 pub type MakeResult<E> = Result<(), marked::MakeError<E>>;
 
@@ -43,9 +39,7 @@ where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
-    move |maker| {
-        Ok(maker.add(mark, DataCell::String(string.into())))
-    }
+    move |maker| Ok(maker.add(mark, DataCell::String(string.into())))
 }
 
 pub fn list<E, F, I>(mark: Mark, iter: I) -> impl FnOnce(&mut Maker) -> MakeResult<E>
@@ -55,9 +49,7 @@ where
     I: Iterator<Item = F>,
 {
     move |maker| {
-        let result: Result<_, _> = iter.map(|f| {
-            f(maker).map(|_| maker.last())
-        }).collect();
+        let result: Result<_, _> = iter.map(|f| f(maker).map(|_| maker.last())).collect();
         result.map(|i| maker.add(mark, DataCell::List(i)))
     }
 }
@@ -70,9 +62,9 @@ where
     I: Iterator<Item = (S, F)>,
 {
     move |maker| {
-        let result: Result<_, _> = iter.map(|(key, f)| {
-            f(maker).map(|_| (key.into(), maker.last()))
-        }).collect();
+        let result: Result<_, _> = iter
+            .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
+            .collect();
         result.map(|i| maker.add(mark, DataCell::Map(i)))
     }
 }
@@ -85,13 +77,21 @@ where
 {
     move |maker| {
         f(maker)?;
-        let result = TagCell { tag: tag.into(), cell_index: maker.last() };
+        let result = TagCell {
+            tag: tag.into(),
+            cell_index: maker.last(),
+        };
         maker.add(mark, DataCell::Tag(result));
         Ok(())
     }
 }
 
-pub fn file<E, F, A, S, I>(mark: Mark, path: PathBuf, anchors: I, f: F) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn file<E, F, A, S, I>(
+    mark: Mark,
+    path: PathBuf,
+    anchors: I,
+    f: F,
+) -> impl FnOnce(&mut Maker) -> MakeResult<E>
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(&mut Maker) -> MakeResult<E>,
@@ -100,9 +100,9 @@ where
     I: Iterator<Item = (S, A)>,
 {
     move |maker| {
-        let file_anchors = anchors.map(|(key, f)| {
-            f(maker).map(|_| (key.into(), maker.last()))
-        }).collect::<Result<_, _>>()?;
+        let file_anchors = anchors
+            .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
+            .collect::<Result<_, _>>()?;
         let result = maker.child(|maker| {
             f(maker).map(|_| FileCell {
                 path,
@@ -126,10 +126,19 @@ where
     move |maker| {
         f(maker)?;
         let name = name.into();
-        let result = AnchorCell { name: name.clone(), cell_index: maker.last() };
-        maker.add_anchor(name.clone(), maker.last()).ok_or(
-            marked::MakeError::new(mark, MakeError::new(maker.path().to_path_buf(), MakeErrorReason::AnchorAlreadyExist(name)))
-        )?;
+        let result = AnchorCell {
+            name: name.clone(),
+            cell_index: maker.last(),
+        };
+        maker
+            .add_anchor(name.clone(), maker.last())
+            .ok_or(marked::MakeError::new(
+                mark,
+                MakeError::new(
+                    maker.path().to_path_buf(),
+                    MakeErrorReason::AnchorAlreadyExist(name),
+                ),
+            ))?;
         maker.add(mark, DataCell::TakeAnchor(result));
         Ok(())
     }
@@ -141,7 +150,10 @@ where
     S: Into<String>,
 {
     move |maker| {
-        let result = AnchorCell { name: name.into(), cell_index: 0 };
+        let result = AnchorCell {
+            name: name.into(),
+            cell_index: 0,
+        };
         maker.add(mark, DataCell::TakeAnchor(result));
         Ok(())
     }
@@ -167,7 +179,12 @@ where
     Ok(data)
 }
 
-pub fn make_file<E, F, A, S, I>(mark: Mark, path: PathBuf, anchors: I, f: F) -> Result<Data, marked::MakeError<E>>
+pub fn make_file<E, F, A, S, I>(
+    mark: Mark,
+    path: PathBuf,
+    anchors: I,
+    f: F,
+) -> Result<Data, marked::MakeError<E>>
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(&mut Maker) -> MakeResult<E>,
@@ -185,74 +202,87 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::convert::Infallible;
-    use super::super::{
-        node::Node,
-        node_type::NodeType,
-    };
+    use super::super::{node::Node, node_type::NodeType};
     use super::*;
-    
+    use std::{collections::HashMap, convert::Infallible};
+
     #[test]
     fn test_null() {
         let data = make::<Infallible, _>(Mark::default(), null(Mark::default())).unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::Null);
     }
-    
+
     #[test]
     fn test_raw() {
         let data = make::<Infallible, _>(Mark::default(), raw(Mark::default(), "hello")).unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::Raw);
-        assert_eq!(clear_node.raw(), Ok("hello"));
+        assert_eq!(clear_node.raw().unwrap(), "hello");
     }
-    
+
     #[test]
     fn test_string() {
-        let data = make::<Infallible, _>(Mark::default(), string(Mark::default(), "hello")).unwrap();
+        let data =
+            make::<Infallible, _>(Mark::default(), string(Mark::default(), "hello")).unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::String);
-        assert_eq!(clear_node.string(), Ok("hello"));
+        assert_eq!(clear_node.string().unwrap(), "hello");
     }
-    
+
     #[test]
     fn test_list() {
         let data = make::<Infallible, _>(Mark::default(), {
-            list(Mark::default(), Vec::from([
-                Box::new(raw(Mark::default(), "hello")) as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
-                Box::new(string(Mark::default(), "hello")),
-            ]).into_iter())
-        }).unwrap();
+            list(
+                Mark::default(),
+                Vec::from([
+                    Box::new(raw(Mark::default(), "hello"))
+                        as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
+                    Box::new(string(Mark::default(), "hello")),
+                ])
+                .into_iter(),
+            )
+        })
+        .unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::List);
-        
+
         let mut list_iter = clear_node.list_iter().unwrap();
         assert_eq!(list_iter.next().unwrap().node_type(), NodeType::Raw);
         assert_eq!(list_iter.next().unwrap().node_type(), NodeType::String);
         assert!(list_iter.next().is_none());
     }
-    
+
     #[test]
     fn test_map() {
         let data = make::<Infallible, _>(Mark::default(), {
-            map(Mark::default(), HashMap::from([
-                ("first", Box::new(raw(Mark::default(), "hello")) as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>),
-                ("second", Box::new(string(Mark::default(), "hello"))),
-            ]).into_iter())
-        }).unwrap();
+            map(
+                Mark::default(),
+                HashMap::from([
+                    (
+                        "first",
+                        Box::new(raw(Mark::default(), "hello"))
+                            as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
+                    ),
+                    ("second", Box::new(string(Mark::default(), "hello"))),
+                ])
+                .into_iter(),
+            )
+        })
+        .unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::Map);
-        
+
         let mut map: Vec<(&String, Node)> = clear_node.map_iter().unwrap().collect();
         map.sort_by(|i, j| i.0.cmp(&j.0));
         assert_eq!(map.len(), 2);
@@ -261,39 +291,56 @@ mod tests {
         assert_eq!(map[1].0, "second");
         assert_eq!(map[1].1.node_type(), NodeType::String);
     }
-    
+
     #[test]
     fn test_tag() {
         let data = make::<Infallible, _>(Mark::default(), {
             tag(Mark::default(), "tag", null(Mark::default()))
-        }).unwrap();
+        })
+        .unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::Tag);
-        assert_eq!(node.tag(), Ok("tag"));
-        
+        assert_eq!(node.tag().unwrap(), "tag");
+
         assert!(node.is_null());
     }
-    
+
     #[test]
     fn test_file() {
         let data = make::<Infallible, _>(Mark::default(), {
-            file(Mark::default(), "dir/name.ieml".into(), HashMap::from([
-                ("file-anchor", Box::new(null(Mark::default())) as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>)
-            ]).into_iter(), raw(Mark::default(), "hello"))
-        }).unwrap();
+            file(
+                Mark::default(),
+                "dir/name.ieml".into(),
+                HashMap::from([(
+                    "file-anchor",
+                    Box::new(null(Mark::default()))
+                        as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
+                )])
+                .into_iter(),
+                raw(Mark::default(), "hello"),
+            )
+        })
+        .unwrap();
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
-        
+
         assert_eq!(clear_node.node_type(), NodeType::File);
-        assert_eq!(clear_node.file_path(), Ok(PathBuf::from("dir/name.ieml").as_path()));
-        
-        let anchors: Vec<_> = clear_node.file_anchors().unwrap().file_anchors_iter().collect();
+        assert_eq!(
+            clear_node.file_path().unwrap(),
+            PathBuf::from("dir/name.ieml"),
+        );
+
+        let anchors: Vec<_> = clear_node
+            .file_anchors()
+            .unwrap()
+            .file_anchors_iter()
+            .collect();
         assert_eq!(anchors.len(), 1);
         assert_eq!(anchors[0].0, "file-anchor");
-        
+
         assert!(clear_node.is_raw());
-        assert_eq!(clear_node.raw(), Ok("hello"));
+        assert_eq!(clear_node.raw().unwrap(), "hello");
     }
 }

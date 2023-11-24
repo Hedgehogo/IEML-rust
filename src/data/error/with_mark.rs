@@ -1,22 +1,19 @@
-use std::{
-    fmt::{Debug, Display, Formatter},
-    error::Error,
-};
 use super::super::mark::Mark;
+use std::fmt::{Debug, Display, Formatter};
 
-#[derive(PartialEq, Eq, Debug)]
-pub struct WithMarkError<T: Error + PartialEq + Eq> {
+#[derive(Debug, PartialEq, Eq)]
+pub struct WithMarkError<T> {
     pub mark: Mark,
     pub data: T,
 }
 
-impl<T: Error + PartialEq + Eq> WithMarkError<T> {
+impl<T> WithMarkError<T> {
     pub fn new(mark: Mark, data: T) -> Self {
         Self { data, mark }
     }
 }
 
-impl<T: Error + PartialEq + Eq> Display for WithMarkError<T> {
+impl<T: Display> Display for WithMarkError<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}: {}", self.mark.line, self.mark.symbol, self.data)
     }

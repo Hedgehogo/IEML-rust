@@ -1,22 +1,17 @@
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct InvalidIndexError {
-    requested_index: usize,
-    list_size: usize,
+    pub requested_index: usize,
+    pub list_size: usize,
 }
 
 impl InvalidIndexError {
     pub fn new(requested_index: usize, list_size: usize) -> Self {
-        Self { requested_index, list_size }
-    }
-    
-    pub fn get_requested_index(&self) -> usize {
-        self.requested_index
-    }
-    
-    pub fn get_list_size(&self) -> usize {
-        self.list_size
+        Self {
+            requested_index,
+            list_size,
+        }
     }
 }
 

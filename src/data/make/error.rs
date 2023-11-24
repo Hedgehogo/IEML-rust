@@ -1,8 +1,5 @@
-use std::{
-    error::Error,
-    path::PathBuf,
-};
 use std::fmt::{Display, Formatter};
+use std::{error::Error, path::PathBuf};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum MakeErrorReason<E: Error + PartialEq + Eq> {
@@ -44,7 +41,11 @@ impl<E: Error + PartialEq + Eq> MakeError<E> {
 impl<E: Error + PartialEq + Eq> Display for MakeError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if !self.file_path.as_os_str().is_empty() {
-            write!(f, "Failed to parse the data in the file {:?}. {}", self.file_path, self.reason)
+            write!(
+                f,
+                "Failed to parse the data in the file {:?}. {}",
+                self.file_path, self.reason
+            )
         } else {
             write!(f, "Failed to parse the data. {}", self.reason)
         }
@@ -62,6 +63,6 @@ impl<E: Error + PartialEq + Eq> Error for MakeError<E> {}
 
 pub mod marked {
     use super::super::super::error::marked::WithMarkError;
-    
+
     pub type MakeError<E> = WithMarkError<super::MakeError<E>>;
 }
