@@ -1,9 +1,9 @@
-use std::error::Error;
-use crate::helpers::to_value::{to_bool, to_number};
 use super::super::{
     error::marked,
-    node::{BasicNode, BasicListIter, BasicMapIter},
+    node::{BasicListIter, BasicMapIter, BasicNode},
 };
+use crate::helpers::to_value::{to_bool, to_number};
+use std::error::Error;
 
 pub trait Decode<'a, E: Error + PartialEq + Eq> {
     fn decode(node: BasicNode<'a, E>) -> Result<Self, marked::DecodeError<E>>
@@ -47,4 +47,3 @@ impl<'a, E: Error + PartialEq + Eq> Decode<'a, E> for BasicMapIter<'a, E> {
         Ok(node.map_iter()?)
     }
 }
-

@@ -1,8 +1,8 @@
-use std::{
-    fmt::{Debug, Display, Formatter},
-    error::Error,
-};
 use super::super::mark::Mark;
+use std::{
+    error::Error,
+    fmt::{Debug, Display, Formatter},
+};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct WithMarkError<T: Error + PartialEq + Eq> {

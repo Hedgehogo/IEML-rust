@@ -1,5 +1,5 @@
-use std::error::Error;
 use super::BasicNode;
+use std::error::Error;
 
 pub struct Tag {}
 
@@ -62,14 +62,17 @@ impl_get_from_step_type!(A B);
 impl_get_from_step_type!(A B C);
 impl_get_from_step_type!(A B C D);
 
-pub(crate) fn clear_step<E: Error + PartialEq + Eq, T: ClearStepType<E>>(node: BasicNode<E>) -> Option<BasicNode<E>> {
+pub(crate) fn clear_step<E: Error + PartialEq + Eq, T: ClearStepType<E>>(
+    node: BasicNode<E>,
+) -> Option<BasicNode<E>> {
     T::clear(node)
 }
 
-pub(crate) fn clear<E: Error + PartialEq + Eq, T: ClearStepType<E>>(node: BasicNode<E>) -> BasicNode<E> {
+pub(crate) fn clear<E: Error + PartialEq + Eq, T: ClearStepType<E>>(
+    node: BasicNode<E>,
+) -> BasicNode<E> {
     match T::clear(node) {
         Some(i) => clear::<E, T>(i),
         None => node,
     }
 }
-

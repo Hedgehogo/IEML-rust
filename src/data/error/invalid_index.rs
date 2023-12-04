@@ -8,13 +8,16 @@ pub struct InvalidIndexError {
 
 impl InvalidIndexError {
     pub fn new(requested_index: usize, list_size: usize) -> Self {
-        Self { requested_index, list_size }
+        Self {
+            requested_index,
+            list_size,
+        }
     }
-    
+
     pub fn get_requested_index(&self) -> usize {
         self.requested_index
     }
-    
+
     pub fn get_list_size(&self) -> usize {
         self.list_size
     }
