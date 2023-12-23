@@ -7,7 +7,7 @@ use nom::{
     sequence::tuple,
 };
 
-fn parse_null(mark: Mark) -> impl Fn(&str) -> ParseResult<&str, ()> {
+pub(crate) fn parse_null(mark: Mark) -> impl Fn(&str) -> ParseResult<&str, ()> {
     move |input| {
         let (input, result) = recognize(tuple((tag("null"), opt(char(' ')))))(input)?;
         let new_mark = mark + Mark::new(0, result.len());

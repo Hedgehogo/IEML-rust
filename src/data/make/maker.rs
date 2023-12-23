@@ -30,7 +30,7 @@ impl<'a> Maker<'a> {
     pub(crate) fn add(&mut self, mark: Mark, cell: DataCell) {
         self.data
             .data
-            .insert(self.data.data.len(), MarkedDataCell { cell, mark });
+            .insert(self.data.data.len(), MarkedDataCell::new(cell, mark));
     }
 
     pub(crate) fn last(&self) -> usize {

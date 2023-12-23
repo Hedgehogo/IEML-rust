@@ -8,85 +8,73 @@ fn test_data() -> Data {
         [
             (
                 0,
-                MarkedDataCell {
-                    cell: DataCell::Null,
-                    mark: Mark { line: 2, symbol: 5 },
-                },
+                MarkedDataCell::new(DataCell::Null, Mark { line: 2, symbol: 5 }),
             ),
             (
                 1,
-                MarkedDataCell {
-                    cell: DataCell::Raw("hello".into()),
-                    mark: Default::default(),
-                },
+                MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
             ),
             (
                 2,
-                MarkedDataCell {
-                    cell: DataCell::String("hello".into()),
-                    mark: Default::default(),
-                },
+                MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
             ),
             (
                 3,
-                MarkedDataCell {
-                    cell: DataCell::List(vec![0, 1]),
-                    mark: Default::default(),
-                },
+                MarkedDataCell::new(DataCell::List(vec![0, 1]), Default::default()),
             ),
             (
                 4,
-                MarkedDataCell {
-                    cell: DataCell::Map(MapCell::from([
+                MarkedDataCell::new(
+                    DataCell::Map(MapCell::from([
                         ("first".to_string(), 2),
                         ("second".to_string(), 3),
                         ("third".to_string(), 8),
                     ])),
-                    mark: Default::default(),
-                },
+                    Default::default(),
+                ),
             ),
             (
                 5,
-                MarkedDataCell {
-                    cell: DataCell::Tag(TagCell {
+                MarkedDataCell::new(
+                    DataCell::Tag(TagCell {
                         cell_index: 7,
                         tag: "tag".into(),
                     }),
-                    mark: Default::default(),
-                },
+                    Default::default(),
+                ),
             ),
             (
                 6,
-                MarkedDataCell {
-                    cell: DataCell::File(FileCell {
+                MarkedDataCell::new(
+                    DataCell::File(FileCell {
                         cell_index: 5,
                         path: PathBuf::from("dir/name.ieml"),
                         anchors: Default::default(),
                         file_anchors: Default::default(),
                         parent: None,
                     }),
-                    mark: Default::default(),
-                },
+                    Default::default(),
+                ),
             ),
             (
                 7,
-                MarkedDataCell {
-                    cell: DataCell::TakeAnchor(AnchorCell {
+                MarkedDataCell::new(
+                    DataCell::TakeAnchor(AnchorCell {
                         cell_index: 4,
                         name: "anchor".into(),
                     }),
-                    mark: Default::default(),
-                },
+                    Default::default(),
+                ),
             ),
             (
                 8,
-                MarkedDataCell {
-                    cell: DataCell::GetAnchor(AnchorCell {
+                MarkedDataCell::new(
+                    DataCell::GetAnchor(AnchorCell {
                         cell_index: 4,
                         name: "anchor".into(),
                     }),
-                    mark: Default::default(),
-                },
+                    Default::default(),
+                ),
             ),
         ],
     )

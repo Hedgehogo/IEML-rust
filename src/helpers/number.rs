@@ -3,16 +3,16 @@ use crate::helpers::blank_lines::match_blank_line;
 
 pub trait ToNumber: Number {
     fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self>;
-
+    
     fn parse_fractional_part(input: &str, radix: u8, number: Self) -> Option<(&str, Self)>;
-
+    
     fn parse_minus(input: &str) -> (&str, bool);
-
+    
     fn add_minus(number: Self, minus: bool) -> Self;
 }
 
 macro_rules! impl_parse_number {
-    ($parse_exponent:ident, $parse_fractional_part:ident, $parse_minus:ident, $add_minus:ident, $($T:ty),*) => {
+    ($parse_exponent:ident, $parse_fractional_part:ident, $parse_minus:ident, $add_minus:ident, ($($T:ty),*)) => {
         $(
             impl ToNumber for $T {
                 fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self> {
@@ -49,7 +49,7 @@ pub fn add_minus_unsigned<T: Number>(number: T, _minus: bool) -> T {
 
 pub fn parse_minus_signed(input: &str) -> (&str, bool) {
     let mut chars = input.chars();
-
+    
     match chars.next() {
         Some(i) => match i {
             '-' => (chars.as_str(), true),
@@ -70,7 +70,7 @@ pub fn to_digit(input: char, radix: u8) -> Option<u8> {
         'A'..='Z' => Some(10 + (input as u8) - ('A' as u8)),
         _ => None,
     }
-    .and_then(|i| if i < radix { Some(i) } else { None })
+        .and_then(|i| if i < radix { Some(i) } else { None })
 }
 
 pub fn parse_number_part<T: Number>(input: &str, radix: u8) -> Option<(&str, (T, T))> {
@@ -209,32 +209,21 @@ impl_parse_number!(
     parse_fractional_part_float,
     parse_minus_signed,
     add_minus_signed,
-    f32,
-    f64
+    (f32, f64)
 );
 impl_parse_number!(
     parse_exponent_integer,
     parse_fractional_part_integer,
     parse_minus_signed,
     add_minus_signed,
-    i8,
-    i16,
-    i32,
-    i64,
-    i128,
-    isize
+    (i8, i16, i32, i64, i128, isize)
 );
 impl_parse_number!(
     parse_exponent_integer,
     parse_fractional_part_integer,
     parse_minus_unsigned,
     add_minus_unsigned,
-    u8,
-    u16,
-    u32,
-    u64,
-    u128,
-    usize
+    (u8, u16, u32, u64, u128, usize)
 );
 
 pub fn to_number<T: ToNumber>(input: &str) -> Option<T> {
@@ -246,20 +235,20 @@ pub fn to_number<T: ToNumber>(input: &str) -> Option<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    
     #[test]
     fn test_to_digit() {
         assert_eq!(to_digit('0', 10), Some(0));
         assert_eq!(to_digit('9', 10), Some(9));
         assert_eq!(to_digit('A', 10), None);
-
+        
         assert_eq!(to_digit('0', 16), Some(0));
         assert_eq!(to_digit('9', 16), Some(9));
         assert_eq!(to_digit('A', 16), Some(10));
         assert_eq!(to_digit('F', 16), Some(15));
         assert_eq!(to_digit('G', 16), None);
     }
-
+    
     #[test]
     fn test_parse_number_part() {
         assert_eq!(
@@ -269,7 +258,7 @@ mod tests {
         assert_eq!(parse_number_part::<i32>("F8", 16).unwrap().1, (0xF8, 0x100));
         assert_eq!(parse_number_part::<i32>("A5", 10).unwrap().1, (0, 1));
     }
-
+    
     #[test]
     fn test_parse_number() {
         assert_eq!(parse_number::<i32>("120", 10).unwrap().1, 120);
@@ -278,7 +267,7 @@ mod tests {
         assert_eq!(parse_number::<i32>("F8", 16).unwrap().1, 0xF8);
         assert_eq!(parse_number::<i32>("A5", 10), None);
     }
-
+    
     #[test]
     fn test_parse_number_radix() {
         assert_eq!(parse_number_radix::<i32>("120").unwrap().1, (120, 10));
@@ -286,7 +275,7 @@ mod tests {
         assert_eq!(parse_number_radix::<i32>("16'F8").unwrap().1, (0xF8, 16));
         assert_eq!(parse_number_radix::<f32>("-2'101.1").unwrap().1, (-5.5, 2));
     }
-
+    
     #[test]
     fn test_parse_number_scientific() {
         assert_eq!(parse_number_scientific::<i32>("120").unwrap().1, 120);
@@ -300,7 +289,7 @@ mod tests {
             0.6875
         );
     }
-
+    
     #[test]
     fn test_to_number() {
         assert_eq!(to_number::<i32>("2'10e1"), Some(4));

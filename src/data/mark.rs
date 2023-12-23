@@ -21,7 +21,7 @@ impl std::ops::Add for Mark {
     fn add(self, rhs: Self) -> Self::Output {
         match rhs.line {
             0 => Mark::new(self.line, self.symbol + rhs.symbol),
-            _ => Mark::new(self.line + rhs.line, 0),
+            _ => Mark::new(self.line + rhs.line, rhs.symbol),
         }
     }
 }

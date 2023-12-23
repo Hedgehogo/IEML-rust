@@ -269,6 +269,7 @@ pub struct Data {
 }
 
 impl Data {
+    #[allow(dead_code)]
     pub(crate) fn new<const N: usize>(index: usize, arr: [(usize, MarkedDataCell); N]) -> Self {
         Self {
             data: HashMap::<usize, MarkedDataCell>::from(arr),

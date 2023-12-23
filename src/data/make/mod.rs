@@ -154,7 +154,7 @@ where
             name: name.into(),
             cell_index: 0,
         };
-        maker.add(mark, DataCell::TakeAnchor(result));
+        maker.add(mark, DataCell::GetAnchor(result));
         Ok(())
     }
 }

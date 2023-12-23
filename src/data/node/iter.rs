@@ -1,7 +1,7 @@
 use super::super::cell::Data;
 use super::BasicNode;
 use std::fmt::{Debug, Formatter};
-use std::{convert::Infallible, error::Error, marker::PhantomData};
+use std::{error::Error, marker::PhantomData};
 
 pub struct BasicListIter<'a, E: Error + PartialEq + Eq> {
     data: &'a Data,
@@ -96,6 +96,7 @@ mod tests {
     use super::super::Node;
     use super::*;
     use std::collections::HashMap;
+    use std::convert::Infallible;
 
     type ListIter<'a> = BasicListIter<'a, Infallible>;
     type MapIter<'a> = BasicMapIter<'a, Infallible>;
@@ -104,43 +105,25 @@ mod tests {
         Data::new(
             4,
             [
-                (
-                    0,
-                    MarkedDataCell {
-                        cell: DataCell::Null,
-                        mark: Default::default(),
-                    },
-                ),
-                (
-                    1,
-                    MarkedDataCell {
-                        cell: DataCell::Null,
-                        mark: Default::default(),
-                    },
-                ),
+                (0, MarkedDataCell::new(DataCell::Null, Default::default())),
+                (1, MarkedDataCell::new(DataCell::Null, Default::default())),
                 (
                     2,
-                    MarkedDataCell {
-                        cell: DataCell::String("hello".into()),
-                        mark: Default::default(),
-                    },
+                    MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
                 ),
                 (
                     3,
-                    MarkedDataCell {
-                        cell: DataCell::Raw("hello".into()),
-                        mark: Default::default(),
-                    },
+                    MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
                 ),
                 (
                     4,
-                    MarkedDataCell {
-                        cell: DataCell::Tag(TagCell {
+                    MarkedDataCell::new(
+                        DataCell::Tag(TagCell {
                             cell_index: 0,
                             tag: "tag".into(),
                         }),
-                        mark: Default::default(),
-                    },
+                        Default::default(),
+                    ),
                 ),
             ],
         )
