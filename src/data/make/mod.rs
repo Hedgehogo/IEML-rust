@@ -3,7 +3,12 @@ mod init;
 pub mod maker;
 
 use super::{
-    cell::{AnchorCell, Data, DataCell, FileCell, TagCell},
+    cell::{
+        data_cell::{
+            DataCell, FileCell, GetAnchorCell, ListCell, MapCell, TagCell, TakeAnchorCell,
+        },
+        Data,
+    },
     mark::Mark,
 };
 use error::*;
@@ -50,7 +55,7 @@ where
 {
     move |maker| {
         let result: Result<_, _> = iter.map(|f| f(maker).map(|_| maker.last())).collect();
-        result.map(|i| maker.add(mark, DataCell::List(i)))
+        result.map(|i| maker.add(mark, DataCell::List(ListCell::new(i))))
     }
 }
 
@@ -65,7 +70,7 @@ where
         let result: Result<_, _> = iter
             .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
             .collect();
-        result.map(|i| maker.add(mark, DataCell::Map(i)))
+        result.map(|i| maker.add(mark, DataCell::Map(MapCell::new(i))))
     }
 }
 
@@ -77,10 +82,7 @@ where
 {
     move |maker| {
         f(maker)?;
-        let result = TagCell {
-            tag: tag.into(),
-            cell_index: maker.last(),
-        };
+        let result = TagCell::new(tag.into(), maker.last());
         maker.add(mark, DataCell::Tag(result));
         Ok(())
     }
@@ -104,12 +106,14 @@ where
             .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
             .collect::<Result<_, _>>()?;
         let result = maker.child(|maker| {
-            f(maker).map(|_| FileCell {
-                path,
-                cell_index: maker.last(),
-                anchors: std::mem::take(maker.anchors()),
-                file_anchors,
-                ..Default::default()
+            f(maker).map(|_| {
+                FileCell::new(
+                    path,
+                    maker.last(),
+                    std::mem::take(maker.anchors()),
+                    MapCell::new(file_anchors),
+                    None,
+                )
             })
         })?;
         maker.add(mark, DataCell::File(result));
@@ -126,10 +130,7 @@ where
     move |maker| {
         f(maker)?;
         let name = name.into();
-        let result = AnchorCell {
-            name: name.clone(),
-            cell_index: maker.last(),
-        };
+        let result = TakeAnchorCell::new(name.clone(), maker.last());
         maker
             .add_anchor(name.clone(), maker.last())
             .ok_or(marked::MakeError::new(
@@ -150,10 +151,7 @@ where
     S: Into<String>,
 {
     move |maker| {
-        let result = AnchorCell {
-            name: name.into(),
-            cell_index: 0,
-        };
+        let result = GetAnchorCell::new(name.into(), 0);
         maker.add(mark, DataCell::GetAnchor(result));
         Ok(())
     }

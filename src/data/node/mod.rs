@@ -5,12 +5,11 @@ mod index;
 pub mod iter;
 
 use super::{
-    cell::{equal_data, Data, DataCell, MarkedDataCell},
+    cell::{Data, DataCell, MarkedDataCell},
     error::{marked, AnotherTypeError, FailedDecodeError, InvalidIndexError, InvalidKeyError},
     mark::Mark,
     node_type::NodeType,
 };
-use crate::data::cell::debug_data;
 use anchors::Anchors;
 use decode::Decode;
 use index::NodeIndex;
@@ -237,7 +236,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn list_size(&self) -> Result<usize, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::List(i) => Ok(i.len()),
+            DataCell::List(i) => Ok(i.data.len()),
             _ => Err(clear.make_another_type_error(NodeType::List)),
         }
     }
@@ -246,7 +245,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn map_size(&self) -> Result<usize, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::Map(i) => Ok(i.len()),
+            DataCell::Map(i) => Ok(i.data.len()),
             _ => Err(clear.make_another_type_error(NodeType::Map)),
         }
     }
@@ -255,8 +254,8 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn size(&self) -> Result<usize, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::List(i) => Ok(i.len()),
-            DataCell::Map(i) => Ok(i.len()),
+            DataCell::List(i) => Ok(i.data.len()),
+            DataCell::Map(i) => Ok(i.data.len()),
             _ => Err(clear.make_another_type_error(NodeType::List)),
         }
     }
@@ -320,7 +319,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn list_iter(&self) -> Result<BasicListIter<'a, E>, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::List(i) => Ok(BasicListIter::new(clear.data, i.into_iter())),
+            DataCell::List(i) => Ok(BasicListIter::new(clear.data, i.data.iter())),
             _ => Err(clear.make_another_type_error(NodeType::List)),
         }
     }
@@ -329,17 +328,17 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn map_iter(&self) -> Result<BasicMapIter<'a, E>, marked::AnotherTypeError> {
         let clear = self.clear();
         match clear.cell() {
-            DataCell::Map(i) => Ok(BasicMapIter::new(clear.data, i.into_iter())),
+            DataCell::Map(i) => Ok(BasicMapIter::new(clear.data, i.data.iter())),
             _ => Err(clear.make_another_type_error(NodeType::Map)),
         }
     }
 
     pub(crate) fn at_index(&self, index: usize) -> Result<Self, marked::ListError> {
         match self.cell() {
-            DataCell::List(i) => match i.get(index) {
+            DataCell::List(i) => match i.data.get(index) {
                 Some(i) => Ok(Self::new(self.data.get(*i), self.data)),
                 None => Err(marked::ListError::InvalidIndex(
-                    self.make_error(InvalidIndexError::new(index, i.len())),
+                    self.make_error(InvalidIndexError::new(index, i.data.len())),
                 )),
             },
             _ => Err(marked::ListError::NodeAnotherType(
@@ -350,7 +349,7 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
 
     pub(crate) fn at_key(&self, key: &str) -> Result<Self, marked::MapError> {
         match self.cell() {
-            DataCell::Map(i) => match i.get(key) {
+            DataCell::Map(i) => match i.data.get(key) {
                 Some(i) => Ok(Self::new(self.data.get(*i), self.data)),
                 None => Err(marked::MapError::InvalidKey(
                     self.make_error(InvalidKeyError::new(key.to_string())),
@@ -396,14 +395,14 @@ impl<'a, E: Error + PartialEq + Eq> Copy for BasicNode<'a, E> {}
 impl<'a, E: Error + PartialEq + Eq> Debug for BasicNode<'a, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Node {{ mark: {:?}, cell: ", self.mark())?;
-        debug_data((&self.cell(), &self.data), f)?;
+        DataCell::debug((&self.cell(), &self.data), f)?;
         write!(f, " }}")
     }
 }
 
 impl<'a, E: Error + PartialEq + Eq> PartialEq for BasicNode<'a, E> {
     fn eq(&self, other: &Self) -> bool {
-        equal_data((self.cell(), self.data), (other.cell(), other.data))
+        DataCell::equal((self.cell(), self.data), (other.cell(), other.data))
     }
 }
 

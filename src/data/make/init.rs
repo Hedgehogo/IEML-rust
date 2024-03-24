@@ -13,12 +13,12 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
     let mut cell = std::mem::take(data.get_mut(index));
     match &mut cell.cell {
         DataCell::List(i) => {
-            for i in i {
+            for i in i.data.iter() {
                 init_step(data, file_index, *i)?;
             }
         }
         DataCell::Map(i) => {
-            for (_, i) in i {
+            for (_, i) in i.data.iter() {
                 init_step(data, file_index, *i)?;
             }
         }
@@ -51,7 +51,7 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
     }
     *data.get_mut(index) = cell;
     if let DataCell::File(ref i) = data.get(index).cell {
-        let file_anchors = i.file_anchors.values().copied().collect::<Vec<_>>();
+        let file_anchors = i.file_anchors.data.values().copied().collect::<Vec<_>>();
         init_step(data, index, i.cell_index)?;
         for i in file_anchors {
             init_step(data, index, i)?;

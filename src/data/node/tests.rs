@@ -1,6 +1,8 @@
-use super::super::cell::{AnchorCell, DataCell, FileCell, MapCell, MarkedDataCell, TagCell};
+use super::super::cell::data_cell::{
+    DataCell, FileCell, GetAnchorCell, ListCell, MapCell, MarkedDataCell, TagCell, TakeAnchorCell,
+};
 use super::*;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 fn test_data() -> Data {
     Data::new(
@@ -20,26 +22,26 @@ fn test_data() -> Data {
             ),
             (
                 3,
-                MarkedDataCell::new(DataCell::List(vec![0, 1]), Default::default()),
+                MarkedDataCell::new(
+                    DataCell::List(ListCell::new(vec![0, 1])),
+                    Default::default(),
+                ),
             ),
             (
                 4,
                 MarkedDataCell::new(
-                    DataCell::Map(MapCell::from([
+                    DataCell::Map(MapCell::new(HashMap::from([
                         ("first".to_string(), 2),
                         ("second".to_string(), 3),
                         ("third".to_string(), 8),
-                    ])),
+                    ]))),
                     Default::default(),
                 ),
             ),
             (
                 5,
                 MarkedDataCell::new(
-                    DataCell::Tag(TagCell {
-                        cell_index: 7,
-                        tag: "tag".into(),
-                    }),
+                    DataCell::Tag(TagCell::new("tag".into(), 7)),
                     Default::default(),
                 ),
             ),
@@ -59,20 +61,14 @@ fn test_data() -> Data {
             (
                 7,
                 MarkedDataCell::new(
-                    DataCell::TakeAnchor(AnchorCell {
-                        cell_index: 4,
-                        name: "anchor".into(),
-                    }),
+                    DataCell::TakeAnchor(TakeAnchorCell::new("anchor".into(), 4)),
                     Default::default(),
                 ),
             ),
             (
                 8,
                 MarkedDataCell::new(
-                    DataCell::GetAnchor(AnchorCell {
-                        cell_index: 4,
-                        name: "anchor".into(),
-                    }),
+                    DataCell::GetAnchor(GetAnchorCell::new("anchor".into(), 4)),
                     Default::default(),
                 ),
             ),

@@ -1,4 +1,4 @@
-use super::super::cell::{Data, DataCell, FileCell};
+use super::super::cell::{Data, data_cell::{DataCell, FileCell}};
 use super::{iter::BasicMapIter, BasicNode};
 use std::{collections::HashMap, error::Error, marker::PhantomData};
 
@@ -29,7 +29,7 @@ impl<'a, E: Error + PartialEq + Eq> Anchors<'a, E> {
     }
 
     fn file_anchors(&self) -> &'a HashMap<String, usize> {
-        &self.cell.file_anchors
+        &self.cell.file_anchors.data
     }
 
     pub fn parent(&self) -> Option<Anchors<'a, E>> {

@@ -90,7 +90,7 @@ impl<'a, E: Error + PartialEq + Eq> Iterator for BasicMapIter<'a, E> {
 #[cfg(test)]
 mod tests {
     use super::super::super::{
-        cell::{DataCell, MarkedDataCell, TagCell},
+        cell::data_cell::{DataCell, MarkedDataCell, TagCell},
         node_type::NodeType,
     };
     use super::super::Node;
@@ -118,10 +118,7 @@ mod tests {
                 (
                     4,
                     MarkedDataCell::new(
-                        DataCell::Tag(TagCell {
-                            cell_index: 0,
-                            tag: "tag".into(),
-                        }),
+                        DataCell::Tag(TagCell::new("tag".into(), 0)),
                         Default::default(),
                     ),
                 ),
