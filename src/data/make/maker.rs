@@ -1,13 +1,12 @@
 use super::super::{
-    cell::{Data, DataCell, MarkedDataCell},
+    cell::{Data, data_cell::{DataCell, MapCell, MarkedDataCell}},
     mark::Mark,
 };
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub struct Maker<'a> {
     data: &'a mut Data,
-    anchors: HashMap<String, usize>,
+    anchors: MapCell,
     path: PathBuf,
 }
 
@@ -38,10 +37,10 @@ impl<'a> Maker<'a> {
     }
 
     pub(crate) fn add_anchor(&mut self, name: String, index: usize) -> Option<()> {
-        self.anchors.insert(name, index).is_none().then_some(())
+        self.anchors.data.insert(name, index).is_none().then_some(())
     }
 
-    pub(crate) fn anchors(&mut self) -> &mut HashMap<String, usize> {
+    pub(crate) fn anchors(&mut self) -> &mut MapCell {
         &mut self.anchors
     }
 

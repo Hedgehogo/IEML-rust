@@ -1,71 +1,63 @@
-use super::super::cell::{Data, data_cell::{DataCell, FileCell}};
-use super::{iter::BasicMapIter, BasicNode};
-use std::{collections::HashMap, error::Error, marker::PhantomData};
+use crate::data::cell::MarkedDataCell;
 
-#[derive(Eq)]
-pub struct Anchors<'a, E: Error + PartialEq + Eq> {
+use super::{
+    super::cell::{
+        data_cell::{DataCell, FileCell},
+        Data,
+    },
+    map_node::MapNode,
+    Mark, Node,
+};
+
+#[derive(Clone, Copy, Eq)]
+pub struct Anchors<'a> {
+    mark: Mark,
     cell: &'a FileCell,
     data: &'a Data,
-    phantom: PhantomData<E>,
 }
 
-impl<'a, E: Error + PartialEq + Eq> PartialEq for Anchors<'a, E> {
+impl<'a> PartialEq for Anchors<'a> {
     fn eq(&self, other: &Self) -> bool {
         return self.anchors() == other.anchors() && self.file_anchors() == other.file_anchors();
     }
 }
 
-impl<'a, E: Error + PartialEq + Eq> Anchors<'a, E> {
-    pub(crate) fn new(cell: &'a FileCell, data: &'a Data) -> Self {
-        Self {
-            cell,
-            data,
-            phantom: Default::default(),
-        }
-    }
-
-    fn anchors(&self) -> &'a HashMap<String, usize> {
-        &self.cell.anchors
-    }
-
-    fn file_anchors(&self) -> &'a HashMap<String, usize> {
-        &self.cell.file_anchors.data
-    }
-
-    pub fn parent(&self) -> Option<Anchors<'a, E>> {
-        self.cell.parent.map(|i| match &self.data.get(i).cell {
-            DataCell::File(i) => Self::new(i, self.data),
-            _ => panic!("Incorrect document structure, the parent node is not a File."),
-        })
-    }
-
-    pub fn anchors_iter(&self) -> BasicMapIter<'a, E> {
-        BasicMapIter::new(self.data, self.anchors().iter())
-    }
-
-    pub fn file_anchors_iter(&self) -> BasicMapIter<'a, E> {
-        BasicMapIter::new(self.data, self.file_anchors().iter())
+impl<'a> Anchors<'a> {
+    pub(crate) fn new(mark: Mark, cell: &'a FileCell, data: &'a Data) -> Self {
+        Self { mark, cell, data }
     }
 
     pub(crate) fn get_index(&self, key: &str) -> Option<usize> {
-        self.anchors().get(key).copied().or_else(|| {
-            self.file_anchors()
+        self.cell.anchors.data.get(key).copied().or_else(|| {
+            self.cell
+                .file_anchors
+                .data
                 .get(key)
                 .copied()
                 .or_else(|| self.parent().and_then(|i| i.get_index(key)))
         })
     }
 
-    pub fn get(&self, key: &str) -> Option<BasicNode<'a, E>> {
+    pub fn parent(&self) -> Option<Anchors<'a>> {
+        self.cell.parent.map(|i| match &self.data.get(i) {
+            MarkedDataCell {
+                mark,
+                cell: DataCell::File(cell),
+            } => Self::new(*mark, cell, self.data),
+            _ => panic!("Incorrect document structure, the parent node is not a File."),
+        })
+    }
+
+    pub fn anchors(&self) -> MapNode<'a> {
+        MapNode::new(self.mark, &self.cell.anchors, self.data)
+    }
+
+    pub fn file_anchors(&self) -> MapNode<'a> {
+        MapNode::new(self.mark, &self.cell.file_anchors, self.data)
+    }
+
+    pub fn get(&self, key: &str) -> Option<Node<'a>> {
         self.get_index(key)
-            .map(|i| BasicNode::new(self.data.get(i), self.data))
+            .map(|i| Node::new(self.data.get(i), self.data))
     }
 }
-
-impl<'a, E: Error + PartialEq + Eq> Clone for Anchors<'a, E> {
-    fn clone(&self) -> Self {
-        Self::new(self.cell, self.data)
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Copy for Anchors<'a, E> {}

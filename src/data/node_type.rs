@@ -6,7 +6,7 @@ pub enum NodeType {
     String,
     List,
     Map,
-    Tag,
+    Tagged,
     File,
     TakeAnchor,
     GetAnchor,

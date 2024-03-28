@@ -5,7 +5,7 @@ pub mod maker;
 use super::{
     cell::{
         data_cell::{
-            DataCell, FileCell, GetAnchorCell, ListCell, MapCell, TagCell, TakeAnchorCell,
+            DataCell, FileCell, GetAnchorCell, ListCell, MapCell, TaggedCell, TakeAnchorCell,
         },
         Data,
     },
@@ -82,8 +82,8 @@ where
 {
     move |maker| {
         f(maker)?;
-        let result = TagCell::new(tag.into(), maker.last());
-        maker.add(mark, DataCell::Tag(result));
+        let result = TaggedCell::new(tag.into(), maker.last());
+        maker.add(mark, DataCell::Tagged(result));
         Ok(())
     }
 }
@@ -200,7 +200,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::{node::Node, node_type::NodeType};
+    use super::super::node_type::NodeType;
     use super::*;
     use std::collections::HashMap;
     use std::convert::Infallible;
@@ -254,10 +254,10 @@ mod tests {
 
         assert_eq!(clear_node.node_type(), NodeType::List);
 
-        let mut list_iter = clear_node.list_iter().unwrap();
-        assert_eq!(list_iter.next().unwrap().node_type(), NodeType::Raw);
-        assert_eq!(list_iter.next().unwrap().node_type(), NodeType::String);
-        assert!(list_iter.next().is_none());
+        let list = clear_node.list().unwrap();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list.get(0).unwrap().node_type(), NodeType::Raw);
+        assert_eq!(list.get(1).unwrap().node_type(), NodeType::String);
     }
 
     #[test]
@@ -282,17 +282,14 @@ mod tests {
 
         assert_eq!(clear_node.node_type(), NodeType::Map);
 
-        let mut map: Vec<(&String, Node)> = clear_node.map_iter().unwrap().collect();
-        map.sort_by(|i, j| i.0.cmp(&j.0));
+        let map = clear_node.map().unwrap();
         assert_eq!(map.len(), 2);
-        assert_eq!(map[0].0, "first");
-        assert_eq!(map[0].1.node_type(), NodeType::Raw);
-        assert_eq!(map[1].0, "second");
-        assert_eq!(map[1].1.node_type(), NodeType::String);
+        assert_eq!(map.get("first").unwrap().node_type(), NodeType::Raw);
+        assert_eq!(map.get("second").unwrap().node_type(), NodeType::String);
     }
 
     #[test]
-    fn test_tag() {
+    fn test_tagged() {
         let data = make::<Infallible, _>(Mark::default(), {
             tag(Mark::default(), "tag", null(Mark::default()))
         })
@@ -300,8 +297,8 @@ mod tests {
         let node = data.node();
         let clear_node = node.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::Tag);
-        assert_eq!(node.tag(), Ok("tag"));
+        assert_eq!(clear_node.node_type(), NodeType::Tagged);
+        assert_eq!(node.tagged().unwrap().tag(), "tag");
 
         assert!(node.is_null());
     }
@@ -327,17 +324,13 @@ mod tests {
 
         assert_eq!(clear_node.node_type(), NodeType::File);
         assert_eq!(
-            clear_node.file_path(),
-            Ok(PathBuf::from("dir/name.ieml").as_path())
+            clear_node.file().unwrap().path(),
+            PathBuf::from("dir/name.ieml").as_path()
         );
 
-        let anchors: Vec<_> = clear_node
-            .file_anchors()
-            .unwrap()
-            .file_anchors_iter()
-            .collect();
+        let anchors = clear_node.file().unwrap().anchors().file_anchors();
         assert_eq!(anchors.len(), 1);
-        assert_eq!(anchors[0].0, "file-anchor");
+        assert!(anchors.contains_key(&"file-anchor".into()));
 
         assert!(clear_node.is_raw());
         assert_eq!(clear_node.raw(), Ok("hello"));

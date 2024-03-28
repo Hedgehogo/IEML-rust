@@ -1,91 +1,118 @@
 pub mod anchors;
 mod clear;
 pub mod decode;
-mod index;
-pub mod iter;
+pub mod file_node;
+pub mod get_anchor_node;
+pub mod list_node;
+pub mod map_node;
+pub mod tagged_node;
+pub mod take_anchor_node;
 
 use super::{
     cell::{Data, DataCell, MarkedDataCell},
-    error::{marked, AnotherTypeError, FailedDecodeError, InvalidIndexError, InvalidKeyError},
+    error::{marked, AnotherTypeError, FailedDecodeError},
     mark::Mark,
     node_type::NodeType,
 };
-use anchors::Anchors;
 use decode::Decode;
-use index::NodeIndex;
-use iter::{BasicListIter, BasicMapIter};
 use std::{
-    convert::Infallible,
     error::Error,
     fmt::{Debug, Formatter},
-    marker::PhantomData,
-    path::Path,
+};
+use {
+    file_node::FileNode, get_anchor_node::GetAnchorNode, list_node::ListNode, map_node::MapNode,
+    tagged_node::TaggedNode, take_anchor_node::TakeAnchorNode,
 };
 
-#[derive(Eq)]
-pub struct BasicNode<'a, E: Error + PartialEq + Eq> {
-    cell: &'a MarkedDataCell,
-    data: &'a Data,
-    phantom: PhantomData<E>,
+#[derive(Clone, Copy, Eq)]
+pub enum Node<'data> {
+    Null(Mark),
+    Raw((Mark, &'data str)),
+    String((Mark, &'data str)),
+    List(ListNode<'data>),
+    Map(MapNode<'data>),
+    Tagged(TaggedNode<'data>),
+    File(FileNode<'data>),
+    TakeAnchor(TakeAnchorNode<'data>),
+    GetAnchor(GetAnchorNode<'data>),
 }
 
-pub type Node<'a> = BasicNode<'a, Infallible>;
-
-impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
-    pub(crate) fn new(cell: &'a MarkedDataCell, data: &'a Data) -> Self {
-        return Self {
-            cell,
-            data,
-            phantom: Default::default(),
-        };
-    }
-
-    pub(crate) fn cell(&self) -> &'a DataCell {
-        &self.cell.cell
+impl<'data> Node<'data> {
+    pub(crate) fn new(cell: &'data MarkedDataCell, data: &'data Data) -> Self {
+        match &cell.cell {
+            DataCell::Null => Self::Null(cell.mark),
+            DataCell::Raw(i) => Self::Raw((cell.mark, i.as_str())),
+            DataCell::String(i) => Self::String((cell.mark, i.as_str())),
+            DataCell::List(i) => Self::List(ListNode::new(cell.mark, i, data)),
+            DataCell::Map(i) => Self::Map(MapNode::new(cell.mark, i, data)),
+            DataCell::Tagged(i) => Self::Tagged(TaggedNode::new(cell.mark, i, data)),
+            DataCell::File(i) => Self::File(FileNode::new(cell.mark, i, data)),
+            DataCell::TakeAnchor(i) => Self::TakeAnchor(TakeAnchorNode::new(cell.mark, i, data)),
+            DataCell::GetAnchor(i) => Self::GetAnchor(GetAnchorNode::new(cell.mark, i, data)),
+        }
     }
 
     /// Gets the mark.
     pub fn mark(&self) -> Mark {
-        self.cell.mark
+        match self {
+            Node::Null(i) => *i,
+            Node::Raw((i, _)) => *i,
+            Node::String((i, _)) => *i,
+            Node::List(i) => i.mark(),
+            Node::Map(i) => i.mark(),
+            Node::Tagged(i) => i.mark(),
+            Node::File(i) => i.mark(),
+            Node::TakeAnchor(i) => i.mark(),
+            Node::GetAnchor(i) => i.mark(),
+        }
     }
 
     /// Gets the node type.
     pub fn node_type(&self) -> NodeType {
-        self.cell().get_node_type()
+        match self {
+            Node::Null(_) => NodeType::Null,
+            Node::Raw(_) => NodeType::Raw,
+            Node::String(_) => NodeType::String,
+            Node::List(_) => NodeType::List,
+            Node::Map(_) => NodeType::Map,
+            Node::Tagged(_) => NodeType::Tagged,
+            Node::File(_) => NodeType::File,
+            Node::TakeAnchor(_) => NodeType::TakeAnchor,
+            Node::GetAnchor(_) => NodeType::GetAnchor,
+        }
     }
 
     /// Returns whether the node is TakeAnchor.
     pub fn is_null(&self) -> bool {
-        matches!(self.clear().cell(), DataCell::Null)
+        matches!(self.clear(), Self::Null(_))
     }
 
     /// Returns whether the node is Raw.
     pub fn is_raw(&self) -> bool {
-        matches!(self.clear().cell(), DataCell::Raw(_))
+        matches!(self.clear(), Self::Raw(_))
     }
 
     /// Returns whether the node is String.
     pub fn is_string(&self) -> bool {
-        matches!(self.clear().cell(), DataCell::String(_))
+        matches!(self.clear(), Self::String(_))
     }
 
     /// Returns whether the node is List.
     pub fn is_list(&self) -> bool {
-        matches!(self.clear().cell(), DataCell::List(_))
+        matches!(self.clear(), Self::List(_))
     }
 
     /// Returns whether the node is Map.
     pub fn is_map(&self) -> bool {
-        matches!(self.clear().cell(), DataCell::Map(_))
+        matches!(self.clear(), Self::Map(_))
     }
 
-    /// Returns whether the node is Tag.
-    pub fn is_tag(&self) -> bool {
+    /// Returns whether the node is Tagged.
+    pub fn is_tagged(&self) -> bool {
         use clear::*;
         matches!(
-            self.clear_advanced::<(File, TakeAnchor, GetAnchor)>()
-                .cell(),
-            DataCell::Tag(_)
+            self.clear_advanced::<(File, TakeAnchor, GetAnchor)>(),
+            Self::Tagged(_)
         )
     }
 
@@ -93,8 +120,8 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn is_file(&self) -> bool {
         use clear::*;
         matches!(
-            self.clear_advanced::<(Tag, TakeAnchor, GetAnchor)>().cell(),
-            DataCell::File(_)
+            self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>(),
+            Self::File(_)
         )
     }
 
@@ -102,8 +129,8 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn is_take_anchor(&self) -> bool {
         use clear::*;
         matches!(
-            self.clear_advanced::<(Tag, File, GetAnchor)>().cell(),
-            DataCell::TakeAnchor(_)
+            self.clear_advanced::<(Tagged, File, GetAnchor)>(),
+            Self::TakeAnchor(_)
         )
     }
 
@@ -111,99 +138,89 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     pub fn is_get_anchor(&self) -> bool {
         use clear::*;
         matches!(
-            self.clear_advanced::<(Tag, File, TakeAnchor)>().cell(),
-            DataCell::GetAnchor(_)
+            self.clear_advanced::<(Tagged, File, TakeAnchor)>(),
+            Self::GetAnchor(_)
         )
     }
 
-    /// Gets a child node if the node type is Tag.
-    pub fn clear_step_tag(&self) -> Option<Self> {
-        if let DataCell::Tag(tag_cell) = &self.cell() {
-            Some(Self::new(self.data.get(tag_cell.cell_index), self.data))
-        } else {
-            None
+    /// Gets a child node if the node type is Tagged.
+    pub fn clear_step_tagged(&self) -> Option<Self> {
+        match self {
+            Self::Tagged(i) => Some(i.node()),
+            _ => None,
         }
     }
 
     /// Gets a child node if the node type is File.
     pub fn clear_step_file(&self) -> Option<Self> {
-        if let DataCell::File(file_cell) = &self.cell() {
-            Some(Self::new(self.data.get(file_cell.cell_index), self.data))
-        } else {
-            None
+        match self {
+            Self::File(i) => Some(i.node()),
+            _ => None,
         }
     }
 
     /// Gets a child node if the node type is TakeAnchor.
     pub fn clear_step_take_anchor(&self) -> Option<Self> {
-        if let DataCell::TakeAnchor(take_anchor_cell) = &self.cell() {
-            Some(Self::new(
-                self.data.get(take_anchor_cell.cell_index),
-                self.data,
-            ))
-        } else {
-            None
+        match self {
+            Self::TakeAnchor(i) => Some(i.node()),
+            _ => None,
         }
     }
 
     /// Gets a child node if the node type is GetAnchor.
     pub fn clear_step_get_anchor(&self) -> Option<Self> {
-        if let DataCell::GetAnchor(get_anchor_cell) = &self.cell() {
-            Some(Self::new(
-                self.data.get(get_anchor_cell.cell_index),
-                self.data,
-            ))
-        } else {
-            None
+        match self {
+            Self::GetAnchor(i) => Some(i.node()),
+            _ => None,
         }
     }
 
-    /// Gets a child node if the node type is Tag, File, TakeAnchor or GetAnchor.
+    /// Gets a child node if the node type is Tagged, File, TakeAnchor or GetAnchor.
     pub fn clear_step(&self) -> Option<Self> {
         use clear::*;
-        clear_step::<E, (Tag, File, TakeAnchor, GetAnchor)>(*self)
+        clear_step::<(Tagged, File, TakeAnchor, GetAnchor)>(*self)
     }
 
     /// Gets a child node if the node type is T.
-    pub fn clear_step_advanced<T: clear::ClearStepType<E>>(&self) -> Option<Self> {
+    pub fn clear_step_advanced<T: clear::Clear<'data>>(&self) -> Option<Self> {
         use clear::*;
-        clear_step::<E, T>(*self)
+        clear_step::<T>(*self)
     }
 
-    /// Recursively gets a child node, excluding Tag, File, TakeAnchor and GetAnchor data.
+    /// Recursively gets a child node, excluding Tagged, File, TakeAnchor and GetAnchor data.
     pub fn clear(&self) -> Self {
         use clear::*;
-        clear::<E, (Tag, File, TakeAnchor, GetAnchor)>(*self)
+        clear::<(Tagged, File, TakeAnchor, GetAnchor)>(*self)
     }
 
     /// Recursively gets a child node, excluding T.
-    pub fn clear_advanced<T: clear::ClearStepType<E>>(&self) -> Self {
+    pub fn clear_advanced<T: clear::Clear<'data>>(&self) -> Self {
         use clear::*;
-        clear::<E, T>(*self)
+        clear::<T>(*self)
     }
 
-    /// Gets the node under the Tag if the node type is with the Tag, otherwise the current node.
+    /// Gets the node under the Tag if the node type is with the Tagged, otherwise the current node.
     pub fn clear_tag(&self) -> Self {
         use clear::*;
-        clear::<E, (File, TakeAnchor, GetAnchor)>(*self)
+        clear::<(File, TakeAnchor, GetAnchor)>(*self)
     }
 
     /// Gets the node contained in the File, if the node type is a File, otherwise the current node.
     pub fn clear_file(&self) -> Self {
         use clear::*;
-        clear::<E, (Tag, TakeAnchor, GetAnchor)>(*self)
+        clear::<(Tagged, TakeAnchor, GetAnchor)>(*self)
     }
 
     /// Gets the node contained in the Anchor if the node type is TakeAnchor, otherwise the current node
     pub fn clear_take_anchor(&self) -> Self {
         use clear::*;
-        clear::<E, (Tag, File, GetAnchor)>(*self)
+        clear::<(Tagged, File, GetAnchor)>(*self)
     }
 
     /// Gets the node contained in the Anchor if the node type is GetAnchor, otherwise the current node
     pub fn clear_get_anchor(&self) -> Self {
         use clear::*;
-        clear::<E, (Tag, File, TakeAnchor)>(*self)
+        clear::<(Tagged, File, TakeAnchor)>(*self)
     }
 
     fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
@@ -215,163 +232,90 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     }
 
     /// Gets the raw data.
-    pub fn raw(&self) -> Result<&'a str, marked::AnotherTypeError> {
+    pub fn raw(&self) -> Result<&'data str, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear.cell() {
-            DataCell::Raw(i) => Ok(i.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::Raw)),
+        match clear {
+            Self::Raw((_, i)) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::Raw)),
         }
     }
 
     /// Gets the string data.
-    pub fn string(&self) -> Result<&'a str, marked::AnotherTypeError> {
+    pub fn string(&self) -> Result<&'data str, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear.cell() {
-            DataCell::String(i) => Ok(i.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::String)),
+        match clear {
+            Self::String((_, i)) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::String)),
         }
     }
 
-    /// Gets the list size.
-    pub fn list_size(&self) -> Result<usize, marked::AnotherTypeError> {
+    /// Gets the list node.
+    pub fn list(&self) -> Result<ListNode<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear.cell() {
-            DataCell::List(i) => Ok(i.data.len()),
-            _ => Err(clear.make_another_type_error(NodeType::List)),
+        match clear {
+            Self::List(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::List)),
         }
     }
 
-    /// Gets the map size.
-    pub fn map_size(&self) -> Result<usize, marked::AnotherTypeError> {
+    /// Gets the map node.
+    pub fn map(&self) -> Result<MapNode<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear.cell() {
-            DataCell::Map(i) => Ok(i.data.len()),
-            _ => Err(clear.make_another_type_error(NodeType::Map)),
+        match clear {
+            Self::Map(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::Map)),
         }
     }
 
-    /// Gets the size.
-    pub fn size(&self) -> Result<usize, marked::AnotherTypeError> {
-        let clear = self.clear();
-        match clear.cell() {
-            DataCell::List(i) => Ok(i.data.len()),
-            DataCell::Map(i) => Ok(i.data.len()),
-            _ => Err(clear.make_another_type_error(NodeType::List)),
+    /// Gets the tagged node.
+    pub fn tagged(&self) -> Result<TaggedNode<'data>, marked::AnotherTypeError> {
+        use clear::*;
+        let clear = self.clear_advanced::<(File, TakeAnchor, GetAnchor)>();
+        match clear {
+            Self::Tagged(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::Tagged)),
         }
     }
 
-    /// Gets the tag.
-    pub fn tag(&self) -> Result<&str, marked::AnotherTypeError> {
-        let clear = self.clear_tag();
-        match clear.cell() {
-            DataCell::Tag(i) => Ok(&i.tag.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::Tag)),
+    /// Gets the file node.
+    pub fn file(&self) -> Result<FileNode<'data>, marked::AnotherTypeError> {
+        use clear::*;
+        let clear = self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>();
+        match clear {
+            Self::File(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::File)),
         }
     }
 
-    /// Gets the file path.
-    pub fn file_path(&self) -> Result<&Path, marked::AnotherTypeError> {
-        let clear = self.clear_file();
-        match clear.cell() {
-            DataCell::File(i) => Ok(i.path.as_path()),
-            _ => Err(clear.make_another_type_error(NodeType::File)),
+    /// Gets the take anchor node.
+    pub fn take_anchor(&self) -> Result<TakeAnchorNode<'data>, marked::AnotherTypeError> {
+        use clear::*;
+        let clear = self.clear_advanced::<(File, Tagged, GetAnchor)>();
+        match clear {
+            Self::TakeAnchor(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
         }
     }
 
-    /// Gets the file anchor keeper.
-    pub fn file_anchors(&self) -> Result<Anchors<E>, marked::AnotherTypeError> {
-        let clear = self.clear_file();
-        match clear.cell() {
-            DataCell::File(i) => Ok(Anchors::new(i, clear.data)),
-            _ => Err(clear.make_another_type_error(NodeType::File)),
-        }
-    }
-
-    /// Gets the take anchor name.
-    pub fn take_anchor_name(&self) -> Result<&str, marked::AnotherTypeError> {
-        let clear = self.clear_take_anchor();
-        match clear.cell() {
-            DataCell::TakeAnchor(i) => Ok(&i.name.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::TakeAnchor)),
-        }
-    }
-
-    /// Gets the get anchor name.
-    pub fn get_anchor_name(&self) -> Result<&str, marked::AnotherTypeError> {
-        let clear = self.clear_get_anchor();
-        match clear.cell() {
-            DataCell::GetAnchor(i) => Ok(&i.name.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::GetAnchor)),
+    /// Gets the get anchor node.
+    pub fn get_anchor(&self) -> Result<GetAnchorNode<'data>, marked::AnotherTypeError> {
+        use clear::*;
+        let clear = self.clear_advanced::<(File, Tagged, TakeAnchor)>();
+        match clear {
+            Self::GetAnchor(i) => Ok(i),
+            _ => Err(self.make_another_type_error(NodeType::GetAnchor)),
         }
     }
 
     /// Gets the anchor name.
     pub fn anchor_name(&self) -> Result<&str, marked::AnotherTypeError> {
-        let clear = self.clear_advanced::<(clear::File, clear::Tag)>();
-        match clear.cell() {
-            DataCell::TakeAnchor(i) => Ok(&i.name.as_str()),
-            DataCell::GetAnchor(i) => Ok(&i.name.as_str()),
-            _ => Err(clear.make_another_type_error(NodeType::TakeAnchor)),
+        use clear::*;
+        let clear = self.clear_advanced::<(File, Tagged)>();
+        match &clear {
+            Self::TakeAnchor(i) => Ok(i.name()),
+            Self::GetAnchor(i) => Ok(i.name()),
+            _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
         }
-    }
-
-    /// Gets the list data.
-    pub fn list_iter(&self) -> Result<BasicListIter<'a, E>, marked::AnotherTypeError> {
-        let clear = self.clear();
-        match clear.cell() {
-            DataCell::List(i) => Ok(BasicListIter::new(clear.data, i.data.iter())),
-            _ => Err(clear.make_another_type_error(NodeType::List)),
-        }
-    }
-
-    /// Gets the map data.
-    pub fn map_iter(&self) -> Result<BasicMapIter<'a, E>, marked::AnotherTypeError> {
-        let clear = self.clear();
-        match clear.cell() {
-            DataCell::Map(i) => Ok(BasicMapIter::new(clear.data, i.data.iter())),
-            _ => Err(clear.make_another_type_error(NodeType::Map)),
-        }
-    }
-
-    pub(crate) fn at_index(&self, index: usize) -> Result<Self, marked::ListError> {
-        match self.cell() {
-            DataCell::List(i) => match i.data.get(index) {
-                Some(i) => Ok(Self::new(self.data.get(*i), self.data)),
-                None => Err(marked::ListError::InvalidIndex(
-                    self.make_error(InvalidIndexError::new(index, i.data.len())),
-                )),
-            },
-            _ => Err(marked::ListError::NodeAnotherType(
-                self.make_another_type_error(NodeType::List),
-            )),
-        }
-    }
-
-    pub(crate) fn at_key(&self, key: &str) -> Result<Self, marked::MapError> {
-        match self.cell() {
-            DataCell::Map(i) => match i.data.get(key) {
-                Some(i) => Ok(Self::new(self.data.get(*i), self.data)),
-                None => Err(marked::MapError::InvalidKey(
-                    self.make_error(InvalidKeyError::new(key.to_string())),
-                )),
-            },
-            _ => Err(marked::MapError::NodeAnotherType(
-                self.make_another_type_error(NodeType::Map),
-            )),
-        }
-    }
-
-    /// Gets the node by the index.
-    ///
-    /// # Generic arguments
-    ///
-    /// * `T` Index type.
-    ///
-    /// # Arguments
-    ///
-    /// * `index` Index.
-    pub fn at<T: NodeIndex<'a, E>>(&self, index: T) -> Result<Self, T::Error> {
-        T::at(self.clear(), index)
     }
 
     /// Decodes the node into type T.
@@ -379,30 +323,69 @@ impl<'a, E: Error + PartialEq + Eq> BasicNode<'a, E> {
     /// # Generic arguments
     ///
     /// * `T` Value type.
-    pub fn decode<T: Decode<'a, E>>(&self) -> Result<T, marked::FailedDecodeError<E>> {
+    pub fn decode<E: Error + PartialEq + Eq, T: Decode<'data, E>>(
+        &self,
+    ) -> Result<T, marked::FailedDecodeError<E>> {
         T::decode(*self).map_err(|e| self.make_error(FailedDecodeError::new::<T>(Box::new(e))))
     }
 }
 
-impl<'a, E: Error + PartialEq + Eq> Clone for BasicNode<'a, E> {
-    fn clone(&self) -> Self {
-        Self::new(self.cell, self.data)
-    }
-}
-
-impl<'a, E: Error + PartialEq + Eq> Copy for BasicNode<'a, E> {}
-
-impl<'a, E: Error + PartialEq + Eq> Debug for BasicNode<'a, E> {
+impl<'a> Debug for Node<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Node {{ mark: {:?}, cell: ", self.mark())?;
-        DataCell::debug((&self.cell(), &self.data), f)?;
+        write!(f, "Node {{ mark: ")?;
+        match self {
+            &Node::Null(mark) => write!(f, "{:?}, cell: Null", mark)?,
+            &Node::Raw((mark, raw)) => write!(f, "{:?}, cell: Raw({:?})", mark, raw)?,
+            &Node::String((mark, string)) => write!(f, "{:?}, cell: String({:?})", mark, string)?,
+            Node::List(i) => {
+                write!(f, "{:?}, cell: List(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+            Node::Map(i) => {
+                write!(f, "{:?}, cell: Map(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+            Node::Tagged(i) => {
+                write!(f, "{:?}, cell: Tagged(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+            Node::File(i) => {
+                write!(f, "{:?}, cell: File(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+            Node::TakeAnchor(i) => {
+                write!(f, "{:?}, cell: TakeAnchor(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+            Node::GetAnchor(i) => {
+                write!(f, "{:?}, cell: GetAnchor(", i.mark())?;
+                i.debug(f)?;
+                write!(f, ")")?;
+            }
+        }
         write!(f, " }}")
     }
 }
 
-impl<'a, E: Error + PartialEq + Eq> PartialEq for BasicNode<'a, E> {
+impl<'a> PartialEq for Node<'a> {
     fn eq(&self, other: &Self) -> bool {
-        DataCell::equal((self.cell(), self.data), (other.cell(), other.data))
+        match (self, other) {
+            (Node::Null(_), Node::Null(_)) => true,
+            (&Node::Raw((_, i)), &Node::Raw((_, j))) => i == j,
+            (&Node::String((_, i)), &Node::String((_, j))) => i == j,
+            (Node::List(i), Node::List(j)) => i == j,
+            (Node::Map(i), Node::Map(j)) => i == j,
+            (Node::Tagged(i), Node::Tagged(j)) => i == j,
+            (Node::File(i), Node::File(j)) => i == j,
+            (Node::TakeAnchor(i), Node::TakeAnchor(j)) => i == j,
+            (Node::GetAnchor(i), Node::GetAnchor(j)) => i == j,
+            _ => false,
+        }
     }
 }
 

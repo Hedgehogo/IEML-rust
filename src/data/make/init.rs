@@ -3,7 +3,7 @@ use super::super::{
     node::anchors::Anchors,
 };
 use super::error::*;
-use std::{convert::Infallible, error::Error};
+use std::error::Error;
 
 pub(crate) fn init_step<E: Error + PartialEq + Eq>(
     data: &mut Data,
@@ -22,14 +22,14 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
                 init_step(data, file_index, *i)?;
             }
         }
-        DataCell::Tag(i) => init_step(data, file_index, i.cell_index)?,
+        DataCell::Tagged(i) => init_step(data, file_index, i.cell_index)?,
         DataCell::File(i) => i.parent = Some(file_index),
         DataCell::TakeAnchor(i) => init_step(data, file_index, i.cell_index)?,
         DataCell::GetAnchor(i) => {
             let file_cell = std::mem::take(data.get_mut(file_index));
             match &file_cell.cell {
                 DataCell::File(file) => {
-                    let anchors = Anchors::<Infallible>::new(file, data);
+                    let anchors = Anchors::new(Default::default(), file, data);
                     match anchors.get_index(i.name.as_str()) {
                         Some(j) => i.cell_index = j,
                         None => {

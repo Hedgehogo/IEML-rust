@@ -1,5 +1,6 @@
 use super::super::cell::data_cell::{
-    DataCell, FileCell, GetAnchorCell, ListCell, MapCell, MarkedDataCell, TagCell, TakeAnchorCell,
+    DataCell, FileCell, GetAnchorCell, ListCell, MapCell, MarkedDataCell, TaggedCell,
+    TakeAnchorCell,
 };
 use super::*;
 use std::{collections::HashMap, path::PathBuf};
@@ -41,7 +42,7 @@ fn test_data() -> Data {
             (
                 5,
                 MarkedDataCell::new(
-                    DataCell::Tag(TagCell::new("tag".into(), 7)),
+                    DataCell::Tagged(TaggedCell::new("tag".into(), 7)),
                     Default::default(),
                 ),
             ),
@@ -98,7 +99,7 @@ fn test_null() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(!node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
@@ -116,7 +117,7 @@ fn test_null() {
         ))
     );
     assert_eq!(
-        node.list_size(),
+        node.list(),
         Err(make_another_type_error(
             NodeType::Null,
             NodeType::List,
@@ -124,23 +125,19 @@ fn test_null() {
         ))
     );
     assert_eq!(
-        node.map_size(),
+        node.map(),
         Err(make_another_type_error(NodeType::Null, NodeType::Map, mark))
     );
     assert_eq!(
-        node.size(),
+        node.tagged(),
         Err(make_another_type_error(
             NodeType::Null,
-            NodeType::List,
+            NodeType::Tagged,
             mark
         ))
     );
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::Null, NodeType::Tag, mark))
-    );
-    assert_eq!(
-        node.file_path(),
+        node.file(),
         Err(make_another_type_error(
             NodeType::Null,
             NodeType::File,
@@ -148,7 +145,7 @@ fn test_null() {
         ))
     );
     assert_eq!(
-        node.take_anchor_name(),
+        node.take_anchor(),
         Err(make_another_type_error(
             NodeType::Null,
             NodeType::TakeAnchor,
@@ -156,7 +153,7 @@ fn test_null() {
         ))
     );
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
             NodeType::Null,
             NodeType::GetAnchor,
@@ -170,32 +167,6 @@ fn test_null() {
             NodeType::TakeAnchor,
             mark
         ))
-    );
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Null, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Null,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert_eq!(
-        node.map_iter().unwrap_err(),
-        make_another_type_error(NodeType::Null, NodeType::Map, mark)
-    );
-    assert_eq!(
-        node.at("key"),
-        Err(marked::MapError::NodeAnotherType(make_another_type_error(
-            NodeType::Null,
-            NodeType::Map,
-            mark
-        )))
     );
 }
 
@@ -213,7 +184,7 @@ fn test_raw() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(!node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
@@ -228,27 +199,27 @@ fn test_raw() {
         ))
     );
     assert_eq!(
-        node.list_size(),
+        node.list(),
         Err(make_another_type_error(NodeType::Raw, NodeType::List, mark))
     );
     assert_eq!(
-        node.map_size(),
+        node.map(),
         Err(make_another_type_error(NodeType::Raw, NodeType::Map, mark))
     );
     assert_eq!(
-        node.size(),
-        Err(make_another_type_error(NodeType::Raw, NodeType::List, mark))
+        node.tagged(),
+        Err(make_another_type_error(
+            NodeType::Raw,
+            NodeType::Tagged,
+            mark
+        ))
     );
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::Raw, NodeType::Tag, mark))
-    );
-    assert_eq!(
-        node.file_path(),
+        node.file(),
         Err(make_another_type_error(NodeType::Raw, NodeType::File, mark))
     );
     assert_eq!(
-        node.take_anchor_name(),
+        node.take_anchor(),
         Err(make_another_type_error(
             NodeType::Raw,
             NodeType::TakeAnchor,
@@ -256,7 +227,7 @@ fn test_raw() {
         ))
     );
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
             NodeType::Raw,
             NodeType::GetAnchor,
@@ -270,32 +241,6 @@ fn test_raw() {
             NodeType::TakeAnchor,
             mark
         ))
-    );
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Raw, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Raw,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert_eq!(
-        node.map_iter().unwrap_err(),
-        make_another_type_error(NodeType::Raw, NodeType::Map, mark)
-    );
-    assert_eq!(
-        node.at("key"),
-        Err(marked::MapError::NodeAnotherType(make_another_type_error(
-            NodeType::Raw,
-            NodeType::Map,
-            mark
-        )))
     );
 }
 
@@ -313,7 +258,7 @@ fn test_string() {
     assert!(node.is_string());
     assert!(!node.is_list());
     assert!(!node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
@@ -328,7 +273,7 @@ fn test_string() {
     );
     assert_eq!(node.string(), Ok("hello"));
     assert_eq!(
-        node.list_size(),
+        node.list(),
         Err(make_another_type_error(
             NodeType::String,
             NodeType::List,
@@ -336,7 +281,7 @@ fn test_string() {
         ))
     );
     assert_eq!(
-        node.map_size(),
+        node.map(),
         Err(make_another_type_error(
             NodeType::String,
             NodeType::Map,
@@ -344,23 +289,15 @@ fn test_string() {
         ))
     );
     assert_eq!(
-        node.size(),
+        node.tagged(),
         Err(make_another_type_error(
             NodeType::String,
-            NodeType::List,
+            NodeType::Tagged,
             mark
         ))
     );
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(
-            NodeType::String,
-            NodeType::Tag,
-            mark
-        ))
-    );
-    assert_eq!(
-        node.file_path(),
+        node.file(),
         Err(make_another_type_error(
             NodeType::String,
             NodeType::File,
@@ -368,7 +305,7 @@ fn test_string() {
         ))
     );
     assert_eq!(
-        node.take_anchor_name(),
+        node.take_anchor(),
         Err(make_another_type_error(
             NodeType::String,
             NodeType::TakeAnchor,
@@ -376,7 +313,7 @@ fn test_string() {
         ))
     );
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
             NodeType::String,
             NodeType::GetAnchor,
@@ -390,32 +327,6 @@ fn test_string() {
             NodeType::TakeAnchor,
             mark
         ))
-    );
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::String, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::String,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert_eq!(
-        node.map_iter().unwrap_err(),
-        make_another_type_error(NodeType::String, NodeType::Map, mark)
-    );
-    assert_eq!(
-        node.at("key"),
-        Err(marked::MapError::NodeAnotherType(make_another_type_error(
-            NodeType::String,
-            NodeType::Map,
-            mark
-        )))
     );
 }
 
@@ -433,7 +344,7 @@ fn test_list() {
     assert!(!node.is_string());
     assert!(node.is_list());
     assert!(!node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
@@ -450,18 +361,28 @@ fn test_list() {
             mark
         ))
     );
-    assert_eq!(node.list_size(), Ok(2));
+    if let DataCell::List(cell) = &data.get(3).cell {
+        assert_eq!(
+            node.list(),
+            Ok(ListNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a list");
+    }
     assert_eq!(
-        node.map_size(),
+        node.map(),
         Err(make_another_type_error(NodeType::List, NodeType::Map, mark))
     );
-    assert_eq!(node.size(), Ok(2));
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::List, NodeType::Tag, mark))
+        node.tagged(),
+        Err(make_another_type_error(
+            NodeType::List,
+            NodeType::Tagged,
+            mark
+        ))
     );
     assert_eq!(
-        node.file_path(),
+        node.file(),
         Err(make_another_type_error(
             NodeType::List,
             NodeType::File,
@@ -469,7 +390,7 @@ fn test_list() {
         ))
     );
     assert_eq!(
-        node.take_anchor_name(),
+        node.take_anchor(),
         Err(make_another_type_error(
             NodeType::List,
             NodeType::TakeAnchor,
@@ -477,7 +398,7 @@ fn test_list() {
         ))
     );
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
             NodeType::List,
             NodeType::GetAnchor,
@@ -491,33 +412,6 @@ fn test_list() {
             NodeType::TakeAnchor,
             mark
         ))
-    );
-
-    let mut list_iter = node.list_iter().unwrap();
-    assert_eq!(list_iter.next().unwrap().node_type(), NodeType::Null);
-    assert_eq!(list_iter.next().unwrap().node_type(), NodeType::Raw);
-    assert_eq!(list_iter.next(), None);
-
-    assert_eq!(node.at(0).unwrap().node_type(), NodeType::Null);
-    assert_eq!(node.at(1).unwrap().node_type(), NodeType::Raw);
-    assert_eq!(
-        node.at(2),
-        Err(marked::ListError::InvalidIndex(
-            marked::InvalidIndexError::new(mark, InvalidIndexError::new(2, 2))
-        ))
-    );
-
-    assert_eq!(
-        node.map_iter().unwrap_err(),
-        make_another_type_error(NodeType::List, NodeType::Map, mark)
-    );
-    assert_eq!(
-        node.at("key"),
-        Err(marked::MapError::NodeAnotherType(make_another_type_error(
-            NodeType::List,
-            NodeType::Map,
-            mark
-        )))
     );
 }
 
@@ -535,7 +429,7 @@ fn test_map() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
@@ -553,21 +447,31 @@ fn test_map() {
         ))
     );
     assert_eq!(
-        node.list_size(),
+        node.list(),
         Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
     );
-    assert_eq!(node.map_size(), Ok(3));
-    assert_eq!(node.size(), Ok(3));
+    if let DataCell::Map(cell) = &data.get(4).cell {
+        assert_eq!(
+            node.map(),
+            Ok(MapNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a map");
+    }
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Tag, mark))
+        node.tagged(),
+        Err(make_another_type_error(
+            NodeType::Map,
+            NodeType::Tagged,
+            mark
+        ))
     );
     assert_eq!(
-        node.file_path(),
+        node.file(),
         Err(make_another_type_error(NodeType::Map, NodeType::File, mark))
     );
     assert_eq!(
-        node.take_anchor_name(),
+        node.take_anchor(),
         Err(make_another_type_error(
             NodeType::Map,
             NodeType::TakeAnchor,
@@ -575,7 +479,7 @@ fn test_map() {
         ))
     );
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
             NodeType::Map,
             NodeType::GetAnchor,
@@ -590,110 +494,80 @@ fn test_map() {
             mark
         ))
     );
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Map, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Map,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    let mut map = node.map_iter().unwrap().collect::<Vec<(&String, Node)>>();
-    map.sort_by(|i, j| i.0.cmp(&j.0));
-    assert_eq!(*map[0].0, "first".to_string());
-    assert_eq!(map[0].1.node_type(), NodeType::String);
-    assert_eq!(*map[1].0, "second".to_string());
-    assert_eq!(map[1].1.node_type(), NodeType::List);
-    assert_eq!(*map[2].0, "third".to_string());
-    assert_eq!(map[2].1.node_type(), NodeType::GetAnchor);
-    assert_eq!(map.get(3), None);
-
-    assert_eq!(node.at("first").unwrap().node_type(), NodeType::String);
-    assert_eq!(node.at("second").unwrap().node_type(), NodeType::List);
-    assert_eq!(node.at("third").unwrap().node_type(), NodeType::GetAnchor);
-    assert_eq!(
-        node.at("key"),
-        Err(marked::MapError::InvalidKey(marked::InvalidKeyError::new(
-            mark,
-            InvalidKeyError::new("key".to_string())
-        )))
-    );
 }
 
 #[test]
-fn test_tag() {
+fn test_tagged() {
     let data = test_data();
     let node = Node::new(data.get(5), &data);
     let mark = Mark::default();
 
     assert_eq!(node.mark(), mark);
-    assert_eq!(node.node_type(), NodeType::Tag);
+    assert_eq!(node.node_type(), NodeType::Tagged);
 
     assert!(!node.is_null());
     assert!(!node.is_raw());
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(node.is_map());
-    assert!(node.is_tag());
+    assert!(node.is_tagged());
     assert!(!node.is_file());
     assert!(node.is_take_anchor());
     assert!(!node.is_get_anchor());
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Raw, mark))
+        Err(make_another_type_error(NodeType::Tagged, NodeType::Raw, mark))
     );
     assert_eq!(
         node.string(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::Tagged,
             NodeType::String,
             mark
         ))
     );
     assert_eq!(
-        node.list_size(),
-        Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
+        node.list(),
+        Err(make_another_type_error(NodeType::Tagged, NodeType::List, mark))
     );
-    assert_eq!(node.map_size(), Ok(3));
-    assert_eq!(node.size(), Ok(3));
-    assert_eq!(node.tag(), Ok("tag"));
+    if let DataCell::Map(cell) = &data.get(4).cell {
+        assert_eq!(
+            node.map(),
+            Ok(MapNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a map");
+    }
+    if let DataCell::Tagged(cell) = &data.get(5).cell {
+        assert_eq!(
+            node.tagged(),
+            Ok(TaggedNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a tagged");
+    }
     assert_eq!(
-        node.file_path(),
-        Err(make_another_type_error(NodeType::Map, NodeType::File, mark))
+        node.file(),
+        Err(make_another_type_error(NodeType::Tagged, NodeType::File, mark))
     );
-    assert_eq!(node.take_anchor_name(), Ok("anchor"));
+    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+        assert_eq!(
+            node.take_anchor(),
+            Ok(TakeAnchorNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a take anchor");
+    }
     assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::Tagged,
             NodeType::GetAnchor,
             mark
         ))
     );
     assert_eq!(node.anchor_name(), Ok("anchor"));
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Map, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Map,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert!(node.map_iter().is_ok());
-    assert!(node.at("first").is_ok());
 }
 
 #[test]
@@ -710,60 +584,68 @@ fn test_file() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(node.is_map());
-    assert!(node.is_tag());
+    assert!(node.is_tagged());
     assert!(node.is_file());
     assert!(node.is_take_anchor());
     assert!(!node.is_get_anchor());
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Raw, mark))
+        Err(make_another_type_error(NodeType::File, NodeType::Raw, mark))
     );
     assert_eq!(
         node.string(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::File,
             NodeType::String,
             mark
         ))
     );
     assert_eq!(
-        node.list_size(),
-        Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
+        node.list(),
+        Err(make_another_type_error(NodeType::File, NodeType::List, mark))
     );
-    assert_eq!(node.map_size(), Ok(3));
-    assert_eq!(node.size(), Ok(3));
-    assert_eq!(node.tag(), Ok("tag"));
+    if let DataCell::Map(cell) = &data.get(4).cell {
+        assert_eq!(
+            node.map(),
+            Ok(MapNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a map");
+    }
+    if let DataCell::Tagged(cell) = &data.get(5).cell {
+        assert_eq!(
+            node.tagged(),
+            Ok(TaggedNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a tagged");
+    }
+    if let DataCell::File(cell) = &data.get(6).cell {
+        assert_eq!(
+            node.file(),
+            Ok(FileNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a take anchor");
+    }
+    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+        assert_eq!(
+            node.take_anchor(),
+            Ok(TakeAnchorNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a take anchor");
+    }
     assert_eq!(
-        node.file_path(),
-        Ok(PathBuf::from("dir/name.ieml").as_path())
-    );
-    assert_eq!(node.take_anchor_name(), Ok("anchor"));
-    assert_eq!(
-        node.get_anchor_name(),
+        node.get_anchor(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::File,
             NodeType::GetAnchor,
             mark
         ))
     );
     assert_eq!(node.anchor_name(), Ok("anchor"));
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Map, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Map,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert!(node.map_iter().is_ok());
-    assert!(node.at("first").is_ok());
 }
 
 #[test]
@@ -780,63 +662,64 @@ fn test_take_anchor() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(node.is_take_anchor());
     assert!(!node.is_get_anchor());
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Raw, mark))
+        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::Raw, mark))
     );
     assert_eq!(
         node.string(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::TakeAnchor,
             NodeType::String,
             mark
         ))
     );
     assert_eq!(
-        node.list_size(),
-        Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
+        node.list(),
+        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::List, mark))
     );
-    assert_eq!(node.map_size(), Ok(3));
-    assert_eq!(node.size(), Ok(3));
+    if let DataCell::Map(cell) = &data.get(4).cell {
+        assert_eq!(
+            node.map(),
+            Ok(MapNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a map");
+    }
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Tag, mark))
-    );
-    assert_eq!(
-        node.file_path(),
-        Err(make_another_type_error(NodeType::Map, NodeType::File, mark))
-    );
-    assert_eq!(node.take_anchor_name(), Ok("anchor"));
-    assert_eq!(
-        node.get_anchor_name(),
+        node.tagged(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::TakeAnchor,
+            NodeType::Tagged,
+            mark
+        ))
+    );
+    assert_eq!(
+        node.file(),
+        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::File, mark))
+    );
+    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+        assert_eq!(
+            node.take_anchor(),
+            Ok(TakeAnchorNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a take anchor");
+    }
+    assert_eq!(
+        node.get_anchor(),
+        Err(make_another_type_error(
+            NodeType::TakeAnchor,
             NodeType::GetAnchor,
             mark
         ))
     );
     assert_eq!(node.anchor_name(), Ok("anchor"));
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Map, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Map,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert!(node.map_iter().is_ok());
-    assert!(node.at("first").is_ok());
 }
 
 #[test]
@@ -853,61 +736,62 @@ fn test_get_anchor() {
     assert!(!node.is_string());
     assert!(!node.is_list());
     assert!(node.is_map());
-    assert!(!node.is_tag());
+    assert!(!node.is_tagged());
     assert!(!node.is_file());
     assert!(!node.is_take_anchor());
     assert!(node.is_get_anchor());
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Raw, mark))
+        Err(make_another_type_error(NodeType::GetAnchor, NodeType::Raw, mark))
     );
     assert_eq!(
         node.string(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::GetAnchor,
             NodeType::String,
             mark
         ))
     );
     assert_eq!(
-        node.list_size(),
-        Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
+        node.list(),
+        Err(make_another_type_error(NodeType::GetAnchor, NodeType::List, mark))
     );
-    assert_eq!(node.map_size(), Ok(3));
-    assert_eq!(node.size(), Ok(3));
+    if let DataCell::Map(cell) = &data.get(4).cell {
+        assert_eq!(
+            node.map(),
+            Ok(MapNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a map");
+    }
     assert_eq!(
-        node.tag(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Tag, mark))
-    );
-    assert_eq!(
-        node.file_path(),
-        Err(make_another_type_error(NodeType::Map, NodeType::File, mark))
-    );
-    assert_eq!(
-        node.take_anchor_name(),
+        node.tagged(),
         Err(make_another_type_error(
-            NodeType::Map,
+            NodeType::GetAnchor,
+            NodeType::Tagged,
+            mark
+        ))
+    );
+    assert_eq!(
+        node.file(),
+        Err(make_another_type_error(NodeType::GetAnchor, NodeType::File, mark))
+    );
+    assert_eq!(
+        node.take_anchor(),
+        Err(make_another_type_error(
+            NodeType::GetAnchor,
             NodeType::TakeAnchor,
             mark
         ))
     );
-    assert_eq!(node.get_anchor_name(), Ok("anchor"));
+    if let DataCell::GetAnchor(cell) = &data.get(8).cell {
+        assert_eq!(
+            node.get_anchor(),
+            Ok(GetAnchorNode::new(Default::default(), cell, &data))
+        );
+    } else {
+        panic!("The cell is not a get anchor");
+    }
     assert_eq!(node.anchor_name(), Ok("anchor"));
-
-    assert_eq!(
-        node.list_iter().unwrap_err(),
-        make_another_type_error(NodeType::Map, NodeType::List, mark)
-    );
-    assert_eq!(
-        node.at(0),
-        Err(marked::ListError::NodeAnotherType(make_another_type_error(
-            NodeType::Map,
-            NodeType::List,
-            mark
-        )))
-    );
-
-    assert!(node.map_iter().is_ok());
-    assert!(node.at("first").is_ok());
 }

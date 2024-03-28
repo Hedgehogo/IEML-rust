@@ -1,6 +1,5 @@
 use super::{super::node::Node, map_cell::MapCell, Data};
 use std::{
-    collections::HashMap,
     fmt::{self, Formatter},
     path::PathBuf,
 };
@@ -9,7 +8,7 @@ use std::{
 pub(crate) struct FileCell {
     pub(crate) path: PathBuf,
     pub(crate) cell_index: usize,
-    pub(crate) anchors: HashMap<String, usize>,
+    pub(crate) anchors: MapCell,
     pub(crate) file_anchors: MapCell,
     pub(crate) parent: Option<usize>,
 }
@@ -18,7 +17,7 @@ impl FileCell {
     pub(crate) fn new(
         path: PathBuf,
         cell_index: usize,
-        anchors: HashMap<String, usize>,
+        anchors: MapCell,
         file_anchors: MapCell,
         parent: Option<usize>,
     ) -> Self {
@@ -36,7 +35,7 @@ impl FileCell {
         other: (&'other Self, &'other Data),
     ) -> bool {
         this.0.path == other.0.path
-            && this.0.anchors.len() == other.0.anchors.len()
+            && this.0.anchors.data.len() == other.0.anchors.data.len()
             && this.1.get(this.0.cell_index) == other.1.get(other.0.cell_index)
             && MapCell::equal(
                 (&this.0.file_anchors, this.1),
