@@ -172,7 +172,6 @@ where
         })
     })?;
     maker.add(mark, DataCell::File(result));
-    data.index = maker.last();
     init(&mut data)?;
     Ok(data)
 }
@@ -193,7 +192,6 @@ where
     let mut data = Data::default();
     let mut maker = Maker::new(&mut data, path.clone());
     file(mark, path, anchors, f)(&mut maker)?;
-    data.index = maker.last();
     init(&mut data)?;
     Ok(data)
 }

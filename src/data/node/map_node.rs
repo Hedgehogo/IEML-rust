@@ -109,30 +109,21 @@ mod tests {
     use std::collections::HashMap;
 
     fn test_data() -> Data {
-        Data::new(
-            3,
-            [
-                (0, MarkedDataCell::new(DataCell::Null, Default::default())),
-                (1, MarkedDataCell::new(DataCell::Null, Default::default())),
-                (
-                    2,
-                    MarkedDataCell::new(
-                        DataCell::Tagged(TaggedCell::new("tag".into(), 0)),
-                        Default::default(),
-                    ),
-                ),
-                (
-                    3,
-                    MarkedDataCell::new(
-                        DataCell::Map(MapCell::new(HashMap::from([
-                            ("first".into(), 1),
-                            ("second".into(), 2),
-                        ]))),
-                        Default::default(),
-                    ),
-                ),
-            ],
-        )
+        Data::new([
+            MarkedDataCell::new(DataCell::Null, Default::default()),
+            MarkedDataCell::new(DataCell::Null, Default::default()),
+            MarkedDataCell::new(
+                DataCell::Tagged(TaggedCell::new("tag".into(), 0)),
+                Default::default(),
+            ),
+            MarkedDataCell::new(
+                DataCell::Map(MapCell::new(HashMap::from([
+                    ("first".into(), 1),
+                    ("second".into(), 2),
+                ]))),
+                Default::default(),
+            ),
+        ])
     }
 
     #[test]

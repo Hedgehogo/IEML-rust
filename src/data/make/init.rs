@@ -61,8 +61,8 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
 }
 
 pub(crate) fn init<E: Error + PartialEq + Eq>(data: &mut Data) -> Result<(), marked::MakeError<E>> {
-    match &data.get(data.index).cell {
-        DataCell::File(i) => init_step(data, data.index, i.cell_index),
+    match &data.get(data.data.len() - 1).cell {
+        DataCell::File(i) => init_step(data, data.data.len() - 1, i.cell_index),
         _ => Ok(()),
     }
 }

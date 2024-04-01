@@ -7,38 +7,40 @@ pub(crate) mod tag_cell;
 pub(crate) mod take_anchor_cell;
 
 use super::node::Node;
-use std::collections::HashMap;
 
 pub(crate) use data_cell::{DataCell, MarkedDataCell};
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Data {
-    pub(crate) data: HashMap<usize, MarkedDataCell>,
-    pub(crate) index: usize,
+    pub(crate) data: Vec<MarkedDataCell>,
 }
 
 impl Data {
     #[allow(dead_code)]
-    pub(crate) fn new<const N: usize>(index: usize, arr: [(usize, MarkedDataCell); N]) -> Self {
+    pub(crate) fn new<const N: usize>(data: [MarkedDataCell; N]) -> Self {
         Self {
-            data: HashMap::<usize, MarkedDataCell>::from(arr),
-            index,
+            data: Vec::from(data),
         }
     }
 
     pub(crate) fn get(&self, index: usize) -> &MarkedDataCell {
         self.data
-            .get(&index)
+            .get(index)
             .expect("Incorrect document structure, Cell does not exist.")
     }
 
     pub(crate) fn get_mut(&mut self, index: usize) -> &mut MarkedDataCell {
         self.data
-            .get_mut(&index)
+            .get_mut(index)
             .expect("Incorrect document structure, Cell does not exist.")
     }
 
     pub fn node(&self) -> Node {
-        Node::new(self.get(self.index), self)
+        Node::new(
+            self.data
+                .last()
+                .expect("Incorrect document structure, Cell does not exist."),
+            self,
+        )
     }
 }

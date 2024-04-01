@@ -6,75 +6,45 @@ use super::*;
 use std::{collections::HashMap, path::PathBuf};
 
 fn test_data() -> Data {
-    Data::new(
-        6,
-        [
-            (
-                0,
-                MarkedDataCell::new(DataCell::Null, Mark { line: 2, symbol: 5 }),
-            ),
-            (
-                1,
-                MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
-            ),
-            (
-                2,
-                MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
-            ),
-            (
-                3,
-                MarkedDataCell::new(
-                    DataCell::List(ListCell::new(vec![0, 1])),
-                    Default::default(),
-                ),
-            ),
-            (
-                4,
-                MarkedDataCell::new(
-                    DataCell::Map(MapCell::new(HashMap::from([
-                        ("first".to_string(), 2),
-                        ("second".to_string(), 3),
-                        ("third".to_string(), 8),
-                    ]))),
-                    Default::default(),
-                ),
-            ),
-            (
-                5,
-                MarkedDataCell::new(
-                    DataCell::Tagged(TaggedCell::new("tag".into(), 7)),
-                    Default::default(),
-                ),
-            ),
-            (
-                6,
-                MarkedDataCell::new(
-                    DataCell::File(FileCell {
-                        cell_index: 5,
-                        path: PathBuf::from("dir/name.ieml"),
-                        anchors: Default::default(),
-                        file_anchors: Default::default(),
-                        parent: None,
-                    }),
-                    Default::default(),
-                ),
-            ),
-            (
-                7,
-                MarkedDataCell::new(
-                    DataCell::TakeAnchor(TakeAnchorCell::new("anchor".into(), 4)),
-                    Default::default(),
-                ),
-            ),
-            (
-                8,
-                MarkedDataCell::new(
-                    DataCell::GetAnchor(GetAnchorCell::new("anchor".into(), 4)),
-                    Default::default(),
-                ),
-            ),
-        ],
-    )
+    Data::new([
+        MarkedDataCell::new(DataCell::Null, Mark { line: 2, symbol: 5 }),
+        MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
+        MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
+        MarkedDataCell::new(
+            DataCell::List(ListCell::new(vec![0, 1])),
+            Default::default(),
+        ),
+        MarkedDataCell::new(
+            DataCell::Map(MapCell::new(HashMap::from([
+                ("first".to_string(), 2),
+                ("second".to_string(), 3),
+                ("third".to_string(), 8),
+            ]))),
+            Default::default(),
+        ),
+        MarkedDataCell::new(
+            DataCell::Tagged(TaggedCell::new("tag".into(), 7)),
+            Default::default(),
+        ),
+        MarkedDataCell::new(
+            DataCell::File(FileCell {
+                cell_index: 5,
+                path: PathBuf::from("dir/name.ieml"),
+                anchors: Default::default(),
+                file_anchors: Default::default(),
+                parent: None,
+            }),
+            Default::default(),
+        ),
+        MarkedDataCell::new(
+            DataCell::TakeAnchor(TakeAnchorCell::new("anchor".into(), 4)),
+            Default::default(),
+        ),
+        MarkedDataCell::new(
+            DataCell::GetAnchor(GetAnchorCell::new("anchor".into(), 4)),
+            Default::default(),
+        ),
+    ])
 }
 
 fn make_another_type_error(
@@ -517,7 +487,11 @@ fn test_tagged() {
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::Tagged, NodeType::Raw, mark))
+        Err(make_another_type_error(
+            NodeType::Tagged,
+            NodeType::Raw,
+            mark
+        ))
     );
     assert_eq!(
         node.string(),
@@ -529,7 +503,11 @@ fn test_tagged() {
     );
     assert_eq!(
         node.list(),
-        Err(make_another_type_error(NodeType::Tagged, NodeType::List, mark))
+        Err(make_another_type_error(
+            NodeType::Tagged,
+            NodeType::List,
+            mark
+        ))
     );
     if let DataCell::Map(cell) = &data.get(4).cell {
         assert_eq!(
@@ -549,7 +527,11 @@ fn test_tagged() {
     }
     assert_eq!(
         node.file(),
-        Err(make_another_type_error(NodeType::Tagged, NodeType::File, mark))
+        Err(make_another_type_error(
+            NodeType::Tagged,
+            NodeType::File,
+            mark
+        ))
     );
     if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
         assert_eq!(
@@ -603,7 +585,11 @@ fn test_file() {
     );
     assert_eq!(
         node.list(),
-        Err(make_another_type_error(NodeType::File, NodeType::List, mark))
+        Err(make_another_type_error(
+            NodeType::File,
+            NodeType::List,
+            mark
+        ))
     );
     if let DataCell::Map(cell) = &data.get(4).cell {
         assert_eq!(
@@ -669,7 +655,11 @@ fn test_take_anchor() {
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::Raw, mark))
+        Err(make_another_type_error(
+            NodeType::TakeAnchor,
+            NodeType::Raw,
+            mark
+        ))
     );
     assert_eq!(
         node.string(),
@@ -681,7 +671,11 @@ fn test_take_anchor() {
     );
     assert_eq!(
         node.list(),
-        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::List, mark))
+        Err(make_another_type_error(
+            NodeType::TakeAnchor,
+            NodeType::List,
+            mark
+        ))
     );
     if let DataCell::Map(cell) = &data.get(4).cell {
         assert_eq!(
@@ -701,7 +695,11 @@ fn test_take_anchor() {
     );
     assert_eq!(
         node.file(),
-        Err(make_another_type_error(NodeType::TakeAnchor, NodeType::File, mark))
+        Err(make_another_type_error(
+            NodeType::TakeAnchor,
+            NodeType::File,
+            mark
+        ))
     );
     if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
         assert_eq!(
@@ -743,7 +741,11 @@ fn test_get_anchor() {
 
     assert_eq!(
         node.raw(),
-        Err(make_another_type_error(NodeType::GetAnchor, NodeType::Raw, mark))
+        Err(make_another_type_error(
+            NodeType::GetAnchor,
+            NodeType::Raw,
+            mark
+        ))
     );
     assert_eq!(
         node.string(),
@@ -755,7 +757,11 @@ fn test_get_anchor() {
     );
     assert_eq!(
         node.list(),
-        Err(make_another_type_error(NodeType::GetAnchor, NodeType::List, mark))
+        Err(make_another_type_error(
+            NodeType::GetAnchor,
+            NodeType::List,
+            mark
+        ))
     );
     if let DataCell::Map(cell) = &data.get(4).cell {
         assert_eq!(
@@ -775,7 +781,11 @@ fn test_get_anchor() {
     );
     assert_eq!(
         node.file(),
-        Err(make_another_type_error(NodeType::GetAnchor, NodeType::File, mark))
+        Err(make_another_type_error(
+            NodeType::GetAnchor,
+            NodeType::File,
+            mark
+        ))
     );
     assert_eq!(
         node.take_anchor(),

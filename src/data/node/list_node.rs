@@ -101,26 +101,14 @@ mod tests {
     };
 
     fn test_data() -> Data {
-        Data::new(
-            2,
-            [
-                (
-                    0,
-                    MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
-                ),
-                (
-                    1,
-                    MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
-                ),
-                (
-                    2,
-                    MarkedDataCell::new(
-                        DataCell::List(ListCell::new(vec![0, 1])),
-                        Default::default(),
-                    ),
-                ),
-            ],
-        )
+        Data::new([
+            MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
+            MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
+            MarkedDataCell::new(
+                DataCell::List(ListCell::new(vec![0, 1])),
+                Default::default(),
+            ),
+        ])
     }
 
     #[test]
