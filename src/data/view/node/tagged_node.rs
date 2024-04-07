@@ -1,5 +1,5 @@
 use super::{
-    super::{
+    super::super::{
         cell::{tag_cell::TaggedCell, Data},
         mark::Mark,
     },
@@ -19,10 +19,6 @@ impl<'data> TaggedNode<'data> {
         Self { mark, cell, data }
     }
 
-    pub(super) fn debug(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        TaggedCell::debug((self.cell, self.data), f)
-    }
-
     pub fn mark(&self) -> Mark {
         self.mark
     }
@@ -38,14 +34,18 @@ impl<'data> TaggedNode<'data> {
 
 impl<'data> PartialEq for TaggedNode<'data> {
     fn eq(&self, other: &Self) -> bool {
-        TaggedCell::equal((self.cell, self.data), (other.cell, other.data))
+        self.tag() == other.tag() && self.node() == other.node()
     }
 }
 
 impl<'data> Debug for TaggedNode<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "TagNode {{ mark: {:?}, cell: ", self.mark)?;
-        TaggedCell::debug((&self.cell, &self.data), f)?;
-        write!(f, " }}")
+        write!(
+            f,
+            "TaggedNode {{ mark: {:?}, tag: {:?}, node: {:?} }}",
+            self.mark,
+            self.tag(),
+            self.node()
+        )
     }
 }

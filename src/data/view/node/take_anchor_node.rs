@@ -1,5 +1,5 @@
 use super::{
-    super::{
+    super::super::{
         cell::{take_anchor_cell::TakeAnchorCell, Data},
         mark::Mark,
     },
@@ -19,10 +19,6 @@ impl<'data> TakeAnchorNode<'data> {
         Self { mark, cell, data }
     }
 
-    pub(super) fn debug(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        TakeAnchorCell::debug((self.cell, self.data), f)
-    }
-
     pub fn mark(&self) -> Mark {
         self.mark
     }
@@ -38,14 +34,18 @@ impl<'data> TakeAnchorNode<'data> {
 
 impl<'data> PartialEq for TakeAnchorNode<'data> {
     fn eq(&self, other: &Self) -> bool {
-        TakeAnchorCell::equal((self.cell, self.data), (other.cell, other.data))
+        self.name() == other.name() && self.node() == other.node()
     }
 }
 
 impl<'data> Debug for TakeAnchorNode<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "TakeAnchorNode {{ mark: {:?}, cell: ", self.mark)?;
-        TakeAnchorCell::debug((&self.cell, &self.data), f)?;
-        write!(f, " }}")
+        write!(
+            f,
+            "TakeAnchorNode {{ mark: {:?}, name: {:?}, node: {:?} }}",
+            self.mark,
+            self.name(),
+            self.node()
+        )
     }
 }

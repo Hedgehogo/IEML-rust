@@ -219,7 +219,7 @@ mod tests {
         let clear_node = node.clear_step_file().unwrap();
 
         assert_eq!(clear_node.node_type(), NodeType::Raw);
-        assert_eq!(clear_node.raw(), Ok("hello"));
+        assert_eq!(clear_node.raw().unwrap().raw(), "hello");
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod tests {
         let clear_node = node.clear_step_file().unwrap();
 
         assert_eq!(clear_node.node_type(), NodeType::String);
-        assert_eq!(clear_node.string(), Ok("hello"));
+        assert_eq!(clear_node.string().unwrap().string(), "hello");
     }
 
     #[test]
@@ -331,6 +331,6 @@ mod tests {
         assert!(anchors.contains_key(&"file-anchor".into()));
 
         assert!(clear_node.is_raw());
-        assert_eq!(clear_node.raw(), Ok("hello"));
+        assert_eq!(clear_node.raw().unwrap().raw(), "hello");
     }
 }

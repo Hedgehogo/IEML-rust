@@ -1,29 +1,26 @@
 use crate::data::cell::MarkedDataCell;
 
 use super::{
-    super::cell::{
-        data_cell::{DataCell, FileCell},
-        Data,
+    super::{
+        cell::{
+            data_cell::{DataCell, FileCell},
+            Data,
+        },
+        mark::Mark,
     },
-    map_node::MapNode,
-    Mark, Node,
+    node::{map_node::MapNode, Node},
 };
+use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone, Copy, Eq)]
-pub struct Anchors<'a> {
+pub struct Anchors<'data> {
     mark: Mark,
-    cell: &'a FileCell,
-    data: &'a Data,
+    cell: &'data FileCell,
+    data: &'data Data,
 }
 
-impl<'a> PartialEq for Anchors<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        return self.anchors() == other.anchors() && self.file_anchors() == other.file_anchors();
-    }
-}
-
-impl<'a> Anchors<'a> {
-    pub(crate) fn new(mark: Mark, cell: &'a FileCell, data: &'a Data) -> Self {
+impl<'data> Anchors<'data> {
+    pub(crate) fn new(mark: Mark, cell: &'data FileCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
 
@@ -38,7 +35,7 @@ impl<'a> Anchors<'a> {
         })
     }
 
-    pub fn parent(&self) -> Option<Anchors<'a>> {
+    pub fn parent(&self) -> Option<Anchors<'data>> {
         self.cell.parent.map(|i| match &self.data.get(i) {
             MarkedDataCell {
                 mark,
@@ -48,16 +45,28 @@ impl<'a> Anchors<'a> {
         })
     }
 
-    pub fn anchors(&self) -> MapNode<'a> {
+    pub fn anchors(&self) -> MapNode<'data> {
         MapNode::new(self.mark, &self.cell.anchors, self.data)
     }
 
-    pub fn file_anchors(&self) -> MapNode<'a> {
+    pub fn file_anchors(&self) -> MapNode<'data> {
         MapNode::new(self.mark, &self.cell.file_anchors, self.data)
     }
 
-    pub fn get(&self, key: &str) -> Option<Node<'a>> {
+    pub fn get(&self, key: &str) -> Option<Node<'data>> {
         self.get_index(key)
             .map(|i| Node::new(self.data.get(i), self.data))
+    }
+}
+
+impl<'data> PartialEq for Anchors<'data> {
+    fn eq(&self, other: &Self) -> bool {
+        return self.anchors() == other.anchors() && self.file_anchors() == other.file_anchors();
+    }
+}
+
+impl<'data> Debug for Anchors<'data> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Anchors {{ file_anchors {:?} }}", self.file_anchors())
     }
 }

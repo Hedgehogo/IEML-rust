@@ -1,9 +1,11 @@
 use super::{
     super::{
-        cell::{file_cell::FileCell, Data},
-        mark::Mark,
+        super::{
+            cell::{file_cell::FileCell, Data},
+            mark::Mark,
+        },
+        anchors::Anchors,
     },
-    anchors::Anchors,
     Node,
 };
 use std::{
@@ -21,10 +23,6 @@ pub struct FileNode<'data> {
 impl<'data> FileNode<'data> {
     pub(super) fn new(mark: Mark, cell: &'data FileCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
-    }
-
-    pub(super) fn debug(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        FileCell::debug((self.cell, self.data), f)
     }
 
     pub fn mark(&self) -> Mark {
@@ -46,14 +44,18 @@ impl<'data> FileNode<'data> {
 
 impl<'data> PartialEq for FileNode<'data> {
     fn eq(&self, other: &Self) -> bool {
-        FileCell::equal((self.cell, self.data), (other.cell, other.data))
+        self.anchors().file_anchors() == other.anchors().file_anchors() && self.node() == other.node()
     }
 }
 
 impl<'data> Debug for FileNode<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "FileNode {{ mark: {:?}, cell: ", self.mark)?;
-        FileCell::debug((&self.cell, &self.data), f)?;
-        write!(f, " }}")
+        write!(
+            f,
+            "FileNode {{ mark: {:?}, anchors {:?}, node: {:?} }}",
+            self.mark,
+            self.anchors(),
+            self.node()
+        )
     }
 }

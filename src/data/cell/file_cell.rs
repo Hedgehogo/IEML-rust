@@ -1,8 +1,5 @@
-use super::{super::node::Node, map_cell::MapCell, Data};
-use std::{
-    fmt::{self, Formatter},
-    path::PathBuf,
-};
+use super::map_cell::MapCell;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct FileCell {
@@ -28,31 +25,5 @@ impl FileCell {
             file_anchors,
             parent,
         }
-    }
-
-    pub(crate) fn equal<'this, 'other>(
-        this: (&'this Self, &'this Data),
-        other: (&'other Self, &'other Data),
-    ) -> bool {
-        this.0.path == other.0.path
-            && this.0.anchors.data.len() == other.0.anchors.data.len()
-            && this.1.get(this.0.cell_index) == other.1.get(other.0.cell_index)
-            && MapCell::equal(
-                (&this.0.file_anchors, this.1),
-                (&other.0.file_anchors, other.1),
-            )
-    }
-
-    pub(crate) fn debug<'this>(
-        this: (&'this Self, &'this Data),
-        f: &mut Formatter<'_>,
-    ) -> fmt::Result {
-        write!(f, "file-path: {:?}, anchors: ", this.0.path)?;
-        MapCell::debug((&this.0.file_anchors, this.1), f)?;
-        write!(
-            f,
-            ", cell: {:?}",
-            Node::new(this.1.get(this.0.cell_index), this.1)
-        )
     }
 }

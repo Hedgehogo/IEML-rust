@@ -1,5 +1,5 @@
 use super::{
-    super::{
+    super::super::{
         cell::{map_cell::MapCell, Data},
         error::{marked, InvalidKeyError},
         mark::Mark,
@@ -47,12 +47,8 @@ pub struct MapNode<'data> {
 }
 
 impl<'data> MapNode<'data> {
-    pub(super) fn new(mark: Mark, cell: &'data MapCell, data: &'data Data) -> Self {
+    pub(in super::super) fn new(mark: Mark, cell: &'data MapCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
-    }
-
-    pub(super) fn debug(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        MapCell::debug((self.cell, self.data), f)
     }
 
     pub fn mark(&self) -> Mark {
@@ -84,15 +80,26 @@ impl<'data> MapNode<'data> {
 
 impl<'data> PartialEq for MapNode<'data> {
     fn eq(&self, other: &Self) -> bool {
-        MapCell::equal((self.cell, self.data), (other.cell, other.data))
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter().all(|(k, v)| {
+            other
+                .get(k)
+                .ok()
+                .and_then(|i| (i == v).then(|| ()))
+                .is_some()
+        })
     }
 }
 
 impl<'data> Debug for MapNode<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "MapNode {{ mark: {:?}, cell: ", self.mark)?;
-        MapCell::debug((&self.cell, &self.data), f)?;
-        write!(f, " }}")
+        write!(f, "MapNode {{ mark: {:?}, map: [", self.mark)?;
+        for (k, v) in self.iter() {
+            write!(f, "{:?}: {:?}, ", k, v)?;
+        }
+        write!(f, "] }}")
     }
 }
 

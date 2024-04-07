@@ -1,5 +1,5 @@
 use super::{
-    super::{
+    super::super::{
         cell::{data_cell::ListCell, Data},
         error::{marked, InvalidIndexError},
         mark::Mark,
@@ -51,10 +51,6 @@ impl<'data> ListNode<'data> {
         Self { mark, cell, data }
     }
 
-    pub(super) fn debug(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        ListCell::debug((self.cell, self.data), f)
-    }
-
     pub fn mark(&self) -> Mark {
         self.mark
     }
@@ -80,15 +76,20 @@ impl<'data> ListNode<'data> {
 
 impl<'data> PartialEq for ListNode<'data> {
     fn eq(&self, other: &Self) -> bool {
-        ListCell::equal((self.cell, self.data), (other.cell, other.data))
+        if self.len() != other.len() {
+            return false;
+        }
+        self.iter().zip(other.iter()).all(|(i, j)| i == j)
     }
 }
 
 impl<'data> Debug for ListNode<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "ListNode {{ mark: {:?}, cell: ", self.mark)?;
-        self.debug(f)?;
-        write!(f, " }}")
+        write!(f, "ListNode {{ mark: {:?}, list: [", self.mark)?;
+        for i in self.iter() {
+            write!(f, "{:?}, ", i)?;
+        }
+        write!(f, "] }}")
     }
 }
 
@@ -119,11 +120,11 @@ mod tests {
 
             let first = list.get(0).unwrap();
             assert_eq!(first.node_type(), NodeType::String);
-            assert_eq!(first.string(), Ok("hello"));
+            assert_eq!(first.string().unwrap().string(), "hello");
 
             let second = list.get(1).unwrap();
             assert_eq!(second.node_type(), NodeType::Raw);
-            assert_eq!(second.raw(), Ok("hello"));
+            assert_eq!(second.raw().unwrap().raw(), "hello");
 
             assert_eq!(list.len(), 2);
 
@@ -131,11 +132,11 @@ mod tests {
 
             let first = iter.next().unwrap();
             assert_eq!(first.node_type(), NodeType::String);
-            assert_eq!(first.string(), Ok("hello"));
+            assert_eq!(first.string().unwrap().string(), "hello");
 
             let second = iter.next().unwrap();
             assert_eq!(second.node_type(), NodeType::Raw);
-            assert_eq!(second.raw(), Ok("hello"));
+            assert_eq!(second.raw().unwrap().raw(), "hello");
 
             assert!(iter.next().is_none());
         } else {

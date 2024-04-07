@@ -1,6 +1,6 @@
 use super::super::{
     cell::{Data, DataCell},
-    node::anchors::Anchors,
+    view::anchors::Anchors,
 };
 use super::error::*;
 use std::error::Error;

@@ -6,7 +6,7 @@ pub(crate) mod map_cell;
 pub(crate) mod tag_cell;
 pub(crate) mod take_anchor_cell;
 
-use super::node::Node;
+use super::view::node::Node;
 
 pub(crate) use data_cell::{DataCell, MarkedDataCell};
 

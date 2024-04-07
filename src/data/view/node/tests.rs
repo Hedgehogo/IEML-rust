@@ -1,4 +1,4 @@
-use super::super::cell::data_cell::{
+use super::super::super::cell::data_cell::{
     DataCell, FileCell, GetAnchorCell, ListCell, MapCell, MarkedDataCell, TaggedCell,
     TakeAnchorCell,
 };
@@ -159,7 +159,7 @@ fn test_raw() {
     assert!(!node.is_take_anchor());
     assert!(!node.is_get_anchor());
 
-    assert_eq!(node.raw(), Ok("hello"));
+    assert_eq!(node.raw().unwrap().raw(), "hello");
     assert_eq!(
         node.string(),
         Err(make_another_type_error(
@@ -241,7 +241,7 @@ fn test_string() {
             mark
         ))
     );
-    assert_eq!(node.string(), Ok("hello"));
+    assert_eq!(node.string().unwrap().string(), "hello");
     assert_eq!(
         node.list(),
         Err(make_another_type_error(

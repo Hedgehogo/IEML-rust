@@ -1,4 +1,4 @@
-use super::Node;
+use super::node::Node;
 
 pub struct Tagged {}
 
