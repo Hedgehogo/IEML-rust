@@ -1,5 +1,5 @@
 pub use super::number::*;
-use crate::helpers::blank_lines::match_blank_line;
+use super::blank_lines::match_blank_line;
 use nom::{branch::alt, bytes::complete::*, combinator::value, *};
 
 pub fn to_bool(input: &str) -> Option<bool> {

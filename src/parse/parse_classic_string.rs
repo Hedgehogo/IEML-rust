@@ -1,6 +1,6 @@
 use super::error::marked::ParseResult;
 use crate::data::mark::Mark;
-use crate::helpers::blank_lines::match_indent;
+use super::utils::blank_lines::match_indent;
 use nom::character::complete::*;
 use nom::IResult;
 

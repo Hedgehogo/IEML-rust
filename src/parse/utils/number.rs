@@ -1,5 +1,4 @@
-use super::number_traits::Number;
-use crate::helpers::blank_lines::match_blank_line;
+use super::{number_traits::Number, blank_lines::match_blank_line};
 
 pub trait ToNumber: Number {
     fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self>;

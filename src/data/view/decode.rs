@@ -3,7 +3,7 @@ use super::{
     node::list_node::ListNode,
     node::map_node::MapNode,
 };
-use crate::helpers::to_value::{to_bool, to_number};
+use crate::parse::to_value::{to_bool, to_number};
 use std::error::Error;
 
 pub trait Decode<'data, E: Error + PartialEq + Eq> {
