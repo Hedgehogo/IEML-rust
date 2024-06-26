@@ -5,6 +5,13 @@ use std::{error::Error, path::PathBuf};
 pub enum MakeErrorReason<E: Error + PartialEq + Eq> {
     AnchorAlreadyExist(String),
     AnchorDoesntExist(String),
+    FailedDetermineType,
+    ExpectedMapKey,
+    ExpectedListItem,
+    ImpermissibleSpace,
+    ImpermissibleTab,
+    IncompleteString,
+    IncompleteDocument,
     Parse(E),
 }
 
@@ -13,6 +20,13 @@ impl<E: Error + PartialEq + Eq> Display for MakeErrorReason<E> {
         match self {
             MakeErrorReason::AnchorAlreadyExist(i) => write!(f, "An attempt was made to take an anchor with the name of an anchor that already exists. Anchor name: {:?}.", i),
             MakeErrorReason::AnchorDoesntExist(i) => write!(f, "There is no requested anchor. Anchor name: {:?}.", i),
+            MakeErrorReason::FailedDetermineType => write!(f, "Node type couldn't be determined."),
+            MakeErrorReason::ExpectedMapKey => write!(f, "Expected map key."),
+            MakeErrorReason::ExpectedListItem => write!(f, "Expected List Item."),
+            MakeErrorReason::ImpermissibleSpace => write!(f, "A space was detected. Perhaps you meant to write a tab as an indentation."),
+            MakeErrorReason::ImpermissibleTab => write!(f, "A tab was detected. A lower level of indentation was expected."),
+            MakeErrorReason::IncompleteString => write!(f, "An attempt was made to take an anchor with the name of an anchor that already exists."),
+            MakeErrorReason::IncompleteDocument => write!(f, "The end of the file has been reached, but the String is not completed."),
             MakeErrorReason::Parse(i) => write!(f, "{i}"),
         }
     }
