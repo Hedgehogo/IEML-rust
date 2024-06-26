@@ -1,5 +1,5 @@
 use super::super::super::{
-    cell::data_cell::RawCell,
+    node::node::RawNode,
     mark::Mark
 };
 use std::fmt::Debug;
@@ -7,11 +7,11 @@ use std::fmt::Debug;
 #[derive(Debug, Clone, Copy, Eq)]
 pub struct RawView<'data> {
     mark: Mark,
-    raw: &'data RawCell,
+    raw: &'data RawNode,
 }
 
 impl<'data> RawView<'data> {
-    pub(super) fn new(mark: Mark, raw: &'data RawCell) -> Self {
+    pub(super) fn new(mark: Mark, raw: &'data RawNode) -> Self {
         Self { mark, raw }
     }
 

@@ -1,12 +1,12 @@
 use super::super::{
-    cell::{Data, data_cell::{DataCell, MapCell, MarkedDataCell}},
+    node::{Data, node::{Node, MapNode, MarkedNode}},
     mark::Mark,
 };
 use std::path::{Path, PathBuf};
 
 pub struct Maker<'a> {
     data: &'a mut Data,
-    anchors: MapCell,
+    anchors: MapNode,
     path: PathBuf,
 }
 
@@ -26,10 +26,10 @@ impl<'a> Maker<'a> {
         result
     }
 
-    pub(super) fn add(&mut self, mark: Mark, cell: DataCell) {
+    pub(super) fn add(&mut self, mark: Mark, node: Node) {
         self.data
             .data
-            .insert(self.data.data.len(), MarkedDataCell::new(cell, mark));
+            .insert(self.data.data.len(), MarkedNode::new(node, mark));
     }
 
     pub(super) fn last(&self) -> usize {
@@ -40,7 +40,7 @@ impl<'a> Maker<'a> {
         self.anchors.data.insert(name, index).is_none().then_some(())
     }
 
-    pub(super) fn anchors(&mut self) -> &mut MapCell {
+    pub(super) fn anchors(&mut self) -> &mut MapNode {
         &mut self.anchors
     }
 

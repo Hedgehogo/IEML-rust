@@ -1,8 +1,8 @@
 use super::{
     super::super::{
-        cell::{map_cell::MapCell, Data},
         error::{marked, InvalidKeyError},
         mark::Mark,
+        node::{map_node::MapNode, Data},
     },
     View,
 };
@@ -42,13 +42,13 @@ impl<'data> Iterator for MapIter<'data> {
 #[derive(Clone, Copy, Eq)]
 pub struct MapView<'data> {
     mark: Mark,
-    cell: &'data MapCell,
+    node: &'data MapNode,
     data: &'data Data,
 }
 
 impl<'data> MapView<'data> {
-    pub(in super::super) fn new(mark: Mark, cell: &'data MapCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(in super::super) fn new(mark: Mark, node: &'data MapNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub fn mark(&self) -> Mark {
@@ -56,15 +56,15 @@ impl<'data> MapView<'data> {
     }
 
     pub fn len(&self) -> usize {
-        self.cell.data.len()
+        self.node.data.len()
     }
 
     pub fn contains_key(&self, key: &String) -> bool {
-        self.cell.data.contains_key(key)
+        self.node.data.contains_key(key)
     }
 
     pub fn get(&self, key: &str) -> Result<View<'data>, marked::InvalidKeyError> {
-        match self.cell.data.get(key) {
+        match self.node.data.get(key) {
             Some(i) => Ok(View::new(self.data.get(*i), self.data)),
             None => Err(marked::WithMarkError::new(
                 self.mark,
@@ -74,7 +74,7 @@ impl<'data> MapView<'data> {
     }
 
     pub fn iter(&self) -> MapIter<'data> {
-        MapIter::new(self.cell.data.iter(), self.data)
+        MapIter::new(self.node.data.iter(), self.data)
     }
 }
 
@@ -107,9 +107,9 @@ impl<'data> Debug for MapView<'data> {
 mod tests {
     use super::*;
     use crate::data::{
-        cell::{
-            data_cell::{DataCell, TaggedCell},
-            MarkedDataCell,
+        node::{
+            node::{Node, TaggedNode},
+            MarkedNode,
         },
         node_type::NodeType,
     };
@@ -117,14 +117,14 @@ mod tests {
 
     fn test_data() -> Data {
         Data::new([
-            MarkedDataCell::new(DataCell::Null, Default::default()),
-            MarkedDataCell::new(DataCell::Null, Default::default()),
-            MarkedDataCell::new(
-                DataCell::Tagged(TaggedCell::new("tag".into(), 0)),
+            MarkedNode::new(Node::Null, Default::default()),
+            MarkedNode::new(Node::Null, Default::default()),
+            MarkedNode::new(
+                Node::Tagged(TaggedNode::new("tag".into(), 0)),
                 Default::default(),
             ),
-            MarkedDataCell::new(
-                DataCell::Map(MapCell::new(HashMap::from([
+            MarkedNode::new(
+                Node::Map(MapNode::new(HashMap::from([
                     ("first".into(), 1),
                     ("second".into(), 2),
                 ]))),
@@ -136,8 +136,8 @@ mod tests {
     #[test]
     fn test_map_view() {
         let data = test_data();
-        if let DataCell::Map(cell) = &data.get(3).cell {
-            let list = MapView::new(Default::default(), cell, &data);
+        if let Node::Map(node) = &data.get(3).node {
+            let list = MapView::new(Default::default(), node, &data);
 
             let first = list.get("first").unwrap();
             assert_eq!(first.node_type(), NodeType::Null);
@@ -153,7 +153,7 @@ mod tests {
                 assert_eq!(list.get(key).unwrap(), i);
             }
         } else {
-            panic!("The cell is not a map");
+            panic!("The node is not a map");
         }
     }
 }

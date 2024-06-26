@@ -1,7 +1,7 @@
 use super::{
     super::super::{
-        cell::{tag_cell::TaggedCell, Data},
         mark::Mark,
+        node::{tag_node::TaggedNode, Data},
     },
     View,
 };
@@ -10,13 +10,13 @@ use std::fmt::{self, Debug, Formatter};
 #[derive(Clone, Copy, Eq)]
 pub struct TaggedView<'data> {
     mark: Mark,
-    cell: &'data TaggedCell,
+    node: &'data TaggedNode,
     data: &'data Data,
 }
 
 impl<'data> TaggedView<'data> {
-    pub(super) fn new(mark: Mark, cell: &'data TaggedCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(super) fn new(mark: Mark, node: &'data TaggedNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub fn mark(&self) -> Mark {
@@ -24,11 +24,11 @@ impl<'data> TaggedView<'data> {
     }
 
     pub fn tag(&self) -> &'data str {
-        self.cell.tag.as_str()
+        self.node.tag.as_str()
     }
 
     pub fn view(&self) -> View<'data> {
-        View::new(self.data.get(self.cell.cell_index), self.data)
+        View::new(self.data.get(self.node.node_index), self.data)
     }
 }
 

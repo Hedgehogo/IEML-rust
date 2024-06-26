@@ -3,9 +3,9 @@ mod init;
 pub mod maker;
 
 use super::{
-    cell::{
-        data_cell::{
-            DataCell, FileCell, GetAnchorCell, ListCell, MapCell, TaggedCell, TakeAnchorCell,
+    node::{
+        node::{
+            Node, FileNode, GetAnchorNode, ListNode, MapNode, TaggedNode, TakeAnchorNode,
         },
         Data,
     },
@@ -23,7 +23,7 @@ where
     E: Error + PartialEq + Eq,
 {
     move |maker| {
-        maker.add(mark, DataCell::Null);
+        maker.add(mark, Node::Null);
         Ok(())
     }
 }
@@ -34,7 +34,7 @@ where
     S: Into<String>,
 {
     move |maker| {
-        maker.add(mark, DataCell::Raw(raw.into()));
+        maker.add(mark, Node::Raw(raw.into()));
         Ok(())
     }
 }
@@ -44,7 +44,7 @@ where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
-    move |maker| Ok(maker.add(mark, DataCell::String(string.into())))
+    move |maker| Ok(maker.add(mark, Node::String(string.into())))
 }
 
 pub fn list<E, F, I>(mark: Mark, iter: I) -> impl FnOnce(&mut Maker) -> MakeResult<E>
@@ -55,7 +55,7 @@ where
 {
     move |maker| {
         let result: Result<_, _> = iter.map(|f| f(maker).map(|_| maker.last())).collect();
-        result.map(|i| maker.add(mark, DataCell::List(ListCell::new(i))))
+        result.map(|i| maker.add(mark, Node::List(ListNode::new(i))))
     }
 }
 
@@ -70,7 +70,7 @@ where
         let result: Result<_, _> = iter
             .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
             .collect();
-        result.map(|i| maker.add(mark, DataCell::Map(MapCell::new(i))))
+        result.map(|i| maker.add(mark, Node::Map(MapNode::new(i))))
     }
 }
 
@@ -82,8 +82,8 @@ where
 {
     move |maker| {
         f(maker)?;
-        let result = TaggedCell::new(tag.into(), maker.last());
-        maker.add(mark, DataCell::Tagged(result));
+        let result = TaggedNode::new(tag.into(), maker.last());
+        maker.add(mark, Node::Tagged(result));
         Ok(())
     }
 }
@@ -107,16 +107,16 @@ where
             .collect::<Result<_, _>>()?;
         let result = maker.child(|maker| {
             f(maker).map(|_| {
-                FileCell::new(
+                FileNode::new(
                     path,
                     maker.last(),
                     std::mem::take(maker.anchors()),
-                    MapCell::new(file_anchors),
+                    MapNode::new(file_anchors),
                     None,
                 )
             })
         })?;
-        maker.add(mark, DataCell::File(result));
+        maker.add(mark, Node::File(result));
         Ok(())
     }
 }
@@ -130,7 +130,7 @@ where
     move |maker| {
         f(maker)?;
         let name = name.into();
-        let result = TakeAnchorCell::new(name.clone(), maker.last());
+        let result = TakeAnchorNode::new(name.clone(), maker.last());
         maker
             .add_anchor(name.clone(), maker.last())
             .ok_or(marked::MakeError::new(
@@ -140,7 +140,7 @@ where
                     MakeErrorReason::AnchorAlreadyExist(name),
                 ),
             ))?;
-        maker.add(mark, DataCell::TakeAnchor(result));
+        maker.add(mark, Node::TakeAnchor(result));
         Ok(())
     }
 }
@@ -151,8 +151,8 @@ where
     S: Into<String>,
 {
     move |maker| {
-        let result = GetAnchorCell::new(name.into(), 0);
-        maker.add(mark, DataCell::GetAnchor(result));
+        let result = GetAnchorNode::new(name.into(), 0);
+        maker.add(mark, Node::GetAnchor(result));
         Ok(())
     }
 }
@@ -165,13 +165,13 @@ where
     let mut data = Data::default();
     let mut maker = Maker::new(&mut data, PathBuf::new());
     let result = maker.child(|maker| {
-        f(maker).map(|_| FileCell {
-            cell_index: maker.last(),
+        f(maker).map(|_| FileNode {
+            node_index: maker.last(),
             anchors: std::mem::take(maker.anchors()),
             ..Default::default()
         })
     })?;
-    maker.add(mark, DataCell::File(result));
+    maker.add(mark, Node::File(result));
     init(&mut data)?;
     Ok(data)
 }

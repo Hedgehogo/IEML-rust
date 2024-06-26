@@ -1,7 +1,7 @@
 use super::{
     super::{
         super::{
-            cell::{file_cell::FileCell, Data},
+            node::{file_node::FileNode, Data},
             mark::Mark,
         },
         anchors::Anchors,
@@ -16,13 +16,13 @@ use std::{
 #[derive(Clone, Copy, Eq)]
 pub struct FileView<'data> {
     mark: Mark,
-    cell: &'data FileCell,
+    node: &'data FileNode,
     data: &'data Data,
 }
 
 impl<'data> FileView<'data> {
-    pub(super) fn new(mark: Mark, cell: &'data FileCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(super) fn new(mark: Mark, node: &'data FileNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub fn mark(&self) -> Mark {
@@ -30,15 +30,15 @@ impl<'data> FileView<'data> {
     }
 
     pub fn path(&self) -> &'data Path {
-        self.cell.path.as_path()
+        self.node.path.as_path()
     }
 
     pub fn view(&self) -> View<'data> {
-        View::new(self.data.get(self.cell.cell_index), self.data)
+        View::new(self.data.get(self.node.node_index), self.data)
     }
 
     pub fn anchors(&self) -> Anchors<'data> {
-        Anchors::new(self.mark, self.cell, self.data)
+        Anchors::new(self.mark, self.node, self.data)
     }
 }
 

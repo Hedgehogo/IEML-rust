@@ -10,9 +10,9 @@ pub mod take_anchor_view;
 
 use super::{
     super::{
-        cell::{Data, DataCell, MarkedDataCell},
         error::{marked, AnotherTypeError, FailedDeserializeError},
         mark::Mark,
+        node::{Data, MarkedNode, Node},
         node_type::NodeType,
     },
     deserialize::Deserialize,
@@ -38,17 +38,17 @@ pub enum View<'data> {
 }
 
 impl<'data> View<'data> {
-    pub(crate) fn new(cell: &'data MarkedDataCell, data: &'data Data) -> Self {
-        match &cell.cell {
-            DataCell::Null => Self::Null(NullView::new(cell.mark)),
-            DataCell::Raw(i) => Self::Raw(RawView::new(cell.mark, i)),
-            DataCell::String(i) => Self::String(StringView::new(cell.mark, i)),
-            DataCell::List(i) => Self::List(ListView::new(cell.mark, i, data)),
-            DataCell::Map(i) => Self::Map(MapView::new(cell.mark, i, data)),
-            DataCell::Tagged(i) => Self::Tagged(TaggedView::new(cell.mark, i, data)),
-            DataCell::File(i) => Self::File(FileView::new(cell.mark, i, data)),
-            DataCell::TakeAnchor(i) => Self::TakeAnchor(TakeAnchorView::new(cell.mark, i, data)),
-            DataCell::GetAnchor(i) => Self::GetAnchor(GetAnchorView::new(cell.mark, i, data)),
+    pub(crate) fn new(node: &'data MarkedNode, data: &'data Data) -> Self {
+        match &node.node {
+            Node::Null => Self::Null(NullView::new(node.mark)),
+            Node::Raw(i) => Self::Raw(RawView::new(node.mark, i)),
+            Node::String(i) => Self::String(StringView::new(node.mark, i)),
+            Node::List(i) => Self::List(ListView::new(node.mark, i, data)),
+            Node::Map(i) => Self::Map(MapView::new(node.mark, i, data)),
+            Node::Tagged(i) => Self::Tagged(TaggedView::new(node.mark, i, data)),
+            Node::File(i) => Self::File(FileView::new(node.mark, i, data)),
+            Node::TakeAnchor(i) => Self::TakeAnchor(TakeAnchorView::new(node.mark, i, data)),
+            Node::GetAnchor(i) => Self::GetAnchor(GetAnchorView::new(node.mark, i, data)),
         }
     }
 

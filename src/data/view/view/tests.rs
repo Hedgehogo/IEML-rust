@@ -1,34 +1,30 @@
-use super::super::super::cell::data_cell::{
-    DataCell, FileCell, GetAnchorCell, ListCell, MapCell, MarkedDataCell, TaggedCell,
-    TakeAnchorCell,
+use super::super::super::node::node::{
+    FileNode, GetAnchorNode, ListNode, MapNode, MarkedNode, Node, TaggedNode, TakeAnchorNode,
 };
 use super::*;
 use std::{collections::HashMap, path::PathBuf};
 
 fn test_data() -> Data {
     Data::new([
-        MarkedDataCell::new(DataCell::Null, Mark { line: 2, symbol: 5 }),
-        MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
-        MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
-        MarkedDataCell::new(
-            DataCell::List(ListCell::new(vec![0, 1])),
-            Default::default(),
-        ),
-        MarkedDataCell::new(
-            DataCell::Map(MapCell::new(HashMap::from([
+        MarkedNode::new(Node::Null, Mark { line: 2, symbol: 5 }),
+        MarkedNode::new(Node::Raw("hello".into()), Default::default()),
+        MarkedNode::new(Node::String("hello".into()), Default::default()),
+        MarkedNode::new(Node::List(ListNode::new(vec![0, 1])), Default::default()),
+        MarkedNode::new(
+            Node::Map(MapNode::new(HashMap::from([
                 ("first".to_string(), 2),
                 ("second".to_string(), 3),
                 ("third".to_string(), 8),
             ]))),
             Default::default(),
         ),
-        MarkedDataCell::new(
-            DataCell::Tagged(TaggedCell::new("tag".into(), 7)),
+        MarkedNode::new(
+            Node::Tagged(TaggedNode::new("tag".into(), 7)),
             Default::default(),
         ),
-        MarkedDataCell::new(
-            DataCell::File(FileCell {
-                cell_index: 5,
+        MarkedNode::new(
+            Node::File(FileNode {
+                node_index: 5,
                 path: PathBuf::from("dir/name.ieml"),
                 anchors: Default::default(),
                 file_anchors: Default::default(),
@@ -36,12 +32,12 @@ fn test_data() -> Data {
             }),
             Default::default(),
         ),
-        MarkedDataCell::new(
-            DataCell::TakeAnchor(TakeAnchorCell::new("anchor".into(), 4)),
+        MarkedNode::new(
+            Node::TakeAnchor(TakeAnchorNode::new("anchor".into(), 4)),
             Default::default(),
         ),
-        MarkedDataCell::new(
-            DataCell::GetAnchor(GetAnchorCell::new("anchor".into(), 4)),
+        MarkedNode::new(
+            Node::GetAnchor(GetAnchorNode::new("anchor".into(), 4)),
             Default::default(),
         ),
     ])
@@ -331,13 +327,13 @@ fn test_list() {
             mark
         ))
     );
-    if let DataCell::List(cell) = &data.get(3).cell {
+    if let Node::List(node) = &data.get(3).node {
         assert_eq!(
             view.list(),
-            Ok(ListView::new(Default::default(), cell, &data))
+            Ok(ListView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a list");
+        panic!("The node is not a list");
     }
     assert_eq!(
         view.map(),
@@ -420,13 +416,13 @@ fn test_map() {
         view.list(),
         Err(make_another_type_error(NodeType::Map, NodeType::List, mark))
     );
-    if let DataCell::Map(cell) = &data.get(4).cell {
+    if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), cell, &data))
+            Ok(MapView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a map");
+        panic!("The node is not a map");
     }
     assert_eq!(
         view.tagged(),
@@ -509,21 +505,21 @@ fn test_tagged() {
             mark
         ))
     );
-    if let DataCell::Map(cell) = &data.get(4).cell {
+    if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), cell, &data))
+            Ok(MapView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a map");
+        panic!("The node is not a map");
     }
-    if let DataCell::Tagged(cell) = &data.get(5).cell {
+    if let Node::Tagged(node) = &data.get(5).node {
         assert_eq!(
             view.tagged(),
-            Ok(TaggedView::new(Default::default(), cell, &data))
+            Ok(TaggedView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a tagged");
+        panic!("The node is not a tagged");
     }
     assert_eq!(
         view.file(),
@@ -533,13 +529,13 @@ fn test_tagged() {
             mark
         ))
     );
-    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+    if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), cell, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a take anchor");
+        panic!("The node is not a take anchor");
     }
     assert_eq!(
         view.get_anchor(),
@@ -591,37 +587,37 @@ fn test_file() {
             mark
         ))
     );
-    if let DataCell::Map(cell) = &data.get(4).cell {
+    if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), cell, &data))
+            Ok(MapView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a map");
+        panic!("The node is not a map");
     }
-    if let DataCell::Tagged(cell) = &data.get(5).cell {
+    if let Node::Tagged(node) = &data.get(5).node {
         assert_eq!(
             view.tagged(),
-            Ok(TaggedView::new(Default::default(), cell, &data))
+            Ok(TaggedView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a tagged");
+        panic!("The node is not a tagged");
     }
-    if let DataCell::File(cell) = &data.get(6).cell {
+    if let Node::File(node) = &data.get(6).node {
         assert_eq!(
             view.file(),
-            Ok(FileView::new(Default::default(), cell, &data))
+            Ok(FileView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a take anchor");
+        panic!("The node is not a take anchor");
     }
-    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+    if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), cell, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a take anchor");
+        panic!("The node is not a take anchor");
     }
     assert_eq!(
         view.get_anchor(),
@@ -677,13 +673,13 @@ fn test_take_anchor() {
             mark
         ))
     );
-    if let DataCell::Map(cell) = &data.get(4).cell {
+    if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), cell, &data))
+            Ok(MapView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a map");
+        panic!("The node is not a map");
     }
     assert_eq!(
         view.tagged(),
@@ -701,13 +697,13 @@ fn test_take_anchor() {
             mark
         ))
     );
-    if let DataCell::TakeAnchor(cell) = &data.get(7).cell {
+    if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), cell, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a take anchor");
+        panic!("The node is not a take anchor");
     }
     assert_eq!(
         view.get_anchor(),
@@ -763,13 +759,13 @@ fn test_get_anchor() {
             mark
         ))
     );
-    if let DataCell::Map(cell) = &data.get(4).cell {
+    if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), cell, &data))
+            Ok(MapView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a map");
+        panic!("The node is not a map");
     }
     assert_eq!(
         view.tagged(),
@@ -795,13 +791,13 @@ fn test_get_anchor() {
             mark
         ))
     );
-    if let DataCell::GetAnchor(cell) = &data.get(8).cell {
+    if let Node::GetAnchor(node) = &data.get(8).node {
         assert_eq!(
             view.get_anchor(),
-            Ok(GetAnchorView::new(Default::default(), cell, &data))
+            Ok(GetAnchorView::new(Default::default(), node, &data))
         );
     } else {
-        panic!("The cell is not a get anchor");
+        panic!("The node is not a get anchor");
     }
     assert_eq!(view.anchor_name(), Ok("anchor"));
 }

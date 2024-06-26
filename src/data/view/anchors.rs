@@ -1,12 +1,12 @@
-use crate::data::cell::MarkedDataCell;
+use crate::data::node::MarkedNode;
 
 use super::{
     super::{
-        cell::{
-            data_cell::{DataCell, FileCell},
+        mark::Mark,
+        node::{
+            node::{FileNode, Node},
             Data,
         },
-        mark::Mark,
     },
     view::{map_view::MapView, View},
 };
@@ -15,18 +15,18 @@ use std::fmt::{self, Debug, Formatter};
 #[derive(Clone, Copy, Eq)]
 pub struct Anchors<'data> {
     mark: Mark,
-    cell: &'data FileCell,
+    node: &'data FileNode,
     data: &'data Data,
 }
 
 impl<'data> Anchors<'data> {
-    pub(crate) fn new(mark: Mark, cell: &'data FileCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(crate) fn new(mark: Mark, node: &'data FileNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub(crate) fn get_index(&self, key: &str) -> Option<usize> {
-        self.cell.anchors.data.get(key).copied().or_else(|| {
-            self.cell
+        self.node.anchors.data.get(key).copied().or_else(|| {
+            self.node
                 .file_anchors
                 .data
                 .get(key)
@@ -36,21 +36,21 @@ impl<'data> Anchors<'data> {
     }
 
     pub fn parent(&self) -> Option<Anchors<'data>> {
-        self.cell.parent.map(|i| match &self.data.get(i) {
-            MarkedDataCell {
+        self.node.parent.map(|i| match &self.data.get(i) {
+            MarkedNode {
                 mark,
-                cell: DataCell::File(cell),
-            } => Self::new(*mark, cell, self.data),
+                node: Node::File(node),
+            } => Self::new(*mark, node, self.data),
             _ => panic!("Incorrect document structure, the parent view is not a File."),
         })
     }
 
     pub fn anchors(&self) -> MapView<'data> {
-        MapView::new(self.mark, &self.cell.anchors, self.data)
+        MapView::new(self.mark, &self.node.anchors, self.data)
     }
 
     pub fn file_anchors(&self) -> MapView<'data> {
-        MapView::new(self.mark, &self.cell.file_anchors, self.data)
+        MapView::new(self.mark, &self.node.file_anchors, self.data)
     }
 
     pub fn get(&self, key: &str) -> Option<View<'data>> {

@@ -1,6 +1,6 @@
 use super::{
     super::super::{
-        cell::{get_anchor_cell::GetAnchorCell, Data},
+        node::{get_anchor_node::GetAnchorNode, Data},
         mark::Mark,
     },
     View,
@@ -10,13 +10,13 @@ use std::fmt::{self, Debug, Formatter};
 #[derive(Clone, Copy, Eq)]
 pub struct GetAnchorView<'data> {
     mark: Mark,
-    cell: &'data GetAnchorCell,
+    node: &'data GetAnchorNode,
     data: &'data Data,
 }
 
 impl<'data> GetAnchorView<'data> {
-    pub(super) fn new(mark: Mark, cell: &'data GetAnchorCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(super) fn new(mark: Mark, node: &'data GetAnchorNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub fn mark(&self) -> Mark {
@@ -24,11 +24,11 @@ impl<'data> GetAnchorView<'data> {
     }
 
     pub fn name(&self) -> &'data str {
-        self.cell.name.as_str()
+        self.node.name.as_str()
     }
 
     pub fn view(&self) -> View<'data> {
-        View::new(self.data.get(self.cell.cell_index), self.data)
+        View::new(self.data.get(self.node.node_index), self.data)
     }
 }
 

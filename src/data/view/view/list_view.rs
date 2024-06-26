@@ -1,8 +1,8 @@
 use super::{
     super::super::{
-        cell::{data_cell::ListCell, Data},
         error::{marked, InvalidIndexError},
         mark::Mark,
+        node::{node::ListNode, Data},
     },
     View,
 };
@@ -42,13 +42,13 @@ impl<'data> Iterator for ListIter<'data> {
 #[derive(Clone, Copy, Eq)]
 pub struct ListView<'data> {
     mark: Mark,
-    cell: &'data ListCell,
+    node: &'data ListNode,
     data: &'data Data,
 }
 
 impl<'data> ListView<'data> {
-    pub(super) fn new(mark: Mark, cell: &'data ListCell, data: &'data Data) -> Self {
-        Self { mark, cell, data }
+    pub(super) fn new(mark: Mark, node: &'data ListNode, data: &'data Data) -> Self {
+        Self { mark, node, data }
     }
 
     pub fn mark(&self) -> Mark {
@@ -56,11 +56,11 @@ impl<'data> ListView<'data> {
     }
 
     pub fn len(&self) -> usize {
-        self.cell.data.len()
+        self.node.data.len()
     }
 
     pub fn get(&self, index: usize) -> Result<View<'data>, marked::InvalidIndexError> {
-        match self.cell.data.get(index) {
+        match self.node.data.get(index) {
             Some(i) => Ok(View::new(self.data.get(*i), self.data)),
             None => Err(marked::WithMarkError::new(
                 self.mark,
@@ -70,7 +70,7 @@ impl<'data> ListView<'data> {
     }
 
     pub fn iter(&self) -> ListIter<'data> {
-        ListIter::new(self.cell.data.iter(), self.data)
+        ListIter::new(self.node.data.iter(), self.data)
     }
 }
 
@@ -97,26 +97,23 @@ impl<'data> Debug for ListView<'data> {
 mod tests {
     use super::*;
     use crate::data::{
-        cell::{data_cell::DataCell, MarkedDataCell},
+        node::{node::Node, MarkedNode},
         node_type::NodeType,
     };
 
     fn test_data() -> Data {
         Data::new([
-            MarkedDataCell::new(DataCell::String("hello".into()), Default::default()),
-            MarkedDataCell::new(DataCell::Raw("hello".into()), Default::default()),
-            MarkedDataCell::new(
-                DataCell::List(ListCell::new(vec![0, 1])),
-                Default::default(),
-            ),
+            MarkedNode::new(Node::String("hello".into()), Default::default()),
+            MarkedNode::new(Node::Raw("hello".into()), Default::default()),
+            MarkedNode::new(Node::List(ListNode::new(vec![0, 1])), Default::default()),
         ])
     }
 
     #[test]
     fn test_list_view() {
         let data = test_data();
-        if let DataCell::List(cell) = &data.get(2).cell {
-            let list = ListView::new(Default::default(), cell, &data);
+        if let Node::List(node) = &data.get(2).node {
+            let list = ListView::new(Default::default(), node, &data);
 
             let first = list.get(0).unwrap();
             assert_eq!(first.node_type(), NodeType::String);
@@ -140,7 +137,7 @@ mod tests {
 
             assert!(iter.next().is_none());
         } else {
-            panic!("The cell is not a list");
+            panic!("The node is not a list");
         }
     }
 }

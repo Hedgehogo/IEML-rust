@@ -1,5 +1,5 @@
 use super::super::super::{
-    cell::data_cell::StringCell,
+    node::node::StringNode,
     mark::Mark
 };
 use std::fmt::Debug;
@@ -7,11 +7,11 @@ use std::fmt::Debug;
 #[derive(Debug, Clone, Copy, Eq)]
 pub struct StringView<'data> {
     mark: Mark,
-    string: &'data StringCell,
+    string: &'data StringNode,
 }
 
 impl<'data> StringView<'data> {
-    pub(super) fn new(mark: Mark, string: &'data StringCell) -> Self {
+    pub(super) fn new(mark: Mark, string: &'data StringNode) -> Self {
         Self { mark, string }
     }
 
