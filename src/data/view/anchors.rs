@@ -8,7 +8,7 @@ use super::{
         },
         mark::Mark,
     },
-    node::{map_node::MapNode, Node},
+    view::{map_view::MapView, View},
 };
 use std::fmt::{self, Debug, Formatter};
 
@@ -41,21 +41,21 @@ impl<'data> Anchors<'data> {
                 mark,
                 cell: DataCell::File(cell),
             } => Self::new(*mark, cell, self.data),
-            _ => panic!("Incorrect document structure, the parent node is not a File."),
+            _ => panic!("Incorrect document structure, the parent view is not a File."),
         })
     }
 
-    pub fn anchors(&self) -> MapNode<'data> {
-        MapNode::new(self.mark, &self.cell.anchors, self.data)
+    pub fn anchors(&self) -> MapView<'data> {
+        MapView::new(self.mark, &self.cell.anchors, self.data)
     }
 
-    pub fn file_anchors(&self) -> MapNode<'data> {
-        MapNode::new(self.mark, &self.cell.file_anchors, self.data)
+    pub fn file_anchors(&self) -> MapView<'data> {
+        MapView::new(self.mark, &self.cell.file_anchors, self.data)
     }
 
-    pub fn get(&self, key: &str) -> Option<Node<'data>> {
+    pub fn get(&self, key: &str) -> Option<View<'data>> {
         self.get_index(key)
-            .map(|i| Node::new(self.data.get(i), self.data))
+            .map(|i| View::new(self.data.get(i), self.data))
     }
 }
 

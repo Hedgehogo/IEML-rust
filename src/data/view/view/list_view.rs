@@ -4,7 +4,7 @@ use super::{
         error::{marked, InvalidIndexError},
         mark::Mark,
     },
-    Node,
+    View,
 };
 use std::{
     fmt::{self, Debug, Formatter},
@@ -30,23 +30,23 @@ impl<'data> Debug for ListIter<'data> {
 }
 
 impl<'data> Iterator for ListIter<'data> {
-    type Item = Node<'data>;
+    type Item = View<'data>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
-            .map(|i| Node::new(self.data.get(*i), self.data))
+            .map(|i| View::new(self.data.get(*i), self.data))
     }
 }
 
 #[derive(Clone, Copy, Eq)]
-pub struct ListNode<'data> {
+pub struct ListView<'data> {
     mark: Mark,
     cell: &'data ListCell,
     data: &'data Data,
 }
 
-impl<'data> ListNode<'data> {
+impl<'data> ListView<'data> {
     pub(super) fn new(mark: Mark, cell: &'data ListCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
@@ -59,9 +59,9 @@ impl<'data> ListNode<'data> {
         self.cell.data.len()
     }
 
-    pub fn get(&self, index: usize) -> Result<Node<'data>, marked::InvalidIndexError> {
+    pub fn get(&self, index: usize) -> Result<View<'data>, marked::InvalidIndexError> {
         match self.cell.data.get(index) {
-            Some(i) => Ok(Node::new(self.data.get(*i), self.data)),
+            Some(i) => Ok(View::new(self.data.get(*i), self.data)),
             None => Err(marked::WithMarkError::new(
                 self.mark,
                 InvalidIndexError::new(index, self.len()),
@@ -74,7 +74,7 @@ impl<'data> ListNode<'data> {
     }
 }
 
-impl<'data> PartialEq for ListNode<'data> {
+impl<'data> PartialEq for ListView<'data> {
     fn eq(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -83,9 +83,9 @@ impl<'data> PartialEq for ListNode<'data> {
     }
 }
 
-impl<'data> Debug for ListNode<'data> {
+impl<'data> Debug for ListView<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "ListNode {{ mark: {:?}, list: [", self.mark)?;
+        write!(f, "ListView {{ mark: {:?}, list: [", self.mark)?;
         for i in self.iter() {
             write!(f, "{:?}, ", i)?;
         }
@@ -113,10 +113,10 @@ mod tests {
     }
 
     #[test]
-    fn test_list_node() {
+    fn test_list_view() {
         let data = test_data();
         if let DataCell::List(cell) = &data.get(2).cell {
-            let list = ListNode::new(Default::default(), cell, &data);
+            let list = ListView::new(Default::default(), cell, &data);
 
             let first = list.get(0).unwrap();
             assert_eq!(first.node_type(), NodeType::String);

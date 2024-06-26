@@ -4,7 +4,7 @@ use super::{
         error::{marked, InvalidKeyError},
         mark::Mark,
     },
-    Node,
+    View,
 };
 use std::{
     collections::hash_map,
@@ -30,23 +30,23 @@ impl<'data> Debug for MapIter<'data> {
 }
 
 impl<'data> Iterator for MapIter<'data> {
-    type Item = (&'data String, Node<'data>);
+    type Item = (&'data String, View<'data>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
             .next()
-            .map(|(key, i)| (key, Node::new(self.data.get(*i), self.data)))
+            .map(|(key, i)| (key, View::new(self.data.get(*i), self.data)))
     }
 }
 
 #[derive(Clone, Copy, Eq)]
-pub struct MapNode<'data> {
+pub struct MapView<'data> {
     mark: Mark,
     cell: &'data MapCell,
     data: &'data Data,
 }
 
-impl<'data> MapNode<'data> {
+impl<'data> MapView<'data> {
     pub(in super::super) fn new(mark: Mark, cell: &'data MapCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
@@ -63,9 +63,9 @@ impl<'data> MapNode<'data> {
         self.cell.data.contains_key(key)
     }
 
-    pub fn get(&self, key: &str) -> Result<Node<'data>, marked::InvalidKeyError> {
+    pub fn get(&self, key: &str) -> Result<View<'data>, marked::InvalidKeyError> {
         match self.cell.data.get(key) {
-            Some(i) => Ok(Node::new(self.data.get(*i), self.data)),
+            Some(i) => Ok(View::new(self.data.get(*i), self.data)),
             None => Err(marked::WithMarkError::new(
                 self.mark,
                 InvalidKeyError::new(key.into()),
@@ -78,7 +78,7 @@ impl<'data> MapNode<'data> {
     }
 }
 
-impl<'data> PartialEq for MapNode<'data> {
+impl<'data> PartialEq for MapView<'data> {
     fn eq(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -93,9 +93,9 @@ impl<'data> PartialEq for MapNode<'data> {
     }
 }
 
-impl<'data> Debug for MapNode<'data> {
+impl<'data> Debug for MapView<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "MapNode {{ mark: {:?}, map: [", self.mark)?;
+        write!(f, "MapView {{ mark: {:?}, map: [", self.mark)?;
         for (k, v) in self.iter() {
             write!(f, "{:?}: {:?}, ", k, v)?;
         }
@@ -134,10 +134,10 @@ mod tests {
     }
 
     #[test]
-    fn test_map_node() {
+    fn test_map_view() {
         let data = test_data();
         if let DataCell::Map(cell) = &data.get(3).cell {
-            let list = MapNode::new(Default::default(), cell, &data);
+            let list = MapView::new(Default::default(), cell, &data);
 
             let first = list.get("first").unwrap();
             assert_eq!(first.node_type(), NodeType::Null);

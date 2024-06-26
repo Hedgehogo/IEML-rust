@@ -24,13 +24,13 @@ pub mod marked {
 
     #[derive(PartialEq, Eq, Debug)]
     pub enum ListError {
-        NodeAnotherType(AnotherTypeError),
+        ViewAnotherType(AnotherTypeError),
         InvalidIndex(InvalidIndexError),
     }
 
     impl From<AnotherTypeError> for ListError {
         fn from(value: AnotherTypeError) -> Self {
-            ListError::NodeAnotherType(value)
+            ListError::ViewAnotherType(value)
         }
     }
 
@@ -42,13 +42,13 @@ pub mod marked {
 
     #[derive(PartialEq, Eq, Debug)]
     pub enum MapError {
-        NodeAnotherType(AnotherTypeError),
+        ViewAnotherType(AnotherTypeError),
         InvalidKey(InvalidKeyError),
     }
 
     impl From<AnotherTypeError> for MapError {
         fn from(value: AnotherTypeError) -> Self {
-            MapError::NodeAnotherType(value)
+            MapError::ViewAnotherType(value)
         }
     }
 
@@ -60,7 +60,7 @@ pub mod marked {
 
     #[derive(PartialEq, Eq, Debug)]
     pub enum DeserializeError<E: Error + PartialEq + Eq> {
-        NodeAnotherType(AnotherTypeError),
+        ViewAnotherType(AnotherTypeError),
         InvalidIndex(InvalidIndexError),
         InvalidKey(InvalidKeyError),
         FailedDecode(FailedDeserializeError<E>),
@@ -71,7 +71,7 @@ pub mod marked {
     impl<E: Error + PartialEq + Eq> Display for DeserializeError<E> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
-                DeserializeError::NodeAnotherType(e) => write!(f, "{}", e),
+                DeserializeError::ViewAnotherType(e) => write!(f, "{}", e),
                 DeserializeError::InvalidIndex(e) => write!(f, "{}", e),
                 DeserializeError::InvalidKey(e) => write!(f, "{}", e),
                 DeserializeError::FailedDecode(e) => write!(f, "{}", e),
@@ -83,7 +83,7 @@ pub mod marked {
 
     impl<E: Error + PartialEq + Eq> From<AnotherTypeError> for DeserializeError<E> {
         fn from(value: AnotherTypeError) -> Self {
-            DeserializeError::NodeAnotherType(value)
+            DeserializeError::ViewAnotherType(value)
         }
     }
 
@@ -108,7 +108,7 @@ pub mod marked {
     impl<E: Error + PartialEq + Eq> From<ListError> for DeserializeError<E> {
         fn from(value: ListError) -> Self {
             match value {
-                ListError::NodeAnotherType(i) => DeserializeError::NodeAnotherType(i),
+                ListError::ViewAnotherType(i) => DeserializeError::ViewAnotherType(i),
                 ListError::InvalidIndex(i) => DeserializeError::InvalidIndex(i),
             }
         }
@@ -117,7 +117,7 @@ pub mod marked {
     impl<E: Error + PartialEq + Eq> From<MapError> for DeserializeError<E> {
         fn from(value: MapError) -> Self {
             match value {
-                MapError::NodeAnotherType(i) => DeserializeError::NodeAnotherType(i),
+                MapError::ViewAnotherType(i) => DeserializeError::ViewAnotherType(i),
                 MapError::InvalidKey(i) => DeserializeError::InvalidKey(i),
             }
         }

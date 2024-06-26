@@ -206,31 +206,31 @@ mod tests {
     #[test]
     fn test_null() {
         let data = make::<Infallible, _>(Mark::default(), null(Mark::default())).unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::Null);
+        assert_eq!(clear_view.node_type(), NodeType::Null);
     }
 
     #[test]
     fn test_raw() {
         let data = make::<Infallible, _>(Mark::default(), raw(Mark::default(), "hello")).unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::Raw);
-        assert_eq!(clear_node.raw().unwrap().raw(), "hello");
+        assert_eq!(clear_view.node_type(), NodeType::Raw);
+        assert_eq!(clear_view.raw().unwrap().raw(), "hello");
     }
 
     #[test]
     fn test_string() {
         let data =
             make::<Infallible, _>(Mark::default(), string(Mark::default(), "hello")).unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::String);
-        assert_eq!(clear_node.string().unwrap().string(), "hello");
+        assert_eq!(clear_view.node_type(), NodeType::String);
+        assert_eq!(clear_view.string().unwrap().string(), "hello");
     }
 
     #[test]
@@ -247,12 +247,12 @@ mod tests {
             )
         })
         .unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::List);
+        assert_eq!(clear_view.node_type(), NodeType::List);
 
-        let list = clear_node.list().unwrap();
+        let list = clear_view.list().unwrap();
         assert_eq!(list.len(), 2);
         assert_eq!(list.get(0).unwrap().node_type(), NodeType::Raw);
         assert_eq!(list.get(1).unwrap().node_type(), NodeType::String);
@@ -275,12 +275,12 @@ mod tests {
             )
         })
         .unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::Map);
+        assert_eq!(clear_view.node_type(), NodeType::Map);
 
-        let map = clear_node.map().unwrap();
+        let map = clear_view.map().unwrap();
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("first").unwrap().node_type(), NodeType::Raw);
         assert_eq!(map.get("second").unwrap().node_type(), NodeType::String);
@@ -292,13 +292,13 @@ mod tests {
             tag(Mark::default(), "tag", null(Mark::default()))
         })
         .unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::Tagged);
-        assert_eq!(node.tagged().unwrap().tag(), "tag");
+        assert_eq!(clear_view.node_type(), NodeType::Tagged);
+        assert_eq!(view.tagged().unwrap().tag(), "tag");
 
-        assert!(node.is_null());
+        assert!(view.is_null());
     }
 
     #[test]
@@ -317,20 +317,20 @@ mod tests {
             )
         })
         .unwrap();
-        let node = data.node();
-        let clear_node = node.clear_step_file().unwrap();
+        let view = data.view();
+        let clear_view = view.clear_step_file().unwrap();
 
-        assert_eq!(clear_node.node_type(), NodeType::File);
+        assert_eq!(clear_view.node_type(), NodeType::File);
         assert_eq!(
-            clear_node.file().unwrap().path(),
+            clear_view.file().unwrap().path(),
             PathBuf::from("dir/name.ieml").as_path()
         );
 
-        let anchors = clear_node.file().unwrap().anchors().file_anchors();
+        let anchors = clear_view.file().unwrap().anchors().file_anchors();
         assert_eq!(anchors.len(), 1);
         assert!(anchors.contains_key(&"file-anchor".into()));
 
-        assert!(clear_node.is_raw());
-        assert_eq!(clear_node.raw().unwrap().raw(), "hello");
+        assert!(clear_view.is_raw());
+        assert_eq!(clear_view.raw().unwrap().raw(), "hello");
     }
 }

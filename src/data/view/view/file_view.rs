@@ -6,7 +6,7 @@ use super::{
         },
         anchors::Anchors,
     },
-    Node,
+    View,
 };
 use std::{
     fmt::{self, Debug, Formatter},
@@ -14,13 +14,13 @@ use std::{
 };
 
 #[derive(Clone, Copy, Eq)]
-pub struct FileNode<'data> {
+pub struct FileView<'data> {
     mark: Mark,
     cell: &'data FileCell,
     data: &'data Data,
 }
 
-impl<'data> FileNode<'data> {
+impl<'data> FileView<'data> {
     pub(super) fn new(mark: Mark, cell: &'data FileCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
@@ -33,8 +33,8 @@ impl<'data> FileNode<'data> {
         self.cell.path.as_path()
     }
 
-    pub fn node(&self) -> Node<'data> {
-        Node::new(self.data.get(self.cell.cell_index), self.data)
+    pub fn view(&self) -> View<'data> {
+        View::new(self.data.get(self.cell.cell_index), self.data)
     }
 
     pub fn anchors(&self) -> Anchors<'data> {
@@ -42,20 +42,20 @@ impl<'data> FileNode<'data> {
     }
 }
 
-impl<'data> PartialEq for FileNode<'data> {
+impl<'data> PartialEq for FileView<'data> {
     fn eq(&self, other: &Self) -> bool {
-        self.anchors().file_anchors() == other.anchors().file_anchors() && self.node() == other.node()
+        self.anchors().file_anchors() == other.anchors().file_anchors() && self.view() == other.view()
     }
 }
 
-impl<'data> Debug for FileNode<'data> {
+impl<'data> Debug for FileView<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "FileNode {{ mark: {:?}, anchors {:?}, node: {:?} }}",
+            "FileView {{ mark: {:?}, anchors {:?}, view: {:?} }}",
             self.mark,
             self.anchors(),
-            self.node()
+            self.view()
         )
     }
 }

@@ -2,11 +2,11 @@ use super::super::super::mark::Mark;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone, Copy, Eq)]
-pub struct NullNode {
+pub struct NullView {
     mark: Mark,
 }
 
-impl NullNode {
+impl NullView {
     pub(super) fn new(mark: Mark) -> Self {
         Self { mark }
     }
@@ -16,7 +16,7 @@ impl NullNode {
     }
 }
 
-impl PartialEq for NullNode {
+impl PartialEq for NullView {
     fn eq(&self, _other: &Self) -> bool {
         true
     }

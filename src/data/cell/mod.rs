@@ -6,7 +6,7 @@ pub(crate) mod map_cell;
 pub(crate) mod tag_cell;
 pub(crate) mod take_anchor_cell;
 
-use super::view::node::Node;
+use super::view::view::View;
 
 pub(crate) use data_cell::{DataCell, MarkedDataCell};
 
@@ -35,8 +35,8 @@ impl Data {
             .expect("Incorrect document structure, Cell does not exist.")
     }
 
-    pub fn node(&self) -> Node {
-        Node::new(
+    pub fn view(&self) -> View {
+        View::new(
             self.data
                 .last()
                 .expect("Incorrect document structure, Cell does not exist."),

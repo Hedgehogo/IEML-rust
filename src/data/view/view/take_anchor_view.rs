@@ -3,18 +3,18 @@ use super::{
         cell::{take_anchor_cell::TakeAnchorCell, Data},
         mark::Mark,
     },
-    Node,
+    View,
 };
 use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone, Copy, Eq)]
-pub struct TakeAnchorNode<'data> {
+pub struct TakeAnchorView<'data> {
     mark: Mark,
     cell: &'data TakeAnchorCell,
     data: &'data Data,
 }
 
-impl<'data> TakeAnchorNode<'data> {
+impl<'data> TakeAnchorView<'data> {
     pub(super) fn new(mark: Mark, cell: &'data TakeAnchorCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
@@ -27,25 +27,25 @@ impl<'data> TakeAnchorNode<'data> {
         self.cell.name.as_str()
     }
 
-    pub fn node(&self) -> Node<'data> {
-        Node::new(self.data.get(self.cell.cell_index), self.data)
+    pub fn view(&self) -> View<'data> {
+        View::new(self.data.get(self.cell.cell_index), self.data)
     }
 }
 
-impl<'data> PartialEq for TakeAnchorNode<'data> {
+impl<'data> PartialEq for TakeAnchorView<'data> {
     fn eq(&self, other: &Self) -> bool {
-        self.name() == other.name() && self.node() == other.node()
+        self.name() == other.name() && self.view() == other.view()
     }
 }
 
-impl<'data> Debug for TakeAnchorNode<'data> {
+impl<'data> Debug for TakeAnchorView<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "TakeAnchorNode {{ mark: {:?}, name: {:?}, node: {:?} }}",
+            "TakeAnchorView {{ mark: {:?}, name: {:?}, view: {:?} }}",
             self.mark,
             self.name(),
-            self.node()
+            self.view()
         )
     }
 }

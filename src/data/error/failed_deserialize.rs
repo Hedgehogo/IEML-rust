@@ -32,11 +32,11 @@ impl<E: Error + PartialEq + Eq> Display for FailedDeserializeError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self.reason {
             marked::DeserializeError::Failed => {
-                write!(f, "Failed to convert node to '{}'.", self.get_type_name())
+                write!(f, "Failed to convert view to '{}'.", self.get_type_name())
             }
             _ => write!(
                 f,
-                "Failed to convert node to '{}', because:\n{}",
+                "Failed to convert view to '{}', because:\n{}",
                 self.get_type_name(),
                 *self.reason
             ),

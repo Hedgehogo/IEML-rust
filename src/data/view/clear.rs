@@ -1,4 +1,4 @@
-use super::node::Node;
+use super::view::View;
 
 pub struct Tagged {}
 
@@ -9,39 +9,39 @@ pub struct TakeAnchor {}
 pub struct GetAnchor {}
 
 pub trait Clear<'data> {
-    fn clear(node: Node<'data>) -> Option<Node<'data>>;
+    fn clear(view: View<'data>) -> Option<View<'data>>;
 }
 
 impl<'data> Clear<'data> for Tagged {
-    fn clear(node: Node<'data>) -> Option<Node<'data>> {
-        node.clear_step_tagged()
+    fn clear(view: View<'data>) -> Option<View<'data>> {
+        view.clear_step_tagged()
     }
 }
 
 impl<'data> Clear<'data> for File {
-    fn clear(node: Node<'data>) -> Option<Node<'data>> {
-        node.clear_step_file()
+    fn clear(view: View<'data>) -> Option<View<'data>> {
+        view.clear_step_file()
     }
 }
 
 impl<'data> Clear<'data> for TakeAnchor {
-    fn clear(node: Node<'data>) -> Option<Node<'data>> {
-        node.clear_step_take_anchor()
+    fn clear(view: View<'data>) -> Option<View<'data>> {
+        view.clear_step_take_anchor()
     }
 }
 
 impl<'data> Clear<'data> for GetAnchor {
-    fn clear(node: Node<'data>) -> Option<Node<'data>> {
-        node.clear_step_get_anchor()
+    fn clear(view: View<'data>) -> Option<View<'data>> {
+        view.clear_step_get_anchor()
     }
 }
 
 macro_rules! impl_get_from_step_type {
 	($($name:ident)*) => {
 		impl<'data, $($name : Clear<'data>),*> Clear<'data> for ($($name, )*) {
-			fn clear(_node: Node<'data>) -> Option<Node<'data>> {
+			fn clear(_view: View<'data>) -> Option<View<'data>> {
 				$(
-					if let Some(i) = $name::clear(_node) {
+					if let Some(i) = $name::clear(_view) {
 						return Some(i);
 					}
 				)*
@@ -58,16 +58,16 @@ impl_get_from_step_type!(A B C);
 impl_get_from_step_type!(A B C D);
 
 pub(crate) fn clear_step<'data, T: Clear<'data>>(
-    node: Node<'data>,
-) -> Option<Node<'data>> {
-    T::clear(node)
+    view: View<'data>,
+) -> Option<View<'data>> {
+    T::clear(view)
 }
 
 pub(crate) fn clear<'data, T: Clear<'data>>(
-    node: Node<'data>,
-) -> Node<'data> {
-    match T::clear(node) {
+    view: View<'data>,
+) -> View<'data> {
+    match T::clear(view) {
         Some(i) => clear::<T>(i),
-        None => node,
+        None => view,
     }
 }

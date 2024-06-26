@@ -28,7 +28,7 @@ impl Display for AnotherTypeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Node of the '{:?}' type cannot be converted to a value of the '{:?}' type.",
+            "View of the '{:?}' type cannot be converted to a value of the '{:?}' type.",
             self.node_type, self.requested_type
         )
     }

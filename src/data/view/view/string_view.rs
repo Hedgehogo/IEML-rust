@@ -5,12 +5,12 @@ use super::super::super::{
 use std::fmt::Debug;
 
 #[derive(Debug, Clone, Copy, Eq)]
-pub struct StringNode<'data> {
+pub struct StringView<'data> {
     mark: Mark,
     string: &'data StringCell,
 }
 
-impl<'data> StringNode<'data> {
+impl<'data> StringView<'data> {
     pub(super) fn new(mark: Mark, string: &'data StringCell) -> Self {
         Self { mark, string }
     }
@@ -24,7 +24,7 @@ impl<'data> StringNode<'data> {
     }
 }
 
-impl<'data> PartialEq for StringNode<'data> {
+impl<'data> PartialEq for StringView<'data> {
     fn eq(&self, other: &Self) -> bool {
         self.string.as_str() == other.string.as_str()
     }

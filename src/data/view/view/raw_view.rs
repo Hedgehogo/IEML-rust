@@ -5,12 +5,12 @@ use super::super::super::{
 use std::fmt::Debug;
 
 #[derive(Debug, Clone, Copy, Eq)]
-pub struct RawNode<'data> {
+pub struct RawView<'data> {
     mark: Mark,
     raw: &'data RawCell,
 }
 
-impl<'data> RawNode<'data> {
+impl<'data> RawView<'data> {
     pub(super) fn new(mark: Mark, raw: &'data RawCell) -> Self {
         Self { mark, raw }
     }
@@ -24,7 +24,7 @@ impl<'data> RawNode<'data> {
     }
 }
 
-impl<'data> PartialEq for RawNode<'data> {
+impl<'data> PartialEq for RawView<'data> {
     fn eq(&self, other: &Self) -> bool {
         self.raw.as_str() == other.raw.as_str()
     }

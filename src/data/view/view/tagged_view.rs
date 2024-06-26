@@ -3,18 +3,18 @@ use super::{
         cell::{tag_cell::TaggedCell, Data},
         mark::Mark,
     },
-    Node,
+    View,
 };
 use std::fmt::{self, Debug, Formatter};
 
 #[derive(Clone, Copy, Eq)]
-pub struct TaggedNode<'data> {
+pub struct TaggedView<'data> {
     mark: Mark,
     cell: &'data TaggedCell,
     data: &'data Data,
 }
 
-impl<'data> TaggedNode<'data> {
+impl<'data> TaggedView<'data> {
     pub(super) fn new(mark: Mark, cell: &'data TaggedCell, data: &'data Data) -> Self {
         Self { mark, cell, data }
     }
@@ -27,25 +27,25 @@ impl<'data> TaggedNode<'data> {
         self.cell.tag.as_str()
     }
 
-    pub fn node(&self) -> Node<'data> {
-        Node::new(self.data.get(self.cell.cell_index), self.data)
+    pub fn view(&self) -> View<'data> {
+        View::new(self.data.get(self.cell.cell_index), self.data)
     }
 }
 
-impl<'data> PartialEq for TaggedNode<'data> {
+impl<'data> PartialEq for TaggedView<'data> {
     fn eq(&self, other: &Self) -> bool {
-        self.tag() == other.tag() && self.node() == other.node()
+        self.tag() == other.tag() && self.view() == other.view()
     }
 }
 
-impl<'data> Debug for TaggedNode<'data> {
+impl<'data> Debug for TaggedView<'data> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "TaggedNode {{ mark: {:?}, tag: {:?}, node: {:?} }}",
+            "TaggedView {{ mark: {:?}, tag: {:?}, view: {:?} }}",
             self.mark,
             self.tag(),
-            self.node()
+            self.view()
         )
     }
 }
