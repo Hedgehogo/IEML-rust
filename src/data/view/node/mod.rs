@@ -11,11 +11,11 @@ pub mod take_anchor_node;
 use super::{
     super::{
         cell::{Data, DataCell, MarkedDataCell},
-        error::{marked, AnotherTypeError, FailedDecodeError},
+        error::{marked, AnotherTypeError, FailedDeserializeError},
         mark::Mark,
         node_type::NodeType,
     },
-    decode::Decode,
+    deserialize::Deserialize,
 };
 use std::{error::Error, fmt::Debug};
 pub use {
@@ -332,10 +332,10 @@ impl<'data> Node<'data> {
     /// # Generic arguments
     ///
     /// * `T` Value type.
-    pub fn decode<E: Error + PartialEq + Eq, T: Decode<'data, E>>(
+    pub fn decode<E: Error + PartialEq + Eq, T: Deserialize<'data, E>>(
         &self,
-    ) -> Result<T, marked::FailedDecodeError<E>> {
-        T::decode(*self).map_err(|e| self.make_error(FailedDecodeError::new::<T>(Box::new(e))))
+    ) -> Result<T, marked::FailedDeserializeError<E>> {
+        T::decode(*self).map_err(|e| self.make_error(FailedDeserializeError::new::<T>(Box::new(e))))
     }
 }
 

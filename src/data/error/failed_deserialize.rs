@@ -6,13 +6,13 @@ use std::{
 };
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct FailedDecodeError<E: Error + PartialEq + Eq> {
+pub struct FailedDeserializeError<E: Error + PartialEq + Eq> {
     type_name: &'static str,
-    reason: Box<marked::DecodeError<E>>,
+    reason: Box<marked::DeserializeError<E>>,
 }
 
-impl<E: Error + PartialEq + Eq> FailedDecodeError<E> {
-    pub fn new<T>(reason: Box<marked::DecodeError<E>>) -> Self {
+impl<E: Error + PartialEq + Eq> FailedDeserializeError<E> {
+    pub fn new<T>(reason: Box<marked::DeserializeError<E>>) -> Self {
         Self {
             type_name: type_name::<T>(),
             reason,
@@ -23,15 +23,15 @@ impl<E: Error + PartialEq + Eq> FailedDecodeError<E> {
         self.type_name
     }
 
-    pub fn get_reason(&self) -> &Box<marked::DecodeError<E>> {
+    pub fn get_reason(&self) -> &Box<marked::DeserializeError<E>> {
         &self.reason
     }
 }
 
-impl<E: Error + PartialEq + Eq> Display for FailedDecodeError<E> {
+impl<E: Error + PartialEq + Eq> Display for FailedDeserializeError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match *self.reason {
-            marked::DecodeError::Failed => {
+            marked::DeserializeError::Failed => {
                 write!(f, "Failed to convert node to '{}'.", self.get_type_name())
             }
             _ => write!(
@@ -44,4 +44,4 @@ impl<E: Error + PartialEq + Eq> Display for FailedDecodeError<E> {
     }
 }
 
-impl<E: Error + PartialEq + Eq> Error for FailedDecodeError<E> {}
+impl<E: Error + PartialEq + Eq> Error for FailedDeserializeError<E> {}

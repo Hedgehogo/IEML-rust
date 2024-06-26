@@ -1,11 +1,11 @@
 pub mod another_type;
-pub mod failed_decode;
+pub mod failed_deserialize;
 pub mod invalid_index;
 pub mod invalid_key;
 pub mod with_mark;
 
 pub use another_type::AnotherTypeError;
-pub use failed_decode::FailedDecodeError;
+pub use failed_deserialize::FailedDeserializeError;
 pub use invalid_index::InvalidIndexError;
 pub use invalid_key::InvalidKeyError;
 
@@ -18,7 +18,7 @@ pub mod marked {
     pub use super::with_mark::WithMarkError;
 
     pub type AnotherTypeError = WithMarkError<super::AnotherTypeError>;
-    pub type FailedDecodeError<E> = WithMarkError<super::FailedDecodeError<E>>;
+    pub type FailedDeserializeError<E> = WithMarkError<super::FailedDeserializeError<E>>;
     pub type InvalidIndexError = WithMarkError<super::InvalidIndexError>;
     pub type InvalidKeyError = WithMarkError<super::InvalidKeyError>;
 
@@ -59,66 +59,66 @@ pub mod marked {
     }
 
     #[derive(PartialEq, Eq, Debug)]
-    pub enum DecodeError<E: Error + PartialEq + Eq> {
+    pub enum DeserializeError<E: Error + PartialEq + Eq> {
         NodeAnotherType(AnotherTypeError),
         InvalidIndex(InvalidIndexError),
         InvalidKey(InvalidKeyError),
-        FailedDecode(FailedDecodeError<E>),
+        FailedDecode(FailedDeserializeError<E>),
         Other(E),
         Failed,
     }
 
-    impl<E: Error + PartialEq + Eq> Display for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> Display for DeserializeError<E> {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             match self {
-                DecodeError::NodeAnotherType(e) => write!(f, "{}", e),
-                DecodeError::InvalidIndex(e) => write!(f, "{}", e),
-                DecodeError::InvalidKey(e) => write!(f, "{}", e),
-                DecodeError::FailedDecode(e) => write!(f, "{}", e),
-                DecodeError::Other(e) => write!(f, "{}", e),
-                DecodeError::Failed => write!(f, ""),
+                DeserializeError::NodeAnotherType(e) => write!(f, "{}", e),
+                DeserializeError::InvalidIndex(e) => write!(f, "{}", e),
+                DeserializeError::InvalidKey(e) => write!(f, "{}", e),
+                DeserializeError::FailedDecode(e) => write!(f, "{}", e),
+                DeserializeError::Other(e) => write!(f, "{}", e),
+                DeserializeError::Failed => write!(f, ""),
             }
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<AnotherTypeError> for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> From<AnotherTypeError> for DeserializeError<E> {
         fn from(value: AnotherTypeError) -> Self {
-            DecodeError::NodeAnotherType(value)
+            DeserializeError::NodeAnotherType(value)
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<InvalidIndexError> for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> From<InvalidIndexError> for DeserializeError<E> {
         fn from(value: InvalidIndexError) -> Self {
-            DecodeError::InvalidIndex(value)
+            DeserializeError::InvalidIndex(value)
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<InvalidKeyError> for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> From<InvalidKeyError> for DeserializeError<E> {
         fn from(value: InvalidKeyError) -> Self {
-            DecodeError::InvalidKey(value)
+            DeserializeError::InvalidKey(value)
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<FailedDecodeError<E>> for DecodeError<E> {
-        fn from(value: FailedDecodeError<E>) -> Self {
-            DecodeError::FailedDecode(value)
+    impl<E: Error + PartialEq + Eq> From<FailedDeserializeError<E>> for DeserializeError<E> {
+        fn from(value: FailedDeserializeError<E>) -> Self {
+            DeserializeError::FailedDecode(value)
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<ListError> for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> From<ListError> for DeserializeError<E> {
         fn from(value: ListError) -> Self {
             match value {
-                ListError::NodeAnotherType(i) => DecodeError::NodeAnotherType(i),
-                ListError::InvalidIndex(i) => DecodeError::InvalidIndex(i),
+                ListError::NodeAnotherType(i) => DeserializeError::NodeAnotherType(i),
+                ListError::InvalidIndex(i) => DeserializeError::InvalidIndex(i),
             }
         }
     }
 
-    impl<E: Error + PartialEq + Eq> From<MapError> for DecodeError<E> {
+    impl<E: Error + PartialEq + Eq> From<MapError> for DeserializeError<E> {
         fn from(value: MapError) -> Self {
             match value {
-                MapError::NodeAnotherType(i) => DecodeError::NodeAnotherType(i),
-                MapError::InvalidKey(i) => DecodeError::InvalidKey(i),
+                MapError::NodeAnotherType(i) => DeserializeError::NodeAnotherType(i),
+                MapError::InvalidKey(i) => DeserializeError::InvalidKey(i),
             }
         }
     }
