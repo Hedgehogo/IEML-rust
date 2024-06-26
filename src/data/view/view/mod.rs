@@ -12,164 +12,148 @@ use std::{error::Error, fmt::Debug};
 
 pub use super::to_match::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum View<'data> {
-    Null(NullView),
-    Raw(RawView<'data>),
-    String(StringView<'data>),
-    List(ListView<'data>),
-    Map(MapView<'data>),
-    Tagged(TaggedView<'data>),
-    File(FileView<'data>),
-    TakeAnchor(TakeAnchorView<'data>),
-    GetAnchor(GetAnchorView<'data>),
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct View<'data> {
+    node: &'data MarkedNode,
+    data: &'data Data,
 }
 
 impl<'data> View<'data> {
     pub(crate) fn new(node: &'data MarkedNode, data: &'data Data) -> Self {
-        match &node.node {
-            Node::Null => Self::Null(NullView::new(node.mark)),
-            Node::Raw(i) => Self::Raw(RawView::new(node.mark, i)),
-            Node::String(i) => Self::String(StringView::new(node.mark, i)),
-            Node::List(i) => Self::List(ListView::new(node.mark, i, data)),
-            Node::Map(i) => Self::Map(MapView::new(node.mark, i, data)),
-            Node::Tagged(i) => Self::Tagged(TaggedView::new(node.mark, i, data)),
-            Node::File(i) => Self::File(FileView::new(node.mark, i, data)),
-            Node::TakeAnchor(i) => Self::TakeAnchor(TakeAnchorView::new(node.mark, i, data)),
-            Node::GetAnchor(i) => Self::GetAnchor(GetAnchorView::new(node.mark, i, data)),
-        }
+        Self { node, data }
     }
 
     /// Gets the mark.
     pub fn mark(&self) -> Mark {
-        match self {
-            View::Null(i) => i.mark(),
-            View::Raw(i) => i.mark(),
-            View::String(i) => i.mark(),
-            View::List(i) => i.mark(),
-            View::Map(i) => i.mark(),
-            View::Tagged(i) => i.mark(),
-            View::File(i) => i.mark(),
-            View::TakeAnchor(i) => i.mark(),
-            View::GetAnchor(i) => i.mark(),
-        }
+        self.node.mark
     }
 
-    /// Gets the view type.
+    /// Gets the node type.
     pub fn node_type(&self) -> NodeType {
-        match self {
-            View::Null(_) => NodeType::Null,
-            View::Raw(_) => NodeType::Raw,
-            View::String(_) => NodeType::String,
-            View::List(_) => NodeType::List,
-            View::Map(_) => NodeType::Map,
-            View::Tagged(_) => NodeType::Tagged,
-            View::File(_) => NodeType::File,
-            View::TakeAnchor(_) => NodeType::TakeAnchor,
-            View::GetAnchor(_) => NodeType::GetAnchor,
+        match &self.node.node {
+            Node::Null => NodeType::Null,
+            Node::Raw(_) => NodeType::Raw,
+            Node::String(_) => NodeType::String,
+            Node::List(_) => NodeType::List,
+            Node::Map(_) => NodeType::Map,
+            Node::Tagged(_) => NodeType::Tagged,
+            Node::File(_) => NodeType::File,
+            Node::TakeAnchor(_) => NodeType::TakeAnchor,
+            Node::GetAnchor(_) => NodeType::GetAnchor,
         }
     }
 
-    /// Returns whether the view is TakeAnchor.
+    /// Gets a view that allows pattern matching.
+    pub fn to_match(&self) -> ToMatchView {
+        match &self.node.node {
+            Node::Null => ToMatchView::Null(NullView::new(self.node.mark)),
+            Node::Raw(i) => ToMatchView::Raw(RawView::new(self.node.mark, i)),
+            Node::String(i) => ToMatchView::String(StringView::new(self.node.mark, i)),
+            Node::List(i) => ToMatchView::List(ListView::new(self.node.mark, i, self.data)),
+            Node::Map(i) => ToMatchView::Map(MapView::new(self.node.mark, i, self.data)),
+            Node::Tagged(i) => ToMatchView::Tagged(TaggedView::new(self.node.mark, i, self.data)),
+            Node::File(i) => ToMatchView::File(FileView::new(self.node.mark, i, self.data)),
+            Node::TakeAnchor(i) => {
+                ToMatchView::TakeAnchor(TakeAnchorView::new(self.node.mark, i, self.data))
+            }
+            Node::GetAnchor(i) => {
+                ToMatchView::GetAnchor(GetAnchorView::new(self.node.mark, i, self.data))
+            }
+        }
+    }
+
+    /// Returns whether the node is TakeAnchor.
     pub fn is_null(&self) -> bool {
-        matches!(self.clear(), Self::Null(_))
+        matches!(self.clear().node.node, Node::Null)
     }
 
-    /// Returns whether the view is Raw.
+    /// Returns whether the node is Raw.
     pub fn is_raw(&self) -> bool {
-        matches!(self.clear(), Self::Raw(_))
+        matches!(self.clear().node.node, Node::Raw(_))
     }
 
-    /// Returns whether the view is String.
+    /// Returns whether the node is String.
     pub fn is_string(&self) -> bool {
-        matches!(self.clear(), Self::String(_))
+        matches!(self.clear().node.node, Node::String(_))
     }
 
-    /// Returns whether the view is List.
+    /// Returns whether the node is List.
     pub fn is_list(&self) -> bool {
-        matches!(self.clear(), Self::List(_))
+        matches!(self.clear().node.node, Node::List(_))
     }
 
-    /// Returns whether the view is Map.
+    /// Returns whether the node is Map.
     pub fn is_map(&self) -> bool {
-        matches!(self.clear(), Self::Map(_))
+        matches!(self.clear().node.node, Node::Map(_))
     }
 
-    /// Returns whether the view is Tagged.
+    /// Returns whether the node is Tagged.
     pub fn is_tagged(&self) -> bool {
         use super::clear::*;
-        matches!(
-            self.clear_advanced::<(File, TakeAnchor, GetAnchor)>(),
-            Self::Tagged(_)
-        )
+        let clear = self.clear_advanced::<(File, TakeAnchor, GetAnchor)>();
+        matches!(clear.node.node, Node::Tagged(_))
     }
 
-    /// Returns whether the view is File.
+    /// Returns whether the node is File.
     pub fn is_file(&self) -> bool {
         use super::clear::*;
-        matches!(
-            self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>(),
-            Self::File(_)
-        )
+        let clear = self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>();
+        matches!(clear.node.node, Node::File(_))
     }
 
-    /// Returns whether the view is TakeAnchor.
+    /// Returns whether the node is TakeAnchor.
     pub fn is_take_anchor(&self) -> bool {
         use super::clear::*;
-        matches!(
-            self.clear_advanced::<(Tagged, File, GetAnchor)>(),
-            Self::TakeAnchor(_)
-        )
+        let clear = self.clear_advanced::<(Tagged, File, GetAnchor)>();
+        matches!(clear.node.node, Node::TakeAnchor(_))
     }
 
-    /// Returns whether the view is GetAnchor.
+    /// Returns whether the node is GetAnchor.
     pub fn is_get_anchor(&self) -> bool {
         use super::clear::*;
-        matches!(
-            self.clear_advanced::<(Tagged, File, TakeAnchor)>(),
-            Self::GetAnchor(_)
-        )
+        let clear = self.clear_advanced::<(Tagged, File, TakeAnchor)>();
+        matches!(clear.node.node, Node::GetAnchor(_))
     }
 
-    /// Gets a child view if the view type is Tagged.
+    /// Gets a child view if the node type is Tagged.
     pub fn clear_step_tagged(&self) -> Option<Self> {
-        match self {
-            Self::Tagged(i) => Some(i.view()),
+        match &self.node.node {
+            Node::Tagged(i) => Some(Self::new(self.data.get(i.node_index), self.data)),
             _ => None,
         }
     }
 
-    /// Gets a child view if the view type is File.
+    /// Gets a child view if the node type is File.
     pub fn clear_step_file(&self) -> Option<Self> {
-        match self {
-            Self::File(i) => Some(i.view()),
+        match &self.node.node {
+            Node::File(i) => Some(Self::new(self.data.get(i.node_index), self.data)),
             _ => None,
         }
     }
 
-    /// Gets a child view if the view type is TakeAnchor.
+    /// Gets a child view if the node type is TakeAnchor.
     pub fn clear_step_take_anchor(&self) -> Option<Self> {
-        match self {
-            Self::TakeAnchor(i) => Some(i.view()),
+        match &self.node.node {
+            Node::TakeAnchor(i) => Some(Self::new(self.data.get(i.node_index), self.data)),
             _ => None,
         }
     }
 
-    /// Gets a child view if the view type is GetAnchor.
+    /// Gets a child view if the node type is GetAnchor.
     pub fn clear_step_get_anchor(&self) -> Option<Self> {
-        match self {
-            Self::GetAnchor(i) => Some(i.view()),
+        match &self.node.node {
+            Node::GetAnchor(i) => Some(Self::new(self.data.get(i.node_index), self.data)),
             _ => None,
         }
     }
 
-    /// Gets a child view if the view type is Tagged, File, TakeAnchor or GetAnchor.
+    /// Gets a child view if the node type is Tagged, File, TakeAnchor or GetAnchor.
     pub fn clear_step(&self) -> Option<Self> {
         use super::clear::*;
         clear_step::<(Tagged, File, TakeAnchor, GetAnchor)>(*self)
     }
 
-    /// Gets a child view if the view type is T.
+    /// Gets a child view if the node type is T.
     pub fn clear_step_advanced<T: super::clear::Clear<'data>>(&self) -> Option<Self> {
         use super::clear::*;
         clear_step::<T>(*self)
@@ -187,25 +171,25 @@ impl<'data> View<'data> {
         clear::<T>(*self)
     }
 
-    /// Gets the view under the Tag if the view type is with the Tagged, otherwise the current view.
+    /// Gets the view under the Tag if the node type is with the Tagged, otherwise the current view.
     pub fn clear_tag(&self) -> Self {
         use super::clear::*;
         clear::<(File, TakeAnchor, GetAnchor)>(*self)
     }
 
-    /// Gets the view contained in the File, if the view type is a File, otherwise the current view.
+    /// Gets the view contained in the File, if the node type is a File, otherwise the current view.
     pub fn clear_file(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, TakeAnchor, GetAnchor)>(*self)
     }
 
-    /// Gets the view contained in the Anchor if the view type is TakeAnchor, otherwise the current view
+    /// Gets the view contained in the Anchor if the node type is TakeAnchor, otherwise the current view
     pub fn clear_take_anchor(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, File, GetAnchor)>(*self)
     }
 
-    /// Gets the view contained in the Anchor if the view type is GetAnchor, otherwise the current view
+    /// Gets the view contained in the Anchor if the node type is GetAnchor, otherwise the current view
     pub fn clear_get_anchor(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, File, TakeAnchor)>(*self)
@@ -222,8 +206,8 @@ impl<'data> View<'data> {
     /// Gets the null data.
     pub fn null(&self) -> Result<NullView, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear {
-            Self::Null(i) => Ok(i),
+        match &clear.node.node {
+            Node::Null => Ok(NullView::new(clear.node.mark)),
             _ => Err(self.make_another_type_error(NodeType::Raw)),
         }
     }
@@ -231,8 +215,8 @@ impl<'data> View<'data> {
     /// Gets the raw data.
     pub fn raw(&self) -> Result<RawView<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear {
-            Self::Raw(i) => Ok(i),
+        match &clear.node.node {
+            Node::Raw(i) => Ok(RawView::new(clear.node.mark, i)),
             _ => Err(self.make_another_type_error(NodeType::Raw)),
         }
     }
@@ -240,8 +224,8 @@ impl<'data> View<'data> {
     /// Gets the string data.
     pub fn string(&self) -> Result<StringView<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear {
-            Self::String(i) => Ok(i),
+        match &clear.node.node {
+            Node::String(i) => Ok(StringView::new(clear.node.mark, i)),
             _ => Err(self.make_another_type_error(NodeType::String)),
         }
     }
@@ -249,8 +233,8 @@ impl<'data> View<'data> {
     /// Gets the list view.
     pub fn list(&self) -> Result<ListView<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear {
-            Self::List(i) => Ok(i),
+        match &clear.node.node {
+            Node::List(i) => Ok(ListView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::List)),
         }
     }
@@ -258,8 +242,8 @@ impl<'data> View<'data> {
     /// Gets the map view.
     pub fn map(&self) -> Result<MapView<'data>, marked::AnotherTypeError> {
         let clear = self.clear();
-        match clear {
-            Self::Map(i) => Ok(i),
+        match &clear.node.node {
+            Node::Map(i) => Ok(MapView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::Map)),
         }
     }
@@ -268,8 +252,8 @@ impl<'data> View<'data> {
     pub fn tagged(&self) -> Result<TaggedView<'data>, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(File, TakeAnchor, GetAnchor)>();
-        match clear {
-            Self::Tagged(i) => Ok(i),
+        match &clear.node.node {
+            Node::Tagged(i) => Ok(TaggedView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::Tagged)),
         }
     }
@@ -278,8 +262,8 @@ impl<'data> View<'data> {
     pub fn file(&self) -> Result<FileView<'data>, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>();
-        match clear {
-            Self::File(i) => Ok(i),
+        match &clear.node.node {
+            Node::File(i) => Ok(FileView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::File)),
         }
     }
@@ -288,8 +272,8 @@ impl<'data> View<'data> {
     pub fn take_anchor(&self) -> Result<TakeAnchorView<'data>, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(File, Tagged, GetAnchor)>();
-        match clear {
-            Self::TakeAnchor(i) => Ok(i),
+        match &clear.node.node {
+            Node::TakeAnchor(i) => Ok(TakeAnchorView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
         }
     }
@@ -298,8 +282,8 @@ impl<'data> View<'data> {
     pub fn get_anchor(&self) -> Result<GetAnchorView<'data>, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(File, Tagged, TakeAnchor)>();
-        match clear {
-            Self::GetAnchor(i) => Ok(i),
+        match &clear.node.node {
+            Node::GetAnchor(i) => Ok(GetAnchorView::new(clear.node.mark, i, clear.data)),
             _ => Err(self.make_another_type_error(NodeType::GetAnchor)),
         }
     }
@@ -308,9 +292,9 @@ impl<'data> View<'data> {
     pub fn anchor_name(&self) -> Result<&str, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(File, Tagged)>();
-        match &clear {
-            Self::TakeAnchor(i) => Ok(i.name()),
-            Self::GetAnchor(i) => Ok(i.name()),
+        match &clear.node.node {
+            Node::TakeAnchor(i) => Ok(i.name.as_str()),
+            Node::GetAnchor(i) => Ok(i.name.as_str()),
             _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
         }
     }
@@ -324,6 +308,12 @@ impl<'data> View<'data> {
         &self,
     ) -> Result<T, marked::FailedDeserializeError<E>> {
         T::decode(*self).map_err(|e| self.make_error(FailedDeserializeError::new::<T>(Box::new(e))))
+    }
+}
+
+impl<'data> Debug for View<'data> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.to_match())
     }
 }
 
