@@ -7,7 +7,7 @@ pub struct NullView {
 }
 
 impl NullView {
-    pub(super) fn new(mark: Mark) -> Self {
+    pub(in super::super) fn new(mark: Mark) -> Self {
         Self { mark }
     }
 

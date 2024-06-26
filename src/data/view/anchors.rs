@@ -1,14 +1,11 @@
-use crate::data::node::MarkedNode;
-
 use super::{
     super::{
+        data::Data,
         mark::Mark,
-        node::{
-            node::{FileNode, Node},
-            Data,
-        },
+        node::node::{FileNode, MarkedNode, Node},
     },
-    view::{map_view::MapView, View},
+    type_view::map_view::MapView,
+    view::View,
 };
 use std::fmt::{self, Debug, Formatter};
 

@@ -1,6 +1,7 @@
 use super::super::{
-    node::{Data, node::{Node, MapNode, MarkedNode}},
+    data::Data,
     mark::Mark,
+    node::node::{MapNode, MarkedNode, Node},
 };
 use std::path::{Path, PathBuf};
 
@@ -37,7 +38,11 @@ impl<'a> Maker<'a> {
     }
 
     pub(super) fn add_anchor(&mut self, name: String, index: usize) -> Option<()> {
-        self.anchors.data.insert(name, index).is_none().then_some(())
+        self.anchors
+            .data
+            .insert(name, index)
+            .is_none()
+            .then_some(())
     }
 
     pub(super) fn anchors(&mut self) -> &mut MapNode {

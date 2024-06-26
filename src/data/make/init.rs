@@ -1,7 +1,4 @@
-use super::super::{
-    node::{Data, Node},
-    view::anchors::Anchors,
-};
+use super::super::{data::Data, node::node::Node, view::anchors::Anchors};
 use super::error::*;
 use std::error::Error;
 

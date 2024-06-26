@@ -1,12 +1,7 @@
-use super::{
-    super::{
-        super::{
-            node::{file_node::FileNode, Data},
-            mark::Mark,
-        },
-        anchors::Anchors,
-    },
-    View,
+use super::super::{
+    super::{data::Data, mark::Mark, node::file_node::FileNode},
+    anchors::Anchors,
+    view::View,
 };
 use std::{
     fmt::{self, Debug, Formatter},
@@ -21,7 +16,7 @@ pub struct FileView<'data> {
 }
 
 impl<'data> FileView<'data> {
-    pub(super) fn new(mark: Mark, node: &'data FileNode, data: &'data Data) -> Self {
+    pub(in super::super) fn new(mark: Mark, node: &'data FileNode, data: &'data Data) -> Self {
         Self { mark, node, data }
     }
 
@@ -44,7 +39,8 @@ impl<'data> FileView<'data> {
 
 impl<'data> PartialEq for FileView<'data> {
     fn eq(&self, other: &Self) -> bool {
-        self.anchors().file_anchors() == other.anchors().file_anchors() && self.view() == other.view()
+        self.anchors().file_anchors() == other.anchors().file_anchors()
+            && self.view() == other.view()
     }
 }
 

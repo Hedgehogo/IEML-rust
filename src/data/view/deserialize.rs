@@ -1,7 +1,7 @@
 use super::{
-    super::{error::marked, view::view::View},
-    view::list_view::ListView,
-    view::map_view::MapView,
+    super::error::marked,
+    type_view::{list_view::ListView, map_view::MapView},
+    view::View,
 };
 use crate::parse::utils::to_value::{to_bool, to_number};
 use std::error::Error;

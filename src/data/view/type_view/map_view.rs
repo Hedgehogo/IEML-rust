@@ -1,10 +1,11 @@
-use super::{
-    super::super::{
+use super::super::{
+    super::{
+        data::Data,
         error::{marked, InvalidKeyError},
         mark::Mark,
-        node::{map_node::MapNode, Data},
+        node::map_node::MapNode,
     },
-    View,
+    view::View,
 };
 use std::{
     collections::hash_map,
@@ -107,10 +108,7 @@ impl<'data> Debug for MapView<'data> {
 mod tests {
     use super::*;
     use crate::data::{
-        node::{
-            node::{Node, TaggedNode},
-            MarkedNode,
-        },
+        node::node::{MarkedNode, Node, TaggedNode},
         node_type::NodeType,
     };
     use std::collections::HashMap;

@@ -11,7 +11,7 @@ pub struct StringView<'data> {
 }
 
 impl<'data> StringView<'data> {
-    pub(super) fn new(mark: Mark, string: &'data StringNode) -> Self {
+    pub(in super::super) fn new(mark: Mark, string: &'data StringNode) -> Self {
         Self { mark, string }
     }
 

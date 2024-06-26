@@ -1,10 +1,11 @@
-use super::{
-    super::super::{
+use super::super::{
+    super::{
+        data::Data,
         error::{marked, InvalidIndexError},
         mark::Mark,
-        node::{node::ListNode, Data},
+        node::node::ListNode,
     },
-    View,
+    view::View,
 };
 use std::{
     fmt::{self, Debug, Formatter},
@@ -47,7 +48,7 @@ pub struct ListView<'data> {
 }
 
 impl<'data> ListView<'data> {
-    pub(super) fn new(mark: Mark, node: &'data ListNode, data: &'data Data) -> Self {
+    pub(in super::super) fn new(mark: Mark, node: &'data ListNode, data: &'data Data) -> Self {
         Self { mark, node, data }
     }
 
@@ -97,7 +98,7 @@ impl<'data> Debug for ListView<'data> {
 mod tests {
     use super::*;
     use crate::data::{
-        node::{node::Node, MarkedNode},
+        node::node::{MarkedNode, Node},
         node_type::NodeType,
     };
 

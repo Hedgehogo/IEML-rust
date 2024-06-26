@@ -1,9 +1,6 @@
-use super::{
-    super::super::{
-        mark::Mark,
-        node::{tag_node::TaggedNode, Data},
-    },
-    View,
+use super::super::{
+    super::{data::Data, mark::Mark, node::tag_node::TaggedNode},
+    view::View,
 };
 use std::fmt::{self, Debug, Formatter};
 
@@ -15,7 +12,7 @@ pub struct TaggedView<'data> {
 }
 
 impl<'data> TaggedView<'data> {
-    pub(super) fn new(mark: Mark, node: &'data TaggedNode, data: &'data Data) -> Self {
+    pub(in super::super) fn new(mark: Mark, node: &'data TaggedNode, data: &'data Data) -> Self {
         Self { mark, node, data }
     }
 

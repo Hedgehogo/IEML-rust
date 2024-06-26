@@ -11,7 +11,7 @@ pub struct RawView<'data> {
 }
 
 impl<'data> RawView<'data> {
-    pub(super) fn new(mark: Mark, raw: &'data RawNode) -> Self {
+    pub(in super::super) fn new(mark: Mark, raw: &'data RawNode) -> Self {
         Self { mark, raw }
     }
 

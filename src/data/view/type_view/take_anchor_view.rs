@@ -1,9 +1,6 @@
-use super::{
-    super::super::{
-        mark::Mark,
-        node::{take_anchor_node::TakeAnchorNode, Data},
-    },
-    View,
+use super::super::{
+    super::{data::Data, mark::Mark, node::take_anchor_node::TakeAnchorNode},
+    view::View,
 };
 use std::fmt::{self, Debug, Formatter};
 
@@ -15,7 +12,7 @@ pub struct TakeAnchorView<'data> {
 }
 
 impl<'data> TakeAnchorView<'data> {
-    pub(super) fn new(mark: Mark, node: &'data TakeAnchorNode, data: &'data Data) -> Self {
+    pub(in super::super) fn new(mark: Mark, node: &'data TakeAnchorNode, data: &'data Data) -> Self {
         Self { mark, node, data }
     }
 
