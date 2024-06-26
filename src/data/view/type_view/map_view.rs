@@ -5,6 +5,7 @@ use super::super::{
         mark::Mark,
         node::map_node::MapNode,
     },
+    analyse_anchors::AnalyseAnchors,
     view::View,
 };
 use std::{
@@ -13,43 +14,65 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct MapIter<'data> {
+pub struct MapIter<'data, A: AnalyseAnchors<'data>> {
     iter: hash_map::Iter<'data, String, usize>,
     data: &'data Data,
+    anchor_analyser: A,
 }
 
-impl<'data> MapIter<'data> {
-    fn new(iter: hash_map::Iter<'data, String, usize>, data: &'data Data) -> Self {
-        Self { data, iter }
+impl<'data, A: AnalyseAnchors<'data>> MapIter<'data, A> {
+    fn new(
+        iter: hash_map::Iter<'data, String, usize>,
+        data: &'data Data,
+        anchor_analyser: A,
+    ) -> Self {
+        Self {
+            data,
+            iter,
+            anchor_analyser,
+        }
     }
 }
 
-impl<'data> Debug for MapIter<'data> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for MapIter<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{{ next: {:?} }}", self.clone().next())
     }
 }
 
-impl<'data> Iterator for MapIter<'data> {
-    type Item = (&'data String, View<'data>);
+impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
+    type Item = (&'data String, View<'data, A>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            .map(|(key, i)| (key, View::new(self.data.get(*i), self.data)))
+        self.iter.next().map(|(key, i)| {
+            let node = self.data.get(*i);
+            let view = View::new(node, self.data, self.anchor_analyser.clone());
+            (key, view)
+        })
     }
 }
 
-#[derive(Clone, Copy, Eq)]
-pub struct MapView<'data> {
+#[derive(Clone, Eq)]
+pub struct MapView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
     node: &'data MapNode,
     data: &'data Data,
+    anchor_analyser: A,
 }
 
-impl<'data> MapView<'data> {
-    pub(in super::super) fn new(mark: Mark, node: &'data MapNode, data: &'data Data) -> Self {
-        Self { mark, node, data }
+impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
+    pub(in super::super) fn new(
+        mark: Mark,
+        node: &'data MapNode,
+        data: &'data Data,
+        anchor_analyser: A,
+    ) -> Self {
+        Self {
+            mark,
+            node,
+            data,
+            anchor_analyser,
+        }
     }
 
     pub fn mark(&self) -> Mark {
@@ -64,22 +87,26 @@ impl<'data> MapView<'data> {
         self.node.data.contains_key(key)
     }
 
-    pub fn get(&self, key: &str) -> Result<View<'data>, marked::InvalidKeyError> {
+    pub fn get(&self, key: &str) -> Result<View<'data, A>, marked::InvalidKeyError> {
         match self.node.data.get(key) {
-            Some(i) => Ok(View::new(self.data.get(*i), self.data)),
-            None => Err(marked::WithMarkError::new(
-                self.mark,
-                InvalidKeyError::new(key.into()),
-            )),
+            Some(i) => Ok({
+                let node = self.data.get(*i);
+                View::new(node, self.data, self.anchor_analyser.clone())
+            }),
+            None => Err({
+                let error = InvalidKeyError::new(key.into());
+                marked::WithMarkError::new(self.mark, error)
+            }),
         }
     }
 
-    pub fn iter(&self) -> MapIter<'data> {
-        MapIter::new(self.node.data.iter(), self.data)
+    pub fn iter(&self) -> MapIter<'data, A> {
+        let anchor_analyser = self.anchor_analyser.clone();
+        MapIter::new(self.node.data.iter(), self.data, anchor_analyser)
     }
 }
 
-impl<'data> PartialEq for MapView<'data> {
+impl<'data, A: AnalyseAnchors<'data>> PartialEq for MapView<'data, A> {
     fn eq(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -94,7 +121,7 @@ impl<'data> PartialEq for MapView<'data> {
     }
 }
 
-impl<'data> Debug for MapView<'data> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for MapView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "MapView {{ mark: {:?}, map: [", self.mark)?;
         for (k, v) in self.iter() {
@@ -135,7 +162,7 @@ mod tests {
     fn test_map_view() {
         let data = test_data();
         if let Node::Map(node) = &data.get(3).node {
-            let list = MapView::new(Default::default(), node, &data);
+            let list = MapView::new(Default::default(), node, &data, ());
 
             let first = list.get("first").unwrap();
             assert_eq!(first.node_type(), NodeType::Null);

@@ -1,7 +1,7 @@
 use super::super::super::mark::Mark;
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct NullView {
     mark: Mark,
 }

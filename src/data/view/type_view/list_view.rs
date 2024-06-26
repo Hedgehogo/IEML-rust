@@ -5,6 +5,7 @@ use super::super::{
         mark::Mark,
         node::node::ListNode,
     },
+    analyse_anchors::AnalyseAnchors,
     view::View,
 };
 use std::{
@@ -13,43 +14,60 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct ListIter<'data> {
+pub struct ListIter<'data, A: AnalyseAnchors<'data>> {
     iter: slice::Iter<'data, usize>,
     data: &'data Data,
+    anchor_analyser: A,
 }
 
-impl<'data> ListIter<'data> {
-    fn new(iter: slice::Iter<'data, usize>, data: &'data Data) -> Self {
-        Self { data, iter }
+impl<'data, A: AnalyseAnchors<'data>> ListIter<'data, A> {
+    fn new(iter: slice::Iter<'data, usize>, data: &'data Data, anchor_analyser: A) -> Self {
+        Self {
+            data,
+            iter,
+            anchor_analyser,
+        }
     }
 }
 
-impl<'data> Debug for ListIter<'data> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for ListIter<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{{ next: {:?} }}", self.clone().next())
     }
 }
 
-impl<'data> Iterator for ListIter<'data> {
-    type Item = View<'data>;
+impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
+    type Item = View<'data, A>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            .map(|i| View::new(self.data.get(*i), self.data))
+        self.iter.next().map(|i| {
+            let node = self.data.get(*i);
+            View::new(node, self.data, self.anchor_analyser.clone())
+        })
     }
 }
 
-#[derive(Clone, Copy, Eq)]
-pub struct ListView<'data> {
+#[derive(Clone, Eq)]
+pub struct ListView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
     node: &'data ListNode,
     data: &'data Data,
+    anchor_analyser: A,
 }
 
-impl<'data> ListView<'data> {
-    pub(in super::super) fn new(mark: Mark, node: &'data ListNode, data: &'data Data) -> Self {
-        Self { mark, node, data }
+impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
+    pub(in super::super) fn new(
+        mark: Mark,
+        node: &'data ListNode,
+        data: &'data Data,
+        anchor_analyser: A,
+    ) -> Self {
+        Self {
+            mark,
+            node,
+            data,
+            anchor_analyser,
+        }
     }
 
     pub fn mark(&self) -> Mark {
@@ -60,22 +78,26 @@ impl<'data> ListView<'data> {
         self.node.data.len()
     }
 
-    pub fn get(&self, index: usize) -> Result<View<'data>, marked::InvalidIndexError> {
+    pub fn get(&self, index: usize) -> Result<View<'data, A>, marked::InvalidIndexError> {
         match self.node.data.get(index) {
-            Some(i) => Ok(View::new(self.data.get(*i), self.data)),
-            None => Err(marked::WithMarkError::new(
-                self.mark,
-                InvalidIndexError::new(index, self.len()),
-            )),
+            Some(i) => Ok({
+                let node = self.data.get(*i);
+                View::new(node, self.data, self.anchor_analyser.clone())
+            }),
+            None => Err({
+                let error = InvalidIndexError::new(index, self.len());
+                marked::WithMarkError::new(self.mark, error)
+            }),
         }
     }
 
-    pub fn iter(&self) -> ListIter<'data> {
-        ListIter::new(self.node.data.iter(), self.data)
+    pub fn iter(&self) -> ListIter<'data, A> {
+        let anchor_analyser = self.anchor_analyser.clone();
+        ListIter::new(self.node.data.iter(), self.data, anchor_analyser)
     }
 }
 
-impl<'data> PartialEq for ListView<'data> {
+impl<'data, A: AnalyseAnchors<'data>> PartialEq for ListView<'data, A> {
     fn eq(&self, other: &Self) -> bool {
         if self.len() != other.len() {
             return false;
@@ -84,7 +106,7 @@ impl<'data> PartialEq for ListView<'data> {
     }
 }
 
-impl<'data> Debug for ListView<'data> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for ListView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "ListView {{ mark: {:?}, list: [", self.mark)?;
         for i in self.iter() {
@@ -114,7 +136,7 @@ mod tests {
     fn test_list_view() {
         let data = test_data();
         if let Node::List(node) = &data.get(2).node {
-            let list = ListView::new(Default::default(), node, &data);
+            let list = ListView::new(Default::default(), node, &data, ());
 
             let first = list.get(0).unwrap();
             assert_eq!(first.node_type(), NodeType::String);

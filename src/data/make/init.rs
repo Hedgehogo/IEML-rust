@@ -26,7 +26,7 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
             let file_node = std::mem::take(data.get_mut(file_index));
             match &file_node.node {
                 Node::File(file) => {
-                    let anchors = Anchors::new(Default::default(), file, data);
+                    let anchors = Anchors::new(Default::default(), file, data, ());
                     match anchors.get_index(i.name.as_str()) {
                         Some(j) => i.node_index = j,
                         None => {

@@ -1,3 +1,4 @@
+pub mod analyse_anchors;
 pub mod anchors;
 pub mod clear;
 pub mod deserialize;

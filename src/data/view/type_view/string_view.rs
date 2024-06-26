@@ -4,7 +4,7 @@ use super::super::super::{
 };
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct StringView<'data> {
     mark: Mark,
     string: &'data StringNode,

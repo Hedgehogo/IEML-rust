@@ -54,7 +54,7 @@ fn make_another_type_error(
 #[test]
 fn test_null() {
     let data = test_data();
-    let view = View::new(data.get(0), &data);
+    let view = View::new(data.get(0), &data, ());
     let mark = Mark { line: 2, symbol: 5 };
 
     assert_eq!(view.mark(), mark);
@@ -139,7 +139,7 @@ fn test_null() {
 #[test]
 fn test_raw() {
     let data = test_data();
-    let view = View::new(data.get(1), &data);
+    let view = View::new(data.get(1), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -213,7 +213,7 @@ fn test_raw() {
 #[test]
 fn test_string() {
     let data = test_data();
-    let view = View::new(data.get(2), &data);
+    let view = View::new(data.get(2), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -299,7 +299,7 @@ fn test_string() {
 #[test]
 fn test_list() {
     let data = test_data();
-    let view = View::new(data.get(3), &data);
+    let view = View::new(data.get(3), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -330,7 +330,7 @@ fn test_list() {
     if let Node::List(node) = &data.get(3).node {
         assert_eq!(
             view.list(),
-            Ok(ListView::new(Default::default(), node, &data))
+            Ok(ListView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a list");
@@ -384,7 +384,7 @@ fn test_list() {
 #[test]
 fn test_map() {
     let data = test_data();
-    let view = View::new(data.get(4), &data);
+    let view = View::new(data.get(4), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -419,7 +419,7 @@ fn test_map() {
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), node, &data))
+            Ok(MapView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a map");
@@ -465,7 +465,7 @@ fn test_map() {
 #[test]
 fn test_tagged() {
     let data = test_data();
-    let view = View::new(data.get(5), &data);
+    let view = View::new(data.get(5), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -508,7 +508,7 @@ fn test_tagged() {
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), node, &data))
+            Ok(MapView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a map");
@@ -516,7 +516,7 @@ fn test_tagged() {
     if let Node::Tagged(node) = &data.get(5).node {
         assert_eq!(
             view.tagged(),
-            Ok(TaggedView::new(Default::default(), node, &data))
+            Ok(TaggedView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a tagged");
@@ -532,7 +532,7 @@ fn test_tagged() {
     if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), node, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
@@ -551,7 +551,7 @@ fn test_tagged() {
 #[test]
 fn test_file() {
     let data = test_data();
-    let view = View::new(data.get(6), &data);
+    let view = View::new(data.get(6), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -590,7 +590,7 @@ fn test_file() {
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), node, &data))
+            Ok(MapView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a map");
@@ -598,7 +598,7 @@ fn test_file() {
     if let Node::Tagged(node) = &data.get(5).node {
         assert_eq!(
             view.tagged(),
-            Ok(TaggedView::new(Default::default(), node, &data))
+            Ok(TaggedView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a tagged");
@@ -606,7 +606,7 @@ fn test_file() {
     if let Node::File(node) = &data.get(6).node {
         assert_eq!(
             view.file(),
-            Ok(FileView::new(Default::default(), node, &data))
+            Ok(FileView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
@@ -614,7 +614,7 @@ fn test_file() {
     if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), node, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
@@ -633,7 +633,7 @@ fn test_file() {
 #[test]
 fn test_take_anchor() {
     let data = test_data();
-    let view = View::new(data.get(7), &data);
+    let view = View::new(data.get(7), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -676,7 +676,7 @@ fn test_take_anchor() {
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), node, &data))
+            Ok(MapView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a map");
@@ -700,7 +700,7 @@ fn test_take_anchor() {
     if let Node::TakeAnchor(node) = &data.get(7).node {
         assert_eq!(
             view.take_anchor(),
-            Ok(TakeAnchorView::new(Default::default(), node, &data))
+            Ok(TakeAnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
@@ -719,7 +719,7 @@ fn test_take_anchor() {
 #[test]
 fn test_get_anchor() {
     let data = test_data();
-    let view = View::new(data.get(8), &data);
+    let view = View::new(data.get(8), &data, ());
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
@@ -762,7 +762,7 @@ fn test_get_anchor() {
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
-            Ok(MapView::new(Default::default(), node, &data))
+            Ok(MapView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a map");
@@ -794,7 +794,7 @@ fn test_get_anchor() {
     if let Node::GetAnchor(node) = &data.get(8).node {
         assert_eq!(
             view.get_anchor(),
-            Ok(GetAnchorView::new(Default::default(), node, &data))
+            Ok(GetAnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a get anchor");
