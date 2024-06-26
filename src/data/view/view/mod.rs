@@ -10,11 +10,7 @@ use super::{
 };
 use std::{error::Error, fmt::Debug};
 
-pub use super::type_view::{
-    file_view::FileView, get_anchor_view::GetAnchorView, list_view::ListView, map_view::MapView,
-    null_view::NullView, raw_view::RawView, string_view::StringView, tagged_view::TaggedView,
-    take_anchor_view::TakeAnchorView,
-};
+pub use super::to_match::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum View<'data> {
