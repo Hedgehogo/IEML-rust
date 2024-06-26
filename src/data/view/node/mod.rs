@@ -17,10 +17,7 @@ use super::{
     },
     decode::Decode,
 };
-use std::{
-    error::Error,
-    fmt::Debug,
-};
+use std::{error::Error, fmt::Debug};
 pub use {
     file_node::FileNode, get_anchor_node::GetAnchorNode, list_node::ListNode, map_node::MapNode,
     null_node::NullNode, raw_node::RawNode, string_node::StringNode, tagged_node::TaggedNode,
