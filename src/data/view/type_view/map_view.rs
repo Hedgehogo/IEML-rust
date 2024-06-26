@@ -131,6 +131,15 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for MapView<'data, A> {
     }
 }
 
+impl<'data, A: AnalyseAnchors<'data>> IntoIterator for MapView<'data, A> {
+    type IntoIter = MapIter<'data, A>;
+    type Item = (&'data String, View<'data, A>);
+
+    fn into_iter(self) -> Self::IntoIter {
+        MapIter::new(self.node.data.iter(), self.data, self.anchor_analyser)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

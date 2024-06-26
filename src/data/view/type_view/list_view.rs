@@ -116,6 +116,15 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for ListView<'data, A> {
     }
 }
 
+impl<'data, A: AnalyseAnchors<'data>> IntoIterator for ListView<'data, A> {
+    type IntoIter = ListIter<'data, A>;
+    type Item = View<'data, A>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ListIter::new(self.node.data.iter(), self.data, self.anchor_analyser)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
