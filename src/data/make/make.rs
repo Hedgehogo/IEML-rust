@@ -8,98 +8,148 @@ use super::{
     },
     error::*,
     init::init,
-    maker::Maker,
 };
 use std::{error::Error, path::PathBuf};
 
-pub type MakeResult<E> = Result<(), marked::MakeError<E>>;
+pub use super::maker::Maker;
 
-pub fn null<E>(mark: Mark) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn null<E>(begin_mark: Mark, end_mark: Mark) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
 {
     move |maker| {
-        maker.add(mark, Node::Null);
-        Ok(())
+        maker.add(begin_mark, Node::Null);
+        Ok(end_mark)
     }
 }
 
-pub fn raw<E, S>(mark: Mark, raw: S) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn raw<E, S>(
+    begin_mark: Mark,
+    end_mark: Mark,
+    raw: S,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
     move |maker| {
-        maker.add(mark, Node::Raw(raw.into()));
-        Ok(())
+        maker.add(begin_mark, Node::Raw(raw.into()));
+        Ok(end_mark)
     }
 }
 
-pub fn string<E, S>(mark: Mark, string: S) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn string<E, S>(
+    begin_mark: Mark,
+    end_mark: Mark,
+    string: S,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
-    move |maker| Ok(maker.add(mark, Node::String(string.into())))
+    move |maker| {
+        maker.add(begin_mark, Node::String(string.into()));
+        Ok(end_mark)
+    }
 }
 
-pub fn list<E, F, I>(mark: Mark, iter: I) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn list<E, F, I>(
+    begin_mark: Mark,
+    end_mark: Mark,
+    iter: I,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     I: Iterator<Item = F>,
 {
     move |maker| {
-        let result: Result<_, _> = iter.map(|f| f(maker).map(|_| maker.last())).collect();
-        result.map(|i| maker.add(mark, Node::List(ListNode::new(i))))
+        let mut end_mark = end_mark;
+        let result: Result<_, _> = iter
+            .map(|f| {
+                f(maker).map(|mark| {
+                    end_mark = mark;
+                    maker.last()
+                })
+            })
+            .collect();
+        result.map(|i| {
+            maker.add(begin_mark, Node::List(ListNode::new(i)));
+            end_mark
+        })
     }
 }
 
-pub fn map<E, F, S, I>(mark: Mark, iter: I) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn map<E, F, S, I>(
+    begin_mark: Mark,
+    end_mark: Mark,
+    iter: I,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     S: Into<String>,
     I: Iterator<Item = (S, F)>,
 {
     move |maker| {
+        let mut end_mark = end_mark;
         let result: Result<_, _> = iter
-            .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
+            .map(|(key, f)| {
+                f(maker).map(|mark| {
+                    end_mark = mark;
+                    (key.into(), maker.last())
+                })
+            })
             .collect();
-        result.map(|i| maker.add(mark, Node::Map(MapNode::new(i))))
+        result.map(|i| {
+            maker.add(begin_mark, Node::Map(MapNode::new(i)));
+            end_mark
+        })
     }
 }
 
-pub fn tag<E, F, S>(mark: Mark, tag: S, f: F) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn tag<E, F, S>(
+    begin_mark: Mark,
+    tag: S,
+    f: F,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     S: Into<String>,
 {
     move |maker| {
-        f(maker)?;
-        let result = TaggedNode::new(tag.into(), maker.last());
-        maker.add(mark, Node::Tagged(result));
-        Ok(())
+        f(maker).map(|end_mark| {
+            let result = TaggedNode::new(tag.into(), maker.last());
+            maker.add(begin_mark, Node::Tagged(result));
+            end_mark
+        })
     }
 }
 
 pub fn file<E, F, A, S, I>(
-    mark: Mark,
+    begin_mark: Mark,
+    end_mark: Mark,
     path: PathBuf,
     anchors: I,
     f: F,
-) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
-    A: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
+    A: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     S: Into<String>,
     I: Iterator<Item = (S, A)>,
 {
     move |maker| {
+        let mut end_mark = end_mark;
         let file_anchors = anchors
-            .map(|(key, f)| f(maker).map(|_| (key.into(), maker.last())))
+            .map(|(key, f)| {
+                f(maker).map(|mark| {
+                    end_mark = mark;
+                    (key.into(), maker.last())
+                })
+            })
             .collect::<Result<_, _>>()?;
         let result = maker.child(|maker| {
             f(maker).map(|_| {
@@ -112,51 +162,60 @@ where
                 )
             })
         })?;
-        maker.add(mark, Node::File(result));
-        Ok(())
+        maker.add(begin_mark, Node::File(result));
+        Ok(end_mark)
     }
 }
 
-pub fn take_anchor<E, F, S>(mark: Mark, name: S, f: F) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn take_anchor<E, F, S>(
+    begin_mark: Mark,
+    name: S,
+    f: F,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     S: Into<String>,
 {
     move |maker| {
-        f(maker)?;
-        let name = name.into();
-        let result = TakeAnchorNode::new(name.clone(), maker.last());
-        maker
-            .add_anchor(name.clone(), maker.last())
-            .ok_or(marked::MakeError::new(
-                mark,
-                MakeError::new(
-                    maker.path().to_path_buf(),
-                    MakeErrorReason::AnchorAlreadyExist(name),
-                ),
-            ))?;
-        maker.add(mark, Node::TakeAnchor(result));
-        Ok(())
+        f(maker).and_then(|end_mark| {
+            let name = name.into();
+            let result = TakeAnchorNode::new(name.clone(), maker.last());
+            maker
+                .add_anchor(name.clone(), maker.last())
+                .ok_or(marked::MakeError::new(
+                    begin_mark,
+                    MakeError::new(
+                        maker.path().to_path_buf(),
+                        MakeErrorReason::AnchorAlreadyExist(name),
+                    ),
+                ))?;
+            maker.add(begin_mark, Node::TakeAnchor(result));
+            Ok(end_mark)
+        })
     }
 }
 
-pub fn get_anchor<E, S>(mark: Mark, name: S) -> impl FnOnce(&mut Maker) -> MakeResult<E>
+pub fn get_anchor<E, S>(
+    begin_mark: Mark,
+    end_mark: Mark,
+    name: S,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<E>
 where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
     move |maker| {
         let result = GetAnchorNode::new(name.into(), 0);
-        maker.add(mark, Node::GetAnchor(result));
-        Ok(())
+        maker.add(begin_mark, Node::GetAnchor(result));
+        Ok(end_mark)
     }
 }
 
-pub fn make<E, F>(mark: Mark, f: F) -> Result<Data, marked::MakeError<E>>
+pub fn make<E, F>(begin_mark: Mark, f: F) -> Result<Data, marked::MakeError<E>>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
 {
     let mut data = Data::default();
     let mut maker = Maker::new(&mut data, PathBuf::new());
@@ -167,27 +226,27 @@ where
             ..Default::default()
         })
     })?;
-    maker.add(mark, Node::File(result));
+    maker.add(begin_mark, Node::File(result));
     init(&mut data)?;
     Ok(data)
 }
 
 pub fn make_file<E, F, A, S, I>(
-    mark: Mark,
+    begin_mark: Mark,
     path: PathBuf,
     anchors: I,
     f: F,
 ) -> Result<Data, marked::MakeError<E>>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(&mut Maker) -> MakeResult<E>,
-    A: FnOnce(&mut Maker) -> MakeResult<E>,
+    F: FnOnce(&mut Maker) -> marked::MakeResult<E>,
+    A: FnOnce(&mut Maker) -> marked::MakeResult<E>,
     S: Into<String>,
     I: Iterator<Item = (S, A)>,
 {
     let mut data = Data::default();
     let mut maker = Maker::new(&mut data, path.clone());
-    file(mark, path, anchors, f)(&mut maker)?;
+    file(begin_mark, Default::default(), path, anchors, f)(&mut maker)?;
     init(&mut data)?;
     Ok(data)
 }
@@ -201,7 +260,8 @@ mod tests {
 
     #[test]
     fn test_null() {
-        let data = make::<Infallible, _>(Mark::default(), null(Mark::default())).unwrap();
+        let data =
+            make::<Infallible, _>(Mark::default(), null(Mark::default(), Mark::default())).unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -210,7 +270,11 @@ mod tests {
 
     #[test]
     fn test_raw() {
-        let data = make::<Infallible, _>(Mark::default(), raw(Mark::default(), "hello")).unwrap();
+        let data = make::<Infallible, _>(
+            Mark::default(),
+            raw(Mark::default(), Mark::default(), "hello"),
+        )
+        .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -220,8 +284,11 @@ mod tests {
 
     #[test]
     fn test_string() {
-        let data =
-            make::<Infallible, _>(Mark::default(), string(Mark::default(), "hello")).unwrap();
+        let data = make::<Infallible, _>(
+            Mark::default(),
+            string(Mark::default(), Mark::default(), "hello"),
+        )
+        .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -234,10 +301,11 @@ mod tests {
         let data = make::<Infallible, _>(Mark::default(), {
             list(
                 Mark::default(),
+                Mark::default(),
                 Vec::from([
-                    Box::new(raw(Mark::default(), "hello"))
-                        as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
-                    Box::new(string(Mark::default(), "hello")),
+                    Box::new(raw(Mark::default(), Mark::default(), "hello"))
+                        as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<Infallible>>,
+                    Box::new(string(Mark::default(), Mark::default(), "hello")),
                 ])
                 .into_iter(),
             )
@@ -259,13 +327,17 @@ mod tests {
         let data = make::<Infallible, _>(Mark::default(), {
             map(
                 Mark::default(),
+                Mark::default(),
                 HashMap::from([
                     (
                         "first",
-                        Box::new(raw(Mark::default(), "hello"))
-                            as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
+                        Box::new(raw(Mark::default(), Mark::default(), "hello"))
+                            as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<Infallible>>,
                     ),
-                    ("second", Box::new(string(Mark::default(), "hello"))),
+                    (
+                        "second",
+                        Box::new(string(Mark::default(), Mark::default(), "hello")),
+                    ),
                 ])
                 .into_iter(),
             )
@@ -285,7 +357,11 @@ mod tests {
     #[test]
     fn test_tagged() {
         let data = make::<Infallible, _>(Mark::default(), {
-            tag(Mark::default(), "tag", null(Mark::default()))
+            tag(
+                Mark::default(),
+                "tag",
+                null(Mark::default(), Mark::default()),
+            )
         })
         .unwrap();
         let view = data.view();
@@ -302,14 +378,15 @@ mod tests {
         let data = make::<Infallible, _>(Mark::default(), {
             file(
                 Mark::default(),
+                Mark::default(),
                 "dir/name.ieml".into(),
                 HashMap::from([(
                     "file-anchor",
-                    Box::new(null(Mark::default()))
-                        as Box<dyn FnOnce(&mut Maker) -> MakeResult<Infallible>>,
+                    Box::new(null(Mark::default(), Mark::default()))
+                        as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<Infallible>>,
                 )])
                 .into_iter(),
-                raw(Mark::default(), "hello"),
+                raw(Mark::default(), Mark::default(), "hello"),
             )
         })
         .unwrap();

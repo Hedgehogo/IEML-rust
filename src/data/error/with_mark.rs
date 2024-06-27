@@ -22,6 +22,8 @@ impl<T: Error + PartialEq + Eq> Display for WithMarkError<T> {
     }
 }
 
+impl<T: Error + PartialEq + Eq> Error for WithMarkError<T> {}
+
 // Add after specializations appear
 /*impl<F, I: From<F>> From<WithMarkError<F>> for WithMarkError<I> {
     fn from(value: WithMarkError<F>) -> Self {
