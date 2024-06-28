@@ -1,6 +1,7 @@
 use super::node::node::MarkedNode;
 use super::view::analyse_anchors::AnalyseAnchors;
 use super::view::view::View;
+use std::fmt::{self, write};
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Data {
@@ -45,5 +46,11 @@ impl Data {
             self,
             anchor_analyser
         )
+    }
+}
+
+impl fmt::Debug for Data {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.view())
     }
 }

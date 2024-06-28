@@ -1,6 +1,6 @@
+pub mod combinator;
 pub mod error;
 mod init;
-pub mod make;
 pub mod maker;
 
-pub use make::*;
+pub use combinator::*;
