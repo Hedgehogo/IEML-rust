@@ -16,13 +16,17 @@ pub(crate) fn parse_null(mark: Mark) -> impl Fn(&str) -> ParseResult<&str, ()> {
 }
 
 /*
-pub(crate) fn null<'input>(file_path: &'input Path, input: &'input str, mark: Mark) -> impl FnOnce(&'input mut make::Maker) -> MakeResult {
+pub(crate) fn null<'input, 'path: 'input>(
+    file_path: &'path Path,
+    input: &'input str,
+    mark: Mark,
+) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| match parse_null(mark)(input) {
-        Ok(i) => make::null(mark, i.1.0)(maker),
-        Err(_) => Err(MakeError::new_with(mark, file_path.into(), error::Reason::FailedDetermineType.into())),
+        Ok((output, (end_mark, _))) => make::null(mark, (output, end_mark))(maker),
+        Err(_) => Err(MakeError::new_with(mark, file_path, FailedDetermineType)),
     }
 }
-*/
+ */
 
 #[cfg(test)]
 mod tests {

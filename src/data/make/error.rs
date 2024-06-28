@@ -66,11 +66,15 @@ pub mod marked {
     use std::{error::Error, path::PathBuf};
 
     pub type MakeError<E> = WithMarkError<super::MakeError<E>>;
-    pub type MakeResult<E> = Result<Mark, MakeError<E>>;
+    pub type MakeResult<O, E> = Result<O, MakeError<E>>;
 
     impl<E: Error + PartialEq + Eq> MakeError<E> {
-        pub fn new_with(mark: Mark, file_path: PathBuf, reason: super::MakeErrorReason<E>) -> Self {
-            Self::new(mark, super::MakeError::new(file_path, reason))
+        pub fn new_with<P, R>(mark: Mark, file_path: P, reason: R) -> Self
+        where
+            P: Into<PathBuf>,
+            R: Into<super::MakeErrorReason<E>>,
+        {
+            Self::new(mark, super::MakeError::new(file_path.into(), reason.into()))
         }
     }
 }

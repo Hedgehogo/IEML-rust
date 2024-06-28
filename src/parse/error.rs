@@ -37,7 +37,7 @@ pub mod marked {
     use nom::IResult;
 
     pub type MakeError = error::marked::MakeError<super::Error>;
-    pub type MakeResult = error::marked::MakeResult<super::Error>;
+    pub type MakeResult<'input> = error::marked::MakeResult<(&'input str, Mark), super::Error>;
 
     pub type ParseResult<I, O, E = nom::error::Error<I>> = IResult<I, (Mark, O), E>;
 }
