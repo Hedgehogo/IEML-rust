@@ -1,7 +1,7 @@
 use super::node::node::MarkedNode;
 use super::view::analyse_anchors::AnalyseAnchors;
 use super::view::view::View;
-use std::fmt::{self, write};
+use std::fmt;
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct Data {

@@ -4,7 +4,7 @@ use super::error::{
     marked::{MakeError, MakeResult, ParseResult},
     Error::{ExpectedTab, FailedDetermineType, IncompleteString},
 };
-use super::utils::blank_lines::match_indent;
+use super::utils::combinator::match_indent;
 use crate::data::{make, mark::Mark};
 use nom::character::complete::*;
 
@@ -12,32 +12,32 @@ fn analyze<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     indent: usize,
-    bytes: usize,
+    capacity: usize,
     mark: Mark,
 ) -> ParseResult<'input, usize> {
     let analyze_newline = |input, offset| match match_indent(indent)(input) {
         Ok((input, _)) => {
             let mark = mark + Mark::new(1, indent);
-            analyze(file_path, input, indent, bytes + offset, mark)
+            analyze(file_path, input, indent, capacity + offset, mark)
         }
         Err(_) => Err(MakeError::new_with(mark, file_path, ExpectedTab)),
     };
     let analyze_any = |input, any: char, offset| {
         let mark = mark + Mark::new(0, 1 + offset);
-        let bytes = bytes + any.len_utf8() + offset;
-        analyze(file_path, input, indent, bytes, mark)
+        let capacity = capacity + any.len_utf8() + offset;
+        analyze(file_path, input, indent, capacity, mark)
     };
     match anychar::<_, nom::error::Error<_>>(input) {
         Ok((input, result)) => match result {
             '\"' => {
                 let mark = mark + Mark::new(0, 1);
-                Ok(((input, mark), bytes + 1))
+                Ok(((input, mark), capacity + 1))
             }
             '\\' => match anychar::<_, nom::error::Error<_>>(input) {
                 Ok((input, result)) => match result {
                     '\\' | '\"' | 't' | 'n' => {
                         let mark = mark + Mark::new(0, 2);
-                        analyze(file_path, input, indent, bytes + 1, mark)
+                        analyze(file_path, input, indent, capacity + 1, mark)
                     }
                     '\n' => analyze_newline(input, 0),
                     i => analyze_any(input, i, 1),
@@ -51,8 +51,8 @@ fn analyze<'input, 'path: 'input>(
     }
 }
 
-fn parse(input: &str, indent: usize, bytes: usize) -> String {
-    let mut result = String::with_capacity(bytes);
+fn parse(input: &str, indent: usize, capacity: usize) -> String {
+    let mut result = String::with_capacity(capacity);
     let mut iter = input.chars();
     loop {
         match iter.next().unwrap() {
@@ -90,8 +90,8 @@ pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     match char::<_, nom::error::Error<_>>('\"')(input) {
         Ok((input, _)) => {
             let new_mark = Mark::new(mark.line, mark.symbol + 1);
-            let ((new_input, new_mark), bytes) = analyze(file_path, input, indent, 0, new_mark)?;
-            let result = parse(input, indent, bytes);
+            let ((new_input, new_mark), capacity) = analyze(file_path, input, indent, 0, new_mark)?;
+            let result = parse(input, indent, capacity);
             Ok(((new_input, new_mark), result))
         }
         Err(_) => Err(MakeError::new_with(mark, file_path, FailedDetermineType)),

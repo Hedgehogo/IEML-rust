@@ -1,25 +1,24 @@
 use std::path::Path;
 
-use super::error::{
-    marked::{MakeError, MakeResult, ParseResult},
-    Error::FailedDetermineType,
+use super::{
+    error::{
+        marked::{MakeError, MakeResult, ParseResult},
+        Error::FailedDetermineType,
+    },
+    utils::combinator::match_line,
 };
 use crate::data::{make, mark::Mark};
 use nom::bytes::complete::tag;
-use nom::multi::many0_count;
-use nom::{character::complete::*, combinator::recognize};
 
 pub(crate) fn parse_line_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
 ) -> ParseResult<'input, String> {
-    match tag("> ")(input).and_then(|(input, _)| {
-        recognize::<_, _, nom::error::Error<_>, _>(many0_count(none_of("\n")))(input)
-    }) {
-        Ok((input, result)) => {
-            let new_mark = mark + Mark::new(0, result.len() + 2);
-            Ok(((input, new_mark), result.into()))
+    match tag::<_, _, nom::error::Error<_>>("> ")(input) {
+        Ok((input, _)) => {
+            let (input, (result, mark)) = match_line(mark + Mark::new(0, 2))(input);
+            Ok(((input, mark), result.into()))
         }
         Err(_) => Err(MakeError::new_with(mark, file_path, FailedDetermineType)),
     }

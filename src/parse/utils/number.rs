@@ -1,4 +1,4 @@
-use super::{number_traits::Number, blank_lines::match_blank_line};
+use super::{number_traits::Number, combinator::match_blank_line};
 
 pub trait ToNumber: Number {
     fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self>;
@@ -227,7 +227,7 @@ impl_parse_number!(
 
 pub fn to_number<T: ToNumber>(input: &str) -> Option<T> {
     let (new_input, number) = parse_number_scientific(input)?;
-    let (new_input, _) = match_blank_line(new_input).ok()?;
+    let (new_input, _) = match_blank_line(new_input);
     new_input.is_empty().then_some(number)
 }
 
