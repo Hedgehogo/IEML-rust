@@ -26,7 +26,7 @@ pub(crate) fn parse_raw<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
-) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
+) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, raw)| make::raw(mark, output, raw)(maker);
         raw(file_path, input, mark).and_then(map)
@@ -43,19 +43,20 @@ mod tests {
     fn test_raw() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
+        let file_path = file_path.as_path();
         assert_eq!(
-            raw(file_path.as_path(), "hello", begin_mark),
+            raw(file_path, "hello", begin_mark),
             Ok((("", Mark::new(0, 5)), "hello".into()))
         );
         assert_eq!(
-            raw(file_path.as_path(), "hello\n", begin_mark),
+            raw(file_path, "hello\n", begin_mark),
             Ok((("\n", Mark::new(0, 5)), "hello".into()))
         );
         assert_eq!(
-            raw(file_path.as_path(), "< \n", begin_mark),
+            raw(file_path, "< \n", begin_mark),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path.clone(),
+                file_path,
                 FailedDetermineType
             ))
         );

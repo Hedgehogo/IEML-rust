@@ -30,7 +30,7 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
-) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
+) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, _)| make::null(mark, output)(maker);
         null(file_path, input, mark).and_then(map)
@@ -47,27 +47,28 @@ mod tests {
     fn test_null() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
+        let file_path = file_path.as_path();
         assert_eq!(
-            null(file_path.as_path(), "null", begin_mark),
+            null(file_path, "null", begin_mark),
             Ok((("", Mark::new(0, 4)), ()))
         );
         assert_eq!(
-            null(file_path.as_path(), "null ", begin_mark),
+            null(file_path, "null ", begin_mark),
             Ok((("", Mark::new(0, 5)), ()))
         );
         assert_eq!(
-            null(file_path.as_path(), "null# is null", begin_mark),
+            null(file_path, "null# is null", begin_mark),
             Ok((("# is null", Mark::new(0, 4)), ()))
         );
         assert_eq!(
-            null(file_path.as_path(), "null # is null", begin_mark),
+            null(file_path, "null # is null", begin_mark),
             Ok((("# is null", Mark::new(0, 5)), ()))
         );
         assert_eq!(
-            null(file_path.as_path(), " null", begin_mark),
+            null(file_path, " null", begin_mark),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path.clone(),
+                file_path,
                 FailedDetermineType
             ))
         );

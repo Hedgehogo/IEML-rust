@@ -36,8 +36,6 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
-
-
 pub mod marked {
     use crate::data::{make::error, mark::Mark};
 
@@ -49,11 +47,11 @@ pub mod marked {
             Ok(i) => Ok(Ok(i)),
             Err(i) => match &i.data.reason {
                 error::MakeErrorReason::Parse(e) => if e == &error {
-                    Err(i)
-                } else {
                     Ok(Err(i))
+                } else {
+                    Err(i)
                 },
-                _ => Ok(Err(i))
+                _ => Err(i)
             }
         }
     }

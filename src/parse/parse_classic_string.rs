@@ -1,10 +1,12 @@
 use std::path::Path;
 
-use super::error::{
-    marked::{MakeError, MakeResult, ParseResult},
-    Error::{ExpectedTab, FailedDetermineType, IncompleteString},
+use super::{
+    error::{
+        marked::{MakeError, MakeResult, ParseResult},
+        Error::{ExpectedTab, FailedDetermineType, IncompleteString},
+    },
+    utils::combinator::{match_indent, skip_blank_line},
 };
-use super::utils::combinator::match_indent;
 use crate::data::{make, mark::Mark};
 use nom::character::complete::*;
 
@@ -42,7 +44,10 @@ fn analyze<'input, 'path: 'input>(
                     '\n' => analyze_newline(input, 0),
                     i => analyze_any(input, i, 1),
                 },
-                Err(_) => Err(MakeError::new_with(mark, file_path, IncompleteString)),
+                Err(_) => {
+                    let mark = mark + Mark::new(0, 1);
+                    Err(MakeError::new_with(mark, file_path, IncompleteString))
+                }
             },
             '\n' => analyze_newline(input, 1),
             i => analyze_any(input, i, 0),
@@ -69,7 +74,9 @@ fn parse(input: &str, indent: usize, capacity: usize) -> String {
                         iter.next();
                     }
                 }
-                i @ ('\\' | '\"' | 't' | 'n') => result.push(i),
+                't' => result.push('\t'),
+                'n' => result.push('\n'),
+                i @ ('\\' | '\"') => result.push(i),
                 i => {
                     result.push('\\');
                     result.push(i);
@@ -89,10 +96,11 @@ pub(crate) fn classic_string<'input, 'path: 'input>(
 ) -> ParseResult<'input, String> {
     match char::<_, nom::error::Error<_>>('\"')(input) {
         Ok((input, _)) => {
-            let new_mark = Mark::new(mark.line, mark.symbol + 1);
-            let ((new_input, new_mark), capacity) = analyze(file_path, input, indent, 0, new_mark)?;
+            let mark = Mark::new(mark.line, mark.symbol + 1);
+            let ((output, mark), capacity) = analyze(file_path, input, indent, 0, mark)?;
+            let (output, mark) = skip_blank_line(mark)(output);
             let result = parse(input, indent, capacity);
-            Ok(((new_input, new_mark), result))
+            Ok(((output, mark), result))
         }
         Err(_) => Err(MakeError::new_with(mark, file_path, FailedDetermineType)),
     }
@@ -103,7 +111,7 @@ pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
+) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, string)| make::string(mark, output, string)(maker);
         classic_string(file_path, input, indent, mark).and_then(map)
@@ -120,79 +128,101 @@ mod tests {
     fn test_classic_string() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
+        let file_path = file_path.as_path();
         {
-            let input = r#""hello""#.into();
+            let input = r#""hello""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(0, 7)), "hello".into()))
             );
         }
         {
-            let input = r#""hello"hello"#.into();
+            let input = r#""hello"hello"#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("hello", Mark::new(0, 7)), "hello".into()))
             );
         }
         {
-            let input = r#" "hello""#.into();
+            let input = r#" "hello""#;
+            let error_mark = Mark::new(0, 0);
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Err(MakeError::new_with(
-                    begin_mark,
-                    file_path.clone(),
+                    error_mark,
+                    file_path,
                     FailedDetermineType
                 ))
             );
         }
         {
             let input = r#""hello
-		world""#
-                .into();
+		world""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(1, 8)), "hello\nworld".into()))
             );
         }
         {
             let input = r#""hello
-			world""#
-                .into();
+			world""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(1, 9)), "hello\n\tworld".into()))
             );
         }
         {
             let input = r#""hello
-	world""#
-                .into();
+	world""#;
+            let error_mark = Mark::new(0, 6);
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
-                Err(MakeError::new_with(Mark::new(0, 6), file_path.clone(), ExpectedTab))
+                classic_string(file_path, input, 2, begin_mark),
+                Err(MakeError::new_with(error_mark, file_path, ExpectedTab))
             );
         }
         {
             let input = r#""hello \
-		world""#
-                .into();
+		world""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(1, 8)), "hello world".into()))
             );
         }
         {
-            let input = r#""hello \"world\"""#.into();
+            let input = r#""hello \"world\"""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(0, 17)), "hello \"world\"".into()))
             );
         }
         {
-            let input = r#""hello \world""#.into();
+            let input = r#""hello \world""#;
             assert_eq!(
-                classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path, input, 2, begin_mark),
                 Ok((("", Mark::new(0, 14)), "hello \\world".into()))
+            );
+        }
+        {
+            let input = r#""hello \world" # hello"#;
+            assert_eq!(
+                classic_string(file_path, input, 2, begin_mark),
+                Ok((("", Mark::new(0, 22)), "hello \\world".into()))
+            );
+        }
+        {
+            let input = r#""hello"#;
+            let error_mark = Mark::new(0, 6);
+            assert_eq!(
+                classic_string(file_path, input, 2, begin_mark),
+                Err(MakeError::new_with(error_mark, file_path, IncompleteString))
+            );
+        }
+        {
+            let input = r#""hello\"#;
+            let error_mark = Mark::new(0, 7);
+            assert_eq!(
+                classic_string(file_path, input, 2, begin_mark),
+                Err(MakeError::new_with(error_mark, file_path, IncompleteString))
             );
         }
     }

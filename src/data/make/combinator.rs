@@ -13,7 +13,10 @@ use std::{error::Error, path::PathBuf};
 
 pub use super::maker::Maker;
 
-pub fn null<O, E>(begin_mark: Mark, output: O) -> impl FnOnce(&mut Maker) -> marked::MakeResult<O, E>
+pub fn null<O, E>(
+    begin_mark: Mark,
+    output: O,
+) -> impl FnOnce(&mut Maker) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
 {
@@ -261,8 +264,10 @@ mod tests {
 
     #[test]
     fn test_null() {
+        let begin_mark = Mark::default();
         let data =
-            make::<_, Infallible, _>(Mark::default(), null(Mark::default(), Mark::default())).unwrap();
+            make::<_, Infallible, _>(begin_mark, null(begin_mark, ()))
+                .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -271,9 +276,10 @@ mod tests {
 
     #[test]
     fn test_raw() {
+        let begin_mark = Mark::default();
         let data = make::<_, Infallible, _>(
-            Mark::default(),
-            raw(Mark::default(), Mark::default(), "hello"),
+            begin_mark,
+            raw(begin_mark, (), "hello"),
         )
         .unwrap();
         let view = data.view();
@@ -285,9 +291,10 @@ mod tests {
 
     #[test]
     fn test_string() {
+        let begin_mark = Mark::default();
         let data = make::<_, Infallible, _>(
-            Mark::default(),
-            string(Mark::default(), Mark::default(), "hello"),
+            begin_mark,
+            string(begin_mark, (), "hello"),
         )
         .unwrap();
         let view = data.view();
@@ -299,15 +306,16 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let data = make::<_, Infallible, _>(Mark::default(), {
+        let begin_mark = Mark::default();
+        let data = make::<_, Infallible, _>(begin_mark, {
             list(
-                Mark::default(),
-                Mark::default(),
-                Vec::from([
-                    Box::new(raw(Mark::default(), Mark::default(), "hello"))
+                begin_mark,
+                (),
+                [
+                    Box::new(raw(begin_mark, (), "hello"))
                         as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<_, Infallible>>,
-                    Box::new(string(Mark::default(), Mark::default(), "hello")),
-                ])
+                    Box::new(string(begin_mark, (), "hello")),
+                ]
                 .into_iter(),
             )
         })
@@ -325,21 +333,22 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let data = make::<_, Infallible, _>(Mark::default(), {
+        let begin_mark = Mark::default();
+        let data = make::<_, Infallible, _>(begin_mark, {
             map(
-                Mark::default(),
-                Mark::default(),
-                HashMap::from([
+                begin_mark,
+                (),
+                [
                     (
                         "first",
-                        Box::new(raw(Mark::default(), Mark::default(), "hello"))
+                        Box::new(raw(begin_mark, (), "hello"))
                             as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<_, Infallible>>,
                     ),
                     (
                         "second",
-                        Box::new(string(Mark::default(), Mark::default(), "hello")),
+                        Box::new(string(begin_mark, (), "hello")),
                     ),
-                ])
+                ]
                 .into_iter(),
             )
         })
@@ -357,11 +366,12 @@ mod tests {
 
     #[test]
     fn test_tagged() {
-        let data = make::<_, Infallible, _>(Mark::default(), {
+        let begin_mark = Mark::default();
+        let data = make::<_, Infallible, _>(begin_mark, {
             tag(
-                Mark::default(),
+                begin_mark,
                 "tag",
-                null(Mark::default(), Mark::default()),
+                null(begin_mark, ()),
             )
         })
         .unwrap();
@@ -376,18 +386,19 @@ mod tests {
 
     #[test]
     fn test_file() {
-        let data = make::<_, Infallible, _>(Mark::default(), {
+        let begin_mark = Mark::default();
+        let data = make::<_, Infallible, _>(begin_mark, {
             file(
-                Mark::default(),
-                Mark::default(),
+                begin_mark,
+                (),
                 "dir/name.ieml".into(),
-                HashMap::from([(
+                [(
                     "file-anchor",
-                    Box::new(null(Mark::default(), Mark::default()))
+                    Box::new(null(begin_mark, ()))
                         as Box<dyn FnOnce(&mut Maker) -> marked::MakeResult<_, Infallible>>,
-                )])
+                )]
                 .into_iter(),
-                raw(Mark::default(), Mark::default(), "hello"),
+                raw(begin_mark, (), "hello"),
             )
         })
         .unwrap();
