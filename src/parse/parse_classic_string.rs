@@ -81,7 +81,7 @@ fn parse(input: &str, indent: usize, capacity: usize) -> String {
     result
 }
 
-pub(crate) fn parse_classic_string<'input, 'path: 'input>(
+pub(crate) fn classic_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     indent: usize,
@@ -98,7 +98,7 @@ pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     }
 }
 
-pub(crate) fn classic_string<'input, 'path: 'input>(
+pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     indent: usize,
@@ -106,7 +106,7 @@ pub(crate) fn classic_string<'input, 'path: 'input>(
 ) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, string)| make::string(mark, output, string)(maker);
-        parse_classic_string(file_path, input, indent, mark).and_then(map)
+        classic_string(file_path, input, indent, mark).and_then(map)
     }
 }
 
@@ -117,27 +117,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_classic_string() {
+    fn test_classic_string() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
         {
             let input = r#""hello""#.into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(0, 7)), "hello".into()))
             );
         }
         {
             let input = r#""hello"hello"#.into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("hello", Mark::new(0, 7)), "hello".into()))
             );
         }
         {
             let input = r#" "hello""#.into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Err(MakeError::new_with(
                     begin_mark,
                     file_path.clone(),
@@ -150,7 +150,7 @@ mod tests {
 		world""#
                 .into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(1, 8)), "hello\nworld".into()))
             );
         }
@@ -159,7 +159,7 @@ mod tests {
 			world""#
                 .into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(1, 9)), "hello\n\tworld".into()))
             );
         }
@@ -168,7 +168,7 @@ mod tests {
 	world""#
                 .into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Err(MakeError::new_with(Mark::new(0, 6), file_path.clone(), ExpectedTab))
             );
         }
@@ -177,21 +177,21 @@ mod tests {
 		world""#
                 .into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(1, 8)), "hello world".into()))
             );
         }
         {
             let input = r#""hello \"world\"""#.into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(0, 17)), "hello \"world\"".into()))
             );
         }
         {
             let input = r#""hello \world""#.into();
             assert_eq!(
-                parse_classic_string(file_path.as_path(), input, 2, begin_mark),
+                classic_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(0, 14)), "hello \\world".into()))
             );
         }

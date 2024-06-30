@@ -12,7 +12,7 @@ use nom::{
     sequence::tuple,
 };
 
-pub(crate) fn parse_null<'input, 'path: 'input>(
+pub(crate) fn null<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
@@ -26,14 +26,14 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
     }
 }
 
-pub(crate) fn null<'input, 'path: 'input>(
+pub(crate) fn parse_null<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
 ) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, _)| make::null(mark, output)(maker);
-        parse_null(file_path, input, mark).and_then(map)
+        null(file_path, input, mark).and_then(map)
     }
 }
 
@@ -44,27 +44,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_null() {
+    fn test_null() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
         assert_eq!(
-            parse_null(file_path.as_path(), "null", begin_mark),
+            null(file_path.as_path(), "null", begin_mark),
             Ok((("", Mark::new(0, 4)), ()))
         );
         assert_eq!(
-            parse_null(file_path.as_path(), "null ", begin_mark),
+            null(file_path.as_path(), "null ", begin_mark),
             Ok((("", Mark::new(0, 5)), ()))
         );
         assert_eq!(
-            parse_null(file_path.as_path(), "null# is null", begin_mark),
+            null(file_path.as_path(), "null# is null", begin_mark),
             Ok((("# is null", Mark::new(0, 4)), ()))
         );
         assert_eq!(
-            parse_null(file_path.as_path(), "null # is null", begin_mark),
+            null(file_path.as_path(), "null # is null", begin_mark),
             Ok((("# is null", Mark::new(0, 5)), ()))
         );
         assert_eq!(
-            parse_null(file_path.as_path(), " null", begin_mark),
+            null(file_path.as_path(), " null", begin_mark),
             Err(MakeError::new_with(
                 begin_mark,
                 file_path.clone(),

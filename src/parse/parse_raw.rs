@@ -8,7 +8,7 @@ use crate::data::{make, mark::Mark};
 use nom::multi::many1_count;
 use nom::{character::complete::*, combinator::recognize};
 
-pub(crate) fn parse_raw<'input, 'path: 'input>(
+pub(crate) fn raw<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
@@ -22,14 +22,14 @@ pub(crate) fn parse_raw<'input, 'path: 'input>(
     }
 }
 
-pub(crate) fn raw<'input, 'path: 'input>(
+pub(crate) fn parse_raw<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
 ) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, raw)| make::raw(mark, output, raw)(maker);
-        parse_raw(file_path, input, mark).and_then(map)
+        raw(file_path, input, mark).and_then(map)
     }
 }
 
@@ -40,19 +40,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_raw() {
+    fn test_raw() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
         assert_eq!(
-            parse_raw(file_path.as_path(), "hello", begin_mark),
+            raw(file_path.as_path(), "hello", begin_mark),
             Ok((("", Mark::new(0, 5)), "hello".into()))
         );
         assert_eq!(
-            parse_raw(file_path.as_path(), "hello\n", begin_mark),
+            raw(file_path.as_path(), "hello\n", begin_mark),
             Ok((("\n", Mark::new(0, 5)), "hello".into()))
         );
         assert_eq!(
-            parse_raw(file_path.as_path(), "< \n", begin_mark),
+            raw(file_path.as_path(), "< \n", begin_mark),
             Err(MakeError::new_with(
                 begin_mark,
                 file_path.clone(),

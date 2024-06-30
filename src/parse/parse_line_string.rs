@@ -10,7 +10,7 @@ use super::{
 use crate::data::{make, mark::Mark};
 use nom::bytes::complete::tag;
 
-pub(crate) fn parse_line_string<'input, 'path: 'input>(
+pub(crate) fn line_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
@@ -24,14 +24,14 @@ pub(crate) fn parse_line_string<'input, 'path: 'input>(
     }
 }
 
-pub(crate) fn line_string<'input, 'path: 'input>(
+pub(crate) fn parse_line_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
 ) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, string)| make::string(mark, output, string)(maker);
-        parse_line_string(file_path, input, mark).and_then(map)
+        line_string(file_path, input, mark).and_then(map)
     }
 }
 
@@ -42,19 +42,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_line_string() {
+    fn test_line_string() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
         assert_eq!(
-            parse_line_string(file_path.as_path(), "> hello", begin_mark),
+            line_string(file_path.as_path(), "> hello", begin_mark),
             Ok((("", Mark::new(0, 7)), "hello".into()))
         );
         assert_eq!(
-            parse_line_string(file_path.as_path(), "> hello\nhello", begin_mark),
+            line_string(file_path.as_path(), "> hello\nhello", begin_mark),
             Ok((("\nhello", Mark::new(0, 7)), "hello".into()))
         );
         assert_eq!(
-            parse_line_string(file_path.as_path(), ">hello", begin_mark),
+            line_string(file_path.as_path(), ">hello", begin_mark),
             Err(MakeError::new_with(
                 begin_mark,
                 file_path.clone(),

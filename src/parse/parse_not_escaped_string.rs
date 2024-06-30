@@ -42,10 +42,10 @@ fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut S
         input = end_input;
         result.push('\n');
         result.push_str(line);
-    };
+    }
 }
 
-pub(crate) fn parse_not_escaped_string<'input, 'path: 'input>(
+pub(crate) fn not_escaped_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     indent: usize,
@@ -67,7 +67,7 @@ pub(crate) fn parse_not_escaped_string<'input, 'path: 'input>(
     Ok(((output, mark), result))
 }
 
-pub(crate) fn not_escaped_string<'input, 'path: 'input>(
+pub(crate) fn parse_not_escaped_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     indent: usize,
@@ -75,7 +75,7 @@ pub(crate) fn not_escaped_string<'input, 'path: 'input>(
 ) -> impl FnOnce(&'input mut make::Maker) -> MakeResult<'input> {
     move |maker| {
         let map = |(output, string)| make::string(mark, output, string)(maker);
-        parse_not_escaped_string(file_path, input, indent, mark).and_then(map)
+        not_escaped_string(file_path, input, indent, mark).and_then(map)
     }
 }
 
@@ -86,14 +86,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_not_escaped_string() {
+    fn test_not_escaped_string() {
         let begin_mark = Mark::new(0, 0);
         let file_path = PathBuf::from("test.ieml");
         {
             let input = r#">>
 		hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(1, 7)), "hello".into()))
             );
         }
@@ -101,7 +101,7 @@ mod tests {
             let input = r#">>
 			hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("", Mark::new(1, 8)), "\thello".into()))
             );
         }
@@ -110,7 +110,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("\n\thello", Mark::new(1, 7)), "hello".into()))
             );
         }
@@ -120,7 +120,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("\n\thello", Mark::new(2, 7)), "hello\nhello".into()))
             );
         }
@@ -130,7 +130,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Ok((("\n\thello", Mark::new(2, 7)), "hello\nhello".into()))
             );
         }
@@ -140,7 +140,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Err(MakeError::new_with(
                     Mark::new(0, 4),
                     file_path.as_path(),
@@ -152,7 +152,7 @@ mod tests {
             let input = r#">>
 	hello"#;
             assert_eq!(
-                parse_not_escaped_string(file_path.as_path(), input, 2, begin_mark),
+                not_escaped_string(file_path.as_path(), input, 2, begin_mark),
                 Err(MakeError::new_with(
                     Mark::new(1, 0),
                     file_path.as_path(),
