@@ -259,7 +259,6 @@ where
 mod tests {
     use super::super::super::node_type::NodeType;
     use super::*;
-    use std::collections::HashMap;
     use std::convert::Infallible;
 
     #[test]
