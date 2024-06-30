@@ -36,11 +36,31 @@ impl Display for Error {
 
 impl std::error::Error for Error {}
 
+
+
 pub mod marked {
     use crate::data::{make::error, mark::Mark};
 
     pub type MakeError = error::marked::MakeError<super::Error>;
     pub type MakeResult<'input> = error::marked::MakeResult<(&'input str, Mark), super::Error>;
+
+    pub(crate) fn isolate<'input>(result: MakeResult<'input>, error: super::Error) -> Result<MakeResult<'input>, MakeError> {
+        match result {
+            Ok(i) => Ok(Ok(i)),
+            Err(i) => match &i.data.reason {
+                error::MakeErrorReason::Parse(e) => if e == &error {
+                    Err(i)
+                } else {
+                    Ok(Err(i))
+                },
+                _ => Ok(Err(i))
+            }
+        }
+    }
+
+    pub(crate) fn isolate_failed<'input>(result: MakeResult<'input>) -> Result<MakeResult<'input>, MakeError> {
+        isolate(result, super::Error::FailedDetermineType)
+    }
 
     pub type ParseResult<'input, T> = Result<((&'input str, Mark), T), MakeError>;
 }
