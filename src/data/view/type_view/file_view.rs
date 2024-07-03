@@ -62,7 +62,7 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for FileView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "FileView {{ mark: {:?}, anchors {:?}, view: {:?} }}",
+            "FileView {{ mark: {:?}, anchors: {:?}, view: {:?} }}",
             self.mark,
             self.anchors(),
             self.view()

@@ -68,7 +68,7 @@ mod tests {
             let input = r#"null # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("", Mark::new(0, 12));
+            let result_output = ("# hello", Mark::new(0, 5));
             let result_f = make::null::<_, Error>(begin_mark, result_output);
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
@@ -77,7 +77,7 @@ mod tests {
             let input = r#"hello # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("", Mark::new(0, 12));
+            let result_output = ("", Mark::new(0, 13));
             let result_f = make::raw::<_, Error, _>(begin_mark, result_output, "hello # hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
@@ -86,7 +86,7 @@ mod tests {
             let input = r#"> hello # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("", Mark::new(0, 12));
+            let result_output = ("", Mark::new(0, 15));
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello # hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
@@ -96,7 +96,7 @@ mod tests {
 		hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("", Mark::new(0, 12));
+            let result_output = ("", Mark::new(1, 7));
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
@@ -127,7 +127,7 @@ mod tests {
             let input = r#""hello" # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("", Mark::new(0, 12));
+            let result_output = ("", Mark::new(0, 15));
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);

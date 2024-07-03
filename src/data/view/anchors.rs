@@ -86,6 +86,6 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for Anchors<'data, A> {
 
 impl<'data, A: AnalyseAnchors<'data>> Debug for Anchors<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Anchors {{ file_anchors {:?} }}", self.file_anchors())
+        write!(f, "Anchors {{ file_anchors: {:?} }}", self.file_anchors())
     }
 }

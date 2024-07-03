@@ -301,15 +301,15 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let raw: for<'maker> fn(_, _, _, &'maker mut Maker) -> _ =
+        let raw: fn(_, _, _, &mut _) -> _ =
             |mark, content, token, maker| raw(mark, (), content)(token, maker);
-        let string: for<'maker> fn(_, _, _, &'maker mut Maker) -> _ =
+        let string: fn(_, _, _, &mut _) -> _ =
             |mark, content, token, maker| string(mark, (), content)(token, maker);
 
         let begin_mark = Mark::default();
         let iter = [("hello", raw), ("hello", string)]
             .into_iter()
-            .map(|(content, f)| move |token, maker| f(begin_mark, content, token, maker));
+            .map(|(content, f)| move |token, maker: &mut _| f(begin_mark, content, token, maker));
         let (data, _) = make::<_, Infallible, _>(begin_mark, list(begin_mark, (), iter)).unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
@@ -324,16 +324,16 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let raw: fn(_, _, _, _) -> _ =
+        let raw: fn(_, _, _, &mut _) -> _ =
             |mark, content, token, maker| raw(mark, (), content)(token, maker);
-        let string: fn(_, _, _, _) -> _ =
+        let string: fn(_, _, _, &mut _) -> _ =
             |mark, content, token, maker| string(mark, (), content)(token, maker);
 
         let begin_mark = Mark::default();
         let iter = [("first", "hello", raw), ("second", "hello", string)]
             .into_iter()
             .map(|(key, content, f)| {
-                (key, move |token, maker| {
+                (key, move |token, maker: &mut _| {
                     f(begin_mark, content, token, maker)
                 })
             });
