@@ -5,16 +5,40 @@ use super::super::{
 };
 use std::path::{Path, PathBuf};
 
-pub struct Maker<'a> {
-    data: &'a mut Data,
+pub struct Token {
+    _field: (),
+}
+
+impl Token {
+    pub(super) fn new() -> Self {
+        Self { _field: () }
+    }
+}
+
+pub struct Added {
+    index: usize,
+}
+
+impl Added {
+    fn new(index: usize) -> Self {
+        Self { index }
+    }
+
+    pub(super) fn index(self) -> usize {
+        self.index
+    }
+}
+
+pub struct Maker {
+    data: Data,
     anchors: MapNode,
     path: PathBuf,
 }
 
-impl<'a> Maker<'a> {
-    pub(super) fn new(data: &'a mut Data, path: PathBuf) -> Self {
+impl Maker {
+    pub(super) fn new(path: PathBuf) -> Self {
         Self {
-            data,
+            data: Default::default(),
             anchors: Default::default(),
             path,
         }
@@ -27,10 +51,11 @@ impl<'a> Maker<'a> {
         result
     }
 
-    pub(super) fn add(&mut self, mark: Mark, node: Node) {
+    pub(super) fn add(&mut self, mark: Mark, _token: Token, node: Node) -> Added {
         self.data
             .data
             .insert(self.data.data.len(), MarkedNode::new(node, mark));
+        Added::new(self.last())
     }
 
     pub(super) fn last(&self) -> usize {
@@ -47,6 +72,10 @@ impl<'a> Maker<'a> {
 
     pub(super) fn anchors(&mut self) -> &mut MapNode {
         &mut self.anchors
+    }
+
+    pub(super) fn data(self) -> Data {
+        self.data
     }
 
     pub fn path(&self) -> &Path {

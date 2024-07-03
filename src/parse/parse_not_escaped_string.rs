@@ -76,10 +76,10 @@ pub(crate) fn parse_not_escaped_string<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
-    move |maker| {
-        let map = |(output, string)| make::string(mark, output, string)(maker);
-        not_escaped_string(file_path, input, indent, mark).and_then(map)
+) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
+    move |token, maker| match not_escaped_string(file_path, input, indent, mark) {
+        Ok((output, string)) => make::string(mark, output, string)(token, maker),
+        Err(error) => Err((token, error)),
     }
 }
 

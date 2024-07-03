@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::{
-    error::marked::{isolate_failed, MakeResult},
+    error::{marked::MakeResult, Error::FailedDetermineType},
     parse_classic_string::parse_classic_string,
     parse_line_string::parse_line_string,
     parse_not_escaped_string::parse_not_escaped_string,
@@ -15,24 +15,37 @@ pub(crate) fn parse_scalar<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
-    move |maker| {
-        if let Ok(i) = parse_null(file_path, input, mark)(maker) {
-            return Ok(i);
+) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
+    move |token, maker| {
+        let parsers: [fn(_, _, _, _, _, &mut make::Maker) -> _; 3] = [
+            |file_path, input, indent, mark, token, maker| {
+                parse_classic_string(file_path, input, indent, mark)(token, maker)
+            },
+            |file_path, input, _indent, mark, token, maker| {
+                parse_line_string(file_path, input, mark)(token, maker)
+            },
+            |file_path, input, indent, mark, token, maker| {
+                parse_not_escaped_string(file_path, input, indent, mark)(token, maker)
+            },
+        ];
+
+        let token = match parse_null(file_path, input, mark)(token, maker) {
+            Ok(i) => return Ok(i),
+            Err((token, _)) => token,
+        };
+
+        let mut token = token;
+        for parse in parsers {
+            token = match parse(file_path, input, indent, mark, token, maker) {
+                Ok(i) => return Ok(i),
+                Err((token, i)) => match &i.data.reason {
+                    make::error::MakeErrorReason::Parse(FailedDetermineType) => token,
+                    _ => return Err((token, i)),
+                },
+            };
         }
-        let result = parse_classic_string(file_path, input, indent, mark)(maker);
-        if let Ok(i) = isolate_failed(result)? {
-            return Ok(i);
-        }
-        let result = parse_line_string(file_path, input, mark)(maker);
-        if let Ok(i) = isolate_failed(result)? {
-            return Ok(i);
-        }
-        let result = parse_not_escaped_string(file_path, input, indent, mark)(maker);
-        if let Ok(i) = isolate_failed(result)? {
-            return Ok(i);
-        }
-        parse_raw(file_path, input, mark)(maker)
+
+        parse_raw(file_path, input, mark)(token, maker)
     }
 }
 
@@ -55,7 +68,8 @@ mod tests {
             let input = r#"null # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_f = make::null::<_, Error>(begin_mark, ());
+            let result_output = ("", Mark::new(0, 12));
+            let result_f = make::null::<_, Error>(begin_mark, result_output);
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }
@@ -63,7 +77,8 @@ mod tests {
             let input = r#"hello # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_f = make::raw::<_, Error, _>(begin_mark, (), "hello # hello");
+            let result_output = ("", Mark::new(0, 12));
+            let result_f = make::raw::<_, Error, _>(begin_mark, result_output, "hello # hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }
@@ -71,7 +86,8 @@ mod tests {
             let input = r#"> hello # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_f = make::string::<_, Error, _>(begin_mark, (), "hello # hello");
+            let result_output = ("", Mark::new(0, 12));
+            let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello # hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }
@@ -80,7 +96,8 @@ mod tests {
 		hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_f = make::string::<_, Error, _>(begin_mark, (), "hello");
+            let result_output = ("", Mark::new(0, 12));
+            let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }
@@ -110,7 +127,8 @@ mod tests {
             let input = r#""hello" # hello"#;
             let data_f = parse_scalar(file_path, input, 2, begin_mark);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_f = make::string::<_, Error, _>(begin_mark, (), "hello");
+            let result_output = ("", Mark::new(0, 12));
+            let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }

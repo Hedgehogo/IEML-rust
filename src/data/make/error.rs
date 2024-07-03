@@ -62,11 +62,14 @@ impl<E: Error + PartialEq + Eq> Error for MakeError<E> {}
 }*/
 
 pub mod marked {
-    use super::super::super::{error::marked::WithMarkError, mark::Mark};
+    use super::super::{
+        super::{error::marked::WithMarkError, mark::Mark},
+        maker::{Token, Added},
+    };
     use std::{error::Error, path::PathBuf};
 
     pub type MakeError<E> = WithMarkError<super::MakeError<E>>;
-    pub type MakeResult<O, E> = Result<O, MakeError<E>>;
+    pub type MakeResult<O, E> = Result<(Added, O), (Token, MakeError<E>)>;
 
     impl<E: Error + PartialEq + Eq> MakeError<E> {
         pub fn new_with<P, R>(mark: Mark, file_path: P, reason: R) -> Self

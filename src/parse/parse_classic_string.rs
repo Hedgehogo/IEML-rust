@@ -111,10 +111,10 @@ pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
-    move |maker| {
-        let map = |(output, string)| make::string(mark, output, string)(maker);
-        classic_string(file_path, input, indent, mark).and_then(map)
+) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
+    move |token, maker| match classic_string(file_path, input, indent, mark) {
+        Ok((output, string)) => make::string(mark, output, string)(token, maker),
+        Err(error) => Err((token, error)),
     }
 }
 

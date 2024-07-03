@@ -41,24 +41,35 @@ pub mod marked {
 
     pub type MakeError = error::marked::MakeError<super::Error>;
     pub type MakeResult<'input> = error::marked::MakeResult<(&'input str, Mark), super::Error>;
+/* 
+    trait Isolate {
+        type Error;
+        type Output;
 
-    pub(crate) fn isolate<'input>(result: MakeResult<'input>, error: super::Error) -> Result<MakeResult<'input>, MakeError> {
-        match result {
-            Ok(i) => Ok(Ok(i)),
-            Err(i) => match &i.data.reason {
-                error::MakeErrorReason::Parse(e) => if e == &error {
-                    Ok(Err(i))
+        fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error>;
+    }
+
+    impl<O, E> Isolate for Result<O, E> {
+        type Error = E;
+    
+        type Output = O;
+    
+        fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error> {
+            match self {
+                Ok(i) => Ok(Ok(i)),
+                Err(e) => if f(&e) {
+                    Err(e)
                 } else {
-                    Err(i)
-                },
-                _ => Err(i)
+                    Ok(Err(e))
+                }
             }
         }
     }
 
-    pub(crate) fn isolate_failed<'input>(result: MakeResult<'input>) -> Result<MakeResult<'input>, MakeError> {
-        isolate(result, super::Error::FailedDetermineType)
+    pub(crate) fn is_failed<'input>(e: &(Token, MakeError)) -> bool {
+        let e = &e.1.data.reason;
+        matches!(e, error::MakeErrorReason::Parse(super::Error::FailedDetermineType))
     }
-
+ */
     pub type ParseResult<'input, T> = Result<((&'input str, Mark), T), MakeError>;
 }

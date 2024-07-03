@@ -28,10 +28,10 @@ pub(crate) fn parse_line_string<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
-) -> impl FnOnce(&mut make::Maker) -> MakeResult<'input> {
-    move |maker| {
-        let map = |(output, string)| make::string(mark, output, string)(maker);
-        line_string(file_path, input, mark).and_then(map)
+) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
+    move |token, maker| match line_string(file_path, input, mark) {
+        Ok((output, string)) => make::string(mark, output, string)(token, maker),
+        Err(error) => Err((token, error)),
     }
 }
 
