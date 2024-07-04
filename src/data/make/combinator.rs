@@ -11,7 +11,7 @@ use super::{
 };
 use std::{error::Error, path::PathBuf};
 
-pub use super::maker::{Maker, Token};
+pub use super::maker::{ListToken, Maker, MapToken, Token};
 
 pub fn null<O, E>(
     begin_mark: Mark,
@@ -50,58 +50,47 @@ where
     }
 }
 
-pub fn list<O, E, F, I>(
+pub fn list<O, E, F>(
     begin_mark: Mark,
-    output: O,
-    iter: I,
+    f: F,
 ) -> impl FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    I: Iterator<Item = F>,
+    F: for<'maker> FnOnce(ListToken<'maker>) -> marked::ListMakeResult<'maker, O, E>,
 {
     move |token, maker| {
-        let mut output = output;
-        let result: Result<_, _> = iter
-            .map(|f| {
-                f(Token::new(), maker).map(|(added, end_output)| {
-                    output = end_output;
-                    added.index()
-                })
-            })
-            .collect();
-        result.map(|i| {
-            let added = maker.add(begin_mark, token, Node::List(ListNode::new(i)));
-            (added, output)
-        })
+        let list_token = ListToken::new(maker);
+        return match f(list_token) {
+            Ok((list_token, output)) => {
+                let maker = list_token.maker;
+                let result = list_token.result;
+                let added = maker.add(begin_mark, token, Node::List(ListNode::new(result)));
+                Ok((added, output))
+            }
+            Err(error) => Err((token, error)),
+        };
     }
 }
 
-pub fn map<O, E, F, S, I>(
+pub fn map<O, E, F>(
     begin_mark: Mark,
-    output: O,
-    iter: I,
+    f: F,
 ) -> impl FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    S: Into<String>,
-    I: Iterator<Item = (S, F)>,
+    F: for<'maker> FnOnce(MapToken<'maker>) -> marked::MapMakeResult<'maker, O, E>,
 {
     move |token, maker| {
-        let mut output = output;
-        let result: Result<_, _> = iter
-            .map(|(key, f)| {
-                f(Token::new(), maker).map(|(added, end_output)| {
-                    output = end_output;
-                    (key.into(), added.index())
-                })
-            })
-            .collect();
-        result.map(|i| {
-            let added = maker.add(begin_mark, token, Node::Map(MapNode::new(i)));
-            (added, output)
-        })
+        let map_token = MapToken::new(maker);
+        return match f(map_token) {
+            Ok((map_token, output)) => {
+                let maker = map_token.maker;
+                let result = map_token.result;
+                let added = maker.add(begin_mark, token, Node::Map(MapNode::new(result)));
+                Ok((added, output))
+            }
+            Err(error) => Err((token, error)),
+        };
     }
 }
 
@@ -124,30 +113,23 @@ where
     }
 }
 
-pub fn file<O, E, F, A, S, I>(
+pub fn file<O, E, F, A>(
     begin_mark: Mark,
-    output: O,
     path: PathBuf,
-    anchors: I,
+    anchors: A,
     f: F,
 ) -> impl FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    A: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    S: Into<String>,
-    I: Iterator<Item = (S, A)>,
+    A: for<'maker> FnOnce(MapToken<'maker>) -> marked::MapMakeResult<'maker, O, E>,
 {
     move |token, maker| {
-        let mut output = output;
-        let file_anchors = anchors
-            .map(|(key, f)| {
-                f(Token::new(), maker).map(|(added, end_output)| {
-                    output = end_output;
-                    (key.into(), added.index())
-                })
-            })
-            .collect::<Result<_, _>>()?;
+        let map_token = MapToken::new(maker);
+        let (maker, file_anchors, output) = match anchors(map_token) {
+            Ok((map_token, output)) => (map_token.maker, map_token.result, output),
+            Err(error) => return Err((token, error)),
+        };
         let result = maker.child(|maker| {
             f(Token::new(), maker).map(|(added, _)| {
                 FileNode::new(
@@ -235,22 +217,19 @@ where
     Ok((data, output))
 }
 
-pub fn make_file<O, E, F, A, S, I>(
+pub fn make_file<O, E, F, A>(
     begin_mark: Mark,
-    output: O,
     path: PathBuf,
-    anchors: I,
+    anchors: A,
     f: F,
 ) -> Result<(Data, O), marked::MakeError<E>>
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    A: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
-    S: Into<String>,
-    I: Iterator<Item = (S, A)>,
+    A: for<'maker> FnOnce(MapToken<'maker>) -> marked::MapMakeResult<'maker, O, E>,
 {
     let mut maker = Maker::new(path.clone());
-    match file(begin_mark, output, path, anchors, f)(Token::new(), &mut maker) {
+    match file(begin_mark, path, anchors, f)(Token::new(), &mut maker) {
         Ok((_added, output)) => {
             let mut data = maker.data();
             init(&mut data)?;
@@ -301,16 +280,16 @@ mod tests {
 
     #[test]
     fn test_list() {
-        let raw: fn(_, _, _, &mut _) -> _ =
-            |mark, content, token, maker| raw(mark, (), content)(token, maker);
-        let string: fn(_, _, _, &mut _) -> _ =
-            |mark, content, token, maker| string(mark, (), content)(token, maker);
-
         let begin_mark = Mark::default();
-        let iter = [("hello", raw), ("hello", string)]
-            .into_iter()
-            .map(|(content, f)| move |token, maker: &mut _| f(begin_mark, content, token, maker));
-        let (data, _) = make::<_, Infallible, _>(begin_mark, list(begin_mark, (), iter)).unwrap();
+        let (data, _) = make::<_, Infallible, _>(
+            begin_mark,
+            list(begin_mark, |mut list_token| {
+                list_token.add(raw(begin_mark, (), "hello"))?;
+                list_token.add(string(begin_mark, (), "hello"))?;
+                Ok((list_token, ()))
+            }),
+        )
+        .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -324,20 +303,16 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let raw: fn(_, _, _, &mut _) -> _ =
-            |mark, content, token, maker| raw(mark, (), content)(token, maker);
-        let string: fn(_, _, _, &mut _) -> _ =
-            |mark, content, token, maker| string(mark, (), content)(token, maker);
-
         let begin_mark = Mark::default();
-        let iter = [("first", "hello", raw), ("second", "hello", string)]
-            .into_iter()
-            .map(|(key, content, f)| {
-                (key, move |token, maker: &mut _| {
-                    f(begin_mark, content, token, maker)
-                })
-            });
-        let (data, _) = make::<_, Infallible, _>(begin_mark, map(begin_mark, (), iter)).unwrap();
+        let (data, _) = make::<_, Infallible, _>(
+            begin_mark,
+            map(begin_mark, |mut map_token| {
+                map_token.add(begin_mark, "first".into(), raw(begin_mark, (), "hello"))?;
+                map_token.add(begin_mark, "second".into(), string(begin_mark, (), "hello"))?;
+                Ok((map_token, ()))
+            }),
+        )
+        .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
@@ -370,9 +345,11 @@ mod tests {
         let (data, _) = make::<_, Infallible, _>(begin_mark, {
             file(
                 begin_mark,
-                (),
                 "dir/name.ieml".into(),
-                [("file-anchor", null(begin_mark, ()))].into_iter(),
+                |mut map_token| {
+                    map_token.add(begin_mark, "file-anchor".into(), null(begin_mark, ()))?;
+                    Ok((map_token, ()))
+                },
                 raw(begin_mark, (), "hello"),
             )
         })

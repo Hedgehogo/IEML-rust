@@ -25,10 +25,18 @@ impl Display for Error {
             Error::ExpectedListItem => write!(f, "Expected a list item."),
             Error::ExpectedTab => write!(f, "Expected a tab."),
             Error::ExpectedBlankLine => write!(f, "Expected a blank line."),
-            Error::ImpermissibleSpace => write!(f, "A space was detected. Perhaps you meant to write a tab as an indentation."),
-            Error::ImpermissibleTab => write!(f, "A tab was detected. A lower level of indentation was expected."),
+            Error::ImpermissibleSpace => write!(
+                f,
+                "A space was detected. Perhaps you meant to write a tab as an indentation."
+            ),
+            Error::ImpermissibleTab => write!(
+                f,
+                "A tab was detected. A lower level of indentation was expected."
+            ),
             Error::IncompleteString => write!(f, "The string is incomplete."),
-            Error::IncompleteDocument => write!(f, "There are extra characters at the end of the document."),
+            Error::IncompleteDocument => {
+                write!(f, "There are extra characters at the end of the document.")
+            }
             Error::NonexistentFile => write!(f, "The requested file does not exist."),
         }
     }
@@ -41,35 +49,35 @@ pub mod marked {
 
     pub type MakeError = error::marked::MakeError<super::Error>;
     pub type MakeResult<'input> = error::marked::MakeResult<(&'input str, Mark), super::Error>;
-/* 
-    trait Isolate {
-        type Error;
-        type Output;
+    /*
+       trait Isolate {
+           type Error;
+           type Output;
 
-        fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error>;
-    }
+           fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error>;
+       }
 
-    impl<O, E> Isolate for Result<O, E> {
-        type Error = E;
-    
-        type Output = O;
-    
-        fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error> {
-            match self {
-                Ok(i) => Ok(Ok(i)),
-                Err(e) => if f(&e) {
-                    Err(e)
-                } else {
-                    Ok(Err(e))
-                }
-            }
-        }
-    }
+       impl<O, E> Isolate for Result<O, E> {
+           type Error = E;
 
-    pub(crate) fn is_failed<'input>(e: &(Token, MakeError)) -> bool {
-        let e = &e.1.data.reason;
-        matches!(e, error::MakeErrorReason::Parse(super::Error::FailedDetermineType))
-    }
- */
+           type Output = O;
+
+           fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error> {
+               match self {
+                   Ok(i) => Ok(Ok(i)),
+                   Err(e) => if f(&e) {
+                       Err(e)
+                   } else {
+                       Ok(Err(e))
+                   }
+               }
+           }
+       }
+
+       pub(crate) fn is_failed<'input>(e: &(Token, MakeError)) -> bool {
+           let e = &e.1.data.reason;
+           matches!(e, error::MakeErrorReason::Parse(super::Error::FailedDetermineType))
+       }
+    */
     pub type ParseResult<'input, T> = Result<((&'input str, Mark), T), MakeError>;
 }

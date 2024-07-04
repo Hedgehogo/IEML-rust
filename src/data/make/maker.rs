@@ -1,9 +1,16 @@
-use super::super::{
-    data::Data,
-    mark::Mark,
-    node::node::{MapNode, MarkedNode, Node},
+use super::{
+    super::{
+        data::Data,
+        mark::Mark,
+        node::node::{MapNode, MarkedNode, Node},
+    },
+    error::{marked, MakeErrorReason},
 };
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    error::Error,
+    path::{Path, PathBuf},
+};
 
 pub struct Token {
     _field: (),
@@ -80,5 +87,65 @@ impl Maker {
 
     pub fn path(&self) -> &Path {
         self.path.as_path()
+    }
+}
+
+pub struct ListToken<'maker> {
+    pub(super) result: Vec<usize>,
+    pub(super) maker: &'maker mut Maker,
+}
+
+impl<'maker> ListToken<'maker> {
+    pub(super) fn new(maker: &'maker mut Maker) -> Self {
+        Self {
+            result: Default::default(),
+            maker,
+        }
+    }
+
+    pub fn add<O, E, F>(&mut self, f: F) -> Result<O, marked::MakeError<E>>
+    where
+        E: Error + PartialEq + Eq,
+        F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
+    {
+        match f(Token::new(), self.maker) {
+            Ok((added, output)) => {
+                self.result.push(added.index());
+                Ok(output)
+            }
+            Err((_token, error)) => Err(error),
+        }
+    }
+}
+
+pub struct MapToken<'maker> {
+    pub(super) result: HashMap<String, usize>,
+    pub(super) maker: &'maker mut Maker,
+}
+
+impl<'maker> MapToken<'maker> {
+    pub(super) fn new(maker: &'maker mut Maker) -> Self {
+        Self {
+            result: Default::default(),
+            maker,
+        }
+    }
+
+    pub fn add<O, E, F>(&mut self, mark: Mark, key: String, f: F) -> Result<O, marked::MakeError<E>>
+    where
+        E: Error + PartialEq + Eq,
+        F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
+    {
+        match f(Token::new(), self.maker) {
+            Ok((added, output)) => match self.result.insert(key, added.index()) {
+                None => Ok(output),
+                Some(_) => Err(marked::MakeError::new_with(
+                    mark,
+                    self.maker.path(),
+                    MakeErrorReason::RepeatedKey,
+                )),
+            },
+            Err((_token, error)) => Err(error),
+        }
     }
 }
