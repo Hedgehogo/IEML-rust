@@ -26,9 +26,9 @@ pub(crate) fn parse_raw<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
-) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
-    move |token, maker| match raw(file_path, input, mark) {
-        Ok((output, raw)) => make::raw(mark, output, raw)(token, maker),
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+    move |token| match raw(file_path, input, mark) {
+        Ok((output, raw)) => make::raw(mark, output, raw)(token),
         Err(error) => Err((token, error)),
     }
 }

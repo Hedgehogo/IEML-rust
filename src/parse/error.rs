@@ -48,7 +48,7 @@ pub mod marked {
     use crate::data::{make::error, mark::Mark};
 
     pub type MakeError = error::marked::MakeError<super::Error>;
-    pub type MakeResult<'input> = error::marked::MakeResult<(&'input str, Mark), super::Error>;
+    pub type MakeResult<'maker, 'input> = error::marked::MakeResult<'maker, (&'input str, Mark), super::Error>;
     /*
        trait Isolate {
            type Error;

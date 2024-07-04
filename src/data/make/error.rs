@@ -66,14 +66,14 @@ impl<E: Error + PartialEq + Eq> Error for MakeError<E> {}
 pub mod marked {
     use super::super::{
         super::{error::marked::WithMarkError, mark::Mark},
-        maker::{Added, ListToken, MapToken, Token},
+        maker::{UsedToken, ListToken, MapToken, Token},
     };
     use std::{error::Error, path::PathBuf};
 
     pub type MakeError<E> = WithMarkError<super::MakeError<E>>;
-    pub type MakeResult<O, E> = Result<(Added, O), (Token, MakeError<E>)>;
-    pub type ListMakeResult<'maker, O, E> = Result<(ListToken<'maker>, O), MakeError<E>>;
-    pub type MapMakeResult<'maker, O, E> = Result<(MapToken<'maker>, O), MakeError<E>>;
+    pub type MakeResult<'maker, O, E> = Result<(UsedToken<'maker>, O), (Token<'maker>, MakeError<E>)>;
+    pub type MakeListResult<'maker, O, E> = Result<(ListToken<'maker>, O), (ListToken<'maker>, MakeError<E>)>;
+    pub type MakeMapResult<'maker, O, E> = Result<(MapToken<'maker>, O), (MapToken<'maker>, MakeError<E>)>;
 
     impl<E: Error + PartialEq + Eq> MakeError<E> {
         pub fn new_with<P, R>(mark: Mark, file_path: P, reason: R) -> Self

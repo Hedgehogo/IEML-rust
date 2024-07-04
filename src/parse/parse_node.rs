@@ -8,7 +8,7 @@ pub(crate) fn parse_node<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     parse_scalar(file_path, input, indent, mark)
 }
 

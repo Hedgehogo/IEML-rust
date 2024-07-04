@@ -4,37 +4,13 @@ use super::{
         mark::Mark,
         node::node::{MapNode, MarkedNode, Node},
     },
-    error::{marked, MakeErrorReason},
+    error::{marked, MakeErrorReason::RepeatedKey},
 };
 use std::{
     collections::HashMap,
     error::Error,
     path::{Path, PathBuf},
 };
-
-pub struct Token {
-    _field: (),
-}
-
-impl Token {
-    pub(super) fn new() -> Self {
-        Self { _field: () }
-    }
-}
-
-pub struct Added {
-    index: usize,
-}
-
-impl Added {
-    fn new(index: usize) -> Self {
-        Self { index }
-    }
-
-    pub(super) fn index(self) -> usize {
-        self.index
-    }
-}
 
 pub struct Maker {
     data: Data,
@@ -51,18 +27,21 @@ impl Maker {
         }
     }
 
-    pub(super) fn child<F: FnOnce(&mut Maker) -> R, R>(&mut self, f: F) -> R {
+    pub(super) fn child<'maker, F, R>(&'maker mut self, f: F) -> (&'maker mut Maker, R)
+    where
+        F: FnOnce(&'maker mut Maker) -> (&'maker mut Maker, R),
+    {
         let anchors = std::mem::take(&mut self.anchors);
-        let result = f(self);
-        self.anchors = anchors;
-        result
+        let (maker, result) = f(self);
+        maker.anchors = anchors;
+        (maker, result)
     }
 
-    pub(super) fn add(&mut self, mark: Mark, _token: Token, node: Node) -> Added {
+    pub(super) fn add(&mut self, mark: Mark, node: Node) -> UsedToken {
         self.data
             .data
             .insert(self.data.data.len(), MarkedNode::new(node, mark));
-        Added::new(self.last())
+        UsedToken::new(self.last(), self)
     }
 
     pub(super) fn last(&self) -> usize {
@@ -90,6 +69,35 @@ impl Maker {
     }
 }
 
+pub struct UsedToken<'maker> {
+    pub(super) index: usize,
+    pub(super) maker: &'maker mut Maker,
+}
+
+impl<'maker> UsedToken<'maker> {
+    fn new(index: usize, maker: &'maker mut Maker) -> Self {
+        Self { index, maker }
+    }
+}
+
+pub struct Token<'maker> {
+    pub(super) maker: &'maker mut Maker,
+}
+
+impl<'maker> Token<'maker> {
+    pub(super) fn new(maker: &'maker mut Maker) -> Self {
+        Self { maker }
+    }
+
+    pub fn add<O, E, F>(self, f: F) -> marked::MakeResult<'maker, O, E>
+    where
+        E: Error + PartialEq + Eq,
+        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
+    {
+        f(self)
+    }
+}
+
 pub struct ListToken<'maker> {
     pub(super) result: Vec<usize>,
     pub(super) maker: &'maker mut Maker,
@@ -103,17 +111,21 @@ impl<'maker> ListToken<'maker> {
         }
     }
 
-    pub fn add<O, E, F>(&mut self, f: F) -> Result<O, marked::MakeError<E>>
+    pub fn add<O, E, F>(mut self, f: F) -> marked::MakeListResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
-        F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
+        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
     {
-        match f(Token::new(), self.maker) {
-            Ok((added, output)) => {
-                self.result.push(added.index());
-                Ok(output)
+        match f(Token::new(self.maker)) {
+            Ok((used_token, output)) => {
+                self.result.push(used_token.index);
+                self.maker = used_token.maker;
+                Ok((self, output))
             }
-            Err((_token, error)) => Err(error),
+            Err((token, error)) => {
+                self.maker = token.maker;
+                Err((self, error))
+            }
         }
     }
 }
@@ -131,21 +143,33 @@ impl<'maker> MapToken<'maker> {
         }
     }
 
-    pub fn add<O, E, F>(&mut self, mark: Mark, key: String, f: F) -> Result<O, marked::MakeError<E>>
+    pub fn add<O, E, F, S>(
+        mut self,
+        mark: Mark,
+        key: S,
+        f: F,
+    ) -> marked::MakeMapResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
-        F: FnOnce(Token, &mut Maker) -> marked::MakeResult<O, E>,
+        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
+        S: Into<String>,
     {
-        match f(Token::new(), self.maker) {
-            Ok((added, output)) => match self.result.insert(key, added.index()) {
-                None => Ok(output),
-                Some(_) => Err(marked::MakeError::new_with(
-                    mark,
-                    self.maker.path(),
-                    MakeErrorReason::RepeatedKey,
-                )),
-            },
-            Err((_token, error)) => Err(error),
+        match f(Token::new(self.maker)) {
+            Ok((used_token, output)) => {
+                self.maker = used_token.maker;
+                match self.result.insert(key.into(), used_token.index) {
+                    None => Ok((self, output)),
+                    Some(_) => {
+                        let path = PathBuf::from(self.maker.path());
+                        let error = marked::MakeError::new_with(mark, path, RepeatedKey);
+                        Err((self, error))
+                    }
+                }
+            }
+            Err((token, error)) => {
+                self.maker = token.maker;
+                Err((self, error))
+            }
         }
     }
 }

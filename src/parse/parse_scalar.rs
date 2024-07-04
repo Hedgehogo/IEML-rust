@@ -15,28 +15,28 @@ pub(crate) fn parse_scalar<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
-    move |token, maker| {
-        let parsers: [fn(_, _, _, _, _, &mut make::Maker) -> _; 3] = [
-            |file_path, input, indent, mark, token, maker| {
-                parse_classic_string(file_path, input, indent, mark)(token, maker)
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+    move |token| {
+        let parsers: [fn(_, _, _, _, _) -> _; 3] = [
+            |file_path, input, indent, mark, token| {
+                parse_classic_string(file_path, input, indent, mark)(token)
             },
-            |file_path, input, _indent, mark, token, maker| {
-                parse_line_string(file_path, input, mark)(token, maker)
+            |file_path, input, _indent, mark, token| {
+                parse_line_string(file_path, input, mark)(token)
             },
-            |file_path, input, indent, mark, token, maker| {
-                parse_not_escaped_string(file_path, input, indent, mark)(token, maker)
+            |file_path, input, indent, mark, token| {
+                parse_not_escaped_string(file_path, input, indent, mark)(token)
             },
         ];
 
-        let token = match parse_null(file_path, input, mark)(token, maker) {
+        let token = match parse_null(file_path, input, mark)(token) {
             Ok(i) => return Ok(i),
             Err((token, _)) => token,
         };
 
         let mut token = token;
         for parse in parsers {
-            token = match parse(file_path, input, indent, mark, token, maker) {
+            token = match parse(file_path, input, indent, mark, token) {
                 Ok(i) => return Ok(i),
                 Err((token, i)) => match &i.data.reason {
                     make::error::MakeErrorReason::Parse(FailedDetermineType) => token,
@@ -45,7 +45,7 @@ pub(crate) fn parse_scalar<'input, 'path: 'input>(
             };
         }
 
-        parse_raw(file_path, input, mark)(token, maker)
+        parse_raw(file_path, input, mark)(token)
     }
 }
 

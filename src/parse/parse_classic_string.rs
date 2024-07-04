@@ -111,9 +111,9 @@ pub(crate) fn parse_classic_string<'input, 'path: 'input>(
     input: &'input str,
     indent: usize,
     mark: Mark,
-) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
-    move |token, maker| match classic_string(file_path, input, indent, mark) {
-        Ok((output, string)) => make::string(mark, output, string)(token, maker),
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+    move |token| match classic_string(file_path, input, indent, mark) {
+        Ok((output, string)) => make::string(mark, output, string)(token),
         Err(error) => Err((token, error)),
     }
 }

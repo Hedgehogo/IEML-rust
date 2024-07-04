@@ -30,10 +30,10 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
     file_path: &'path Path,
     input: &'input str,
     mark: Mark,
-) -> impl FnOnce(make::Token, &mut make::Maker) -> MakeResult<'input> {
-    move |token, maker| {
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+    move |token| {
         match null(file_path, input, mark) {
-            Ok((output, _)) => make::null(mark, output)(token, maker),
+            Ok((output, _)) => make::null(mark, output)(token),
             Err(error) => Err((token, error)),
         }
     }
