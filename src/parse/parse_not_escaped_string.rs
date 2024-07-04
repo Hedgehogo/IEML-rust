@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::{
+    cursor::Cursor,
     error::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
@@ -12,25 +13,25 @@ use super::{
 use crate::data::{make, mark::Mark};
 use nom::bytes::complete::tag;
 
-fn analyze<'input, 'path: 'input>(
-    file_path: &'path Path,
-    input: &'input str,
+fn analyze<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
     indent: usize,
     capacity: usize,
     lines: usize,
-    mark: Mark,
-) -> ((&'input str, Mark), (usize, usize)) {
-    let match_whitespace = match_enter(input).and_then(|(input, _)| match_indent(indent)(input));
+) -> (Cursor<'input>, (usize, usize)) {
+    let match_whitespace =
+        match_enter(cursor.input).and_then(|(input, _)| match_indent(indent)(input).into());
 
     let input = match match_whitespace {
         Ok((input, _)) => input,
-        Err(_) => return ((input, mark), (capacity - 1, lines)),
+        Err(_) => return (cursor, (capacity - 1, lines)),
     };
 
-    let (input, (line, mark)) = match_line(mark + Mark::new(1, indent))(input);
+    let (input, (line, mark)) = match_line(cursor.mark + Mark::new(1, indent))(input);
     let capacity = capacity + line.len() + 1;
     let lines = lines + 1;
-    analyze(file_path, input, indent, capacity, lines, mark)
+    analyze(file_path, (input, mark).into(), indent, capacity, lines)
 }
 
 fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut String) {
@@ -45,15 +46,14 @@ fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut S
     }
 }
 
-pub(crate) fn not_escaped_string<'input, 'path: 'input>(
-    file_path: &'path Path,
-    input: &'input str,
+pub(crate) fn not_escaped_string<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
     indent: usize,
-    mark: Mark,
 ) -> ParseResult<'input, String> {
-    let (input, _) = tag::<_, _, nom::error::Error<_>>(">>")(input)
-        .map_err(|_| MakeError::new_with(mark, file_path, FailedDetermineType))?;
-    let (input, mark) = skip_blank_line(mark + Mark::new(0, 2))(input);
+    let (input, _) = tag::<_, _, nom::error::Error<_>>(">>")(cursor.input)
+        .map_err(|_| MakeError::new_with(cursor.mark, file_path, FailedDetermineType))?;
+    let (input, mark) = skip_blank_line(cursor.mark + Mark::new(0, 2))(input);
 
     let (input, mark) = skip_enter(mark)(input)
         .map_err(|_| MakeError::new_with(mark, file_path, IncompleteString))?;
@@ -62,23 +62,22 @@ pub(crate) fn not_escaped_string<'input, 'path: 'input>(
     let (input, (line, mark)) = match_line(mark)(input);
 
     let capacity = line.len() + 1;
-    let ((output, mark), (capacity, lines)) = analyze(file_path, input, indent, capacity, 1, mark);
+    let (cursor, (capacity, lines)) = analyze(file_path, (input, mark).into(), indent, capacity, 1);
 
     let mut result = String::with_capacity(capacity);
     result.push_str(line);
     parse(input, indent, lines, &mut result);
 
-    Ok(((output, mark), result))
+    Ok((cursor, result))
 }
 
-pub(crate) fn parse_not_escaped_string<'input, 'path: 'input>(
-    file_path: &'path Path,
-    input: &'input str,
+pub(crate) fn parse_not_escaped_string<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
     indent: usize,
-    mark: Mark,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| match not_escaped_string(file_path, input, indent, mark) {
-        Ok((output, string)) => make::string(mark, output, string)(token),
+    move |token: make::Token| match not_escaped_string(file_path, cursor, indent) {
+        Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => Err((token, error)),
     }
 }
@@ -98,16 +97,16 @@ mod tests {
             let input = r#">>
 		hello"#;
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
-                Ok((("", Mark::new(1, 7)), "hello".into()))
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
+                Ok((("", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
         {
             let input = r#">>
 			hello"#;
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
-                Ok((("", Mark::new(1, 8)), "\thello".into()))
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
+                Ok((("", Mark::new(1, 8)).into(), "\thello".into()))
             );
         }
         {
@@ -115,8 +114,8 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
-                Ok((("\n\thello", Mark::new(1, 7)), "hello".into()))
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
+                Ok((("\n\thello", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
         {
@@ -125,8 +124,8 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
-                Ok((("\n\thello", Mark::new(2, 7)), "hello\nhello".into()))
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
+                Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
         {
@@ -135,8 +134,8 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
-                Ok((("\n\thello", Mark::new(2, 7)), "hello\nhello".into()))
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
+                Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
         {
@@ -146,7 +145,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(0, 4);
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
                 Err(MakeError::new_with(error_mark, file_path, IncompleteString))
             );
         }
@@ -155,7 +154,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(1, 0);
             assert_eq!(
-                not_escaped_string(file_path, input, 2, begin_mark),
+                not_escaped_string(file_path, (input, begin_mark).into(), 2),
                 Err(MakeError::new_with(error_mark, file_path, ExpectedTab))
             );
         }

@@ -1,20 +1,20 @@
 use std::path::Path;
 
-use super::{error::marked::MakeResult, parse_scalar::parse_scalar};
-use crate::data::{make, mark::Mark};
+use super::{cursor::Cursor, error::marked::MakeResult, parse_scalar::parse_scalar};
+use crate::data::make;
 
-pub(crate) fn parse_node<'input, 'path: 'input>(
-    file_path: &'path Path,
-    input: &'input str,
+pub(crate) fn parse_node<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
     indent: usize,
-    mark: Mark,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    parse_scalar(file_path, input, indent, mark)
+    parse_scalar(file_path, cursor, indent)
 }
 
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use crate::data::mark::Mark;
 
     use super::*;
 

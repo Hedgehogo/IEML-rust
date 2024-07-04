@@ -1,4 +1,5 @@
 use crate::data::mark::Mark;
+use super::super::cursor::Cursor;
 use nom::error::Error;
 use nom::sequence::Tuple;
 use nom::{bytes::complete::*, character::complete::*, multi::*, *};

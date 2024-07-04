@@ -45,10 +45,11 @@ impl Display for Error {
 impl std::error::Error for Error {}
 
 pub mod marked {
-    use crate::data::{make::error, mark::Mark};
+    use super::super::cursor::Cursor;
+    use crate::data::make::error::marked;
 
-    pub type MakeError = error::marked::MakeError<super::Error>;
-    pub type MakeResult<'maker, 'input> = error::marked::MakeResult<'maker, (&'input str, Mark), super::Error>;
+    pub type MakeError = marked::MakeError<super::Error>;
+    pub type MakeResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
     /*
        trait Isolate {
            type Error;
@@ -79,5 +80,5 @@ pub mod marked {
            matches!(e, error::MakeErrorReason::Parse(super::Error::FailedDetermineType))
        }
     */
-    pub type ParseResult<'input, T> = Result<((&'input str, Mark), T), MakeError>;
+    pub type ParseResult<'input, T> = Result<(Cursor<'input>, T), MakeError>;
 }

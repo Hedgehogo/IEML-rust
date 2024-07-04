@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::{
+    cursor::Cursor,
     error::{
         marked::{MakeError, MakeResult},
         Error::{ExpectedListItem, FailedDetermineType},
@@ -11,37 +12,35 @@ use super::{
 use crate::data::{make, mark::Mark};
 use nom::bytes::complete::tag;
 
-pub(crate) fn parse_list<'input, 'path: 'input>(
-    file_path: &'path Path,
-    input: &'input str,
+pub(crate) fn parse_list<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
     indent: usize,
-    mark: Mark,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let begin_mark = mark;
+        let begin_mark = cursor.mark;
 
-        let skip_special = |input, mark| {
-            let match_special = tag::<_, _, nom::error::Error<_>>("- ");
-            match_special(input)
+        let skip_special = |cursor: Cursor<'input>| {
+            let match_special = tag::<_, &str, nom::error::Error<_>>("- ");
+            match_special(cursor.input)
                 .ok()
-                .map(|(input, _)| (input, mark + Mark::new(0, 2)))
+                .map(|(input, _)| (input, cursor.mark + Mark::new(0, 2)).into())
         };
 
-        let skip_whitespace = |input, mark| {
-            skip_enter(mark)(input)
+        let skip_whitespace = |cursor: Cursor<'input>| {
+            skip_enter(cursor.mark)(cursor.input)
                 .ok()
                 .and_then(|(input, mark)| skip_indent(indent, mark)(input).ok())
+                .map(|(input, mark)| (input, mark).into())
         };
 
-        if let Some((input, mark)) = skip_special(input, mark) {
+        if let Some(cursor) = skip_special(cursor) {
             return make::list(begin_mark, |token| {
-                token.add(parse_node(file_path, input, indent, mark))
+                token.add(parse_node(file_path, cursor, indent))
             })(token);
         }
 
-        let (input, mark) = match skip_whitespace(input, mark)
-            .and_then(|(input, mark)| skip_special(input, mark))
-        {
+        let cursor = match skip_whitespace(cursor).and_then(|i| skip_special(i)) {
             Some(i) => i,
             None => {
                 let error = MakeError::new_with(begin_mark, file_path, FailedDetermineType);
@@ -49,22 +48,22 @@ pub(crate) fn parse_list<'input, 'path: 'input>(
             }
         };
         make::list(begin_mark, |token| {
-            let (mut token, (mut input, mut mark)) =
-                token.add(parse_node(file_path, input, indent, mark))?;
+            let (mut token, mut cursor) = token.add(parse_node(file_path, cursor, indent))?;
             loop {
-                (token, (input, mark)) = {
-                    let (input, mark) = match skip_whitespace(input, mark) {
+                (token, cursor) = {
+                    let cursor = match skip_whitespace(cursor) {
                         Some(i) => i,
-                        None => return Ok((token, (input, mark))),
+                        None => return Ok((token, cursor)),
                     };
-                    let (input, mark) = match skip_special(input, mark) {
+                    let cursor = match skip_special(cursor) {
                         Some(i) => i,
                         None => {
+                            let mark = cursor.mark;
                             let error = MakeError::new_with(mark, file_path, ExpectedListItem);
                             return Err((token, error));
                         }
                     };
-                    token.add(parse_node(file_path, input, indent, mark))?
+                    token.add(parse_node(file_path, cursor, indent))?
                 }
             }
         })(token)

@@ -1,3 +1,4 @@
+pub mod cursor;
 pub mod error;
 pub mod parse_classic_string;
 pub mod parse_line_string;
