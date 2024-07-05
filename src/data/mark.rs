@@ -9,7 +9,7 @@ impl Mark {
         Self { line, symbol }
     }
 
-    pub fn enter(self) -> Self {
+    pub fn newline(self) -> Self {
         Self::new(self.line + 1, 0)
     }
 }

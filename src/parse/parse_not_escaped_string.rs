@@ -7,7 +7,7 @@ use super::{
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
     utils::combinator::{
-        match_enter, match_indent, match_line, skip_blank_line, skip_enter, skip_indent,
+        match_indent, match_line, match_newline, skip_blank_line, skip_indent, skip_newline,
     },
 };
 use crate::data::{make, mark::Mark};
@@ -21,7 +21,7 @@ fn analyze<'input>(
     lines: usize,
 ) -> (Cursor<'input>, (usize, usize)) {
     let match_whitespace =
-        match_enter(cursor.input).and_then(|(input, _)| match_indent(indent)(input).into());
+        match_newline(cursor.input).and_then(|(input, _)| match_indent(indent)(input).into());
 
     let input = match match_whitespace {
         Ok((input, _)) => input,
@@ -55,7 +55,7 @@ pub(crate) fn not_escaped_string<'input>(
         .map_err(|_| MakeError::new_with(cursor.mark, file_path, FailedDetermineType))?;
     let (input, mark) = skip_blank_line(cursor.mark + Mark::new(0, 2))(input);
 
-    let (input, mark) = skip_enter(mark)(input)
+    let (input, mark) = skip_newline(mark)(input)
         .map_err(|_| MakeError::new_with(mark, file_path, IncompleteString))?;
     let (input, mark) = skip_indent(indent, mark)(input)
         .map_err(|_| MakeError::new_with(mark, file_path, ExpectedTab))?;

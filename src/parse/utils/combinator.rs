@@ -3,12 +3,12 @@ use nom::error::Error;
 use nom::sequence::Tuple;
 use nom::{bytes::complete::*, character::complete::*, multi::*, *};
 
-pub fn match_enter(input: &str) -> IResult<&str, ()> {
+pub fn match_newline(input: &str) -> IResult<&str, ()> {
     Ok((tag("\n")(input)?.0, ()))
 }
 
-pub fn skip_enter(mark: Mark) -> impl FnMut(&str) -> IResult<&str, Mark> {
-    move |input| match_enter(input).map(|(output, _)| (output, mark + Mark::new(1, 0)))
+pub fn skip_newline(mark: Mark) -> impl FnMut(&str) -> IResult<&str, Mark> {
+    move |input| match_newline(input).map(|(output, _)| (output, mark + Mark::new(1, 0)))
 }
 
 pub fn match_indent(indent: usize) -> impl FnMut(&str) -> IResult<&str, ()> {
@@ -45,10 +45,10 @@ pub fn skip_blank_lines_ln(mark: Mark) -> impl FnMut(&str) -> IResult<&str, Mark
         fold_many1(
             |input| {
                 let (input, _) = match_blank_line(input);
-                match_enter(input)
+                match_newline(input)
             },
             || mark,
-            |mark, _| mark.enter(),
+            |mark, _| mark.newline(),
         )(input)
     }
 }
@@ -69,16 +69,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_match_enter() {
-        assert_eq!(match_enter("\nhello"), Ok(("hello", ())));
-        assert!(match_enter("hello").is_err());
+    fn test_match_newline() {
+        assert_eq!(match_newline("\nhello"), Ok(("hello", ())));
+        assert!(match_newline("hello").is_err());
     }
 
     #[test]
-    fn test_skip_enter() {
+    fn test_skip_newline() {
         let mark = Mark::new(15, 10);
-        assert_eq!(skip_enter(mark)("\nhello"), Ok(("hello", Mark::new(16, 0))));
-        assert!(match_enter("hello").is_err());
+        assert_eq!(
+            skip_newline(mark)("\nhello"),
+            Ok(("hello", Mark::new(16, 0)))
+        );
+        assert!(match_newline("hello").is_err());
     }
 
     #[test]
