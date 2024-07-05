@@ -9,9 +9,8 @@ impl Mark {
         Self { line, symbol }
     }
 
-    pub fn enter(&mut self) {
-        self.line += 1;
-        self.symbol = 0;
+    pub fn enter(self) -> Self {
+        Self::new(self.line + 1, 0)
     }
 }
 

@@ -1,5 +1,4 @@
 use crate::data::mark::Mark;
-use super::super::cursor::Cursor;
 use nom::error::Error;
 use nom::sequence::Tuple;
 use nom::{bytes::complete::*, character::complete::*, multi::*, *};
@@ -43,16 +42,13 @@ pub fn skip_blank_line(mark: Mark) -> impl FnMut(&str) -> (&str, Mark) {
 
 pub fn skip_blank_lines_ln(mark: Mark) -> impl FnMut(&str) -> IResult<&str, Mark> {
     move |input| {
-        fold_many0(
+        fold_many1(
             |input| {
                 let (input, _) = match_blank_line(input);
                 match_enter(input)
             },
             || mark,
-            |mut mark, _| {
-                mark.enter();
-                mark
-            },
+            |mark, _| mark.enter(),
         )(input)
     }
 }
@@ -146,16 +142,17 @@ mod tests {
     fn test_skip_blank_lines_ln() {
         let mark = Mark::new(15, 10);
         assert_eq!(
+            skip_blank_lines_ln(mark)(" # hello\n\t"),
+            Ok(("\t", Mark::new(16, 0)))
+        );
+        assert_eq!(
             skip_blank_lines_ln(mark)(" # hello\n\t \t \n world"),
             Ok((" world", Mark::new(17, 0)))
         );
         assert_eq!(
-            skip_blank_lines_ln(mark)(" #hello\nhello"),
-            Ok((" #hello\nhello", Mark::new(15, 10)))
+            skip_blank_lines_ln(mark)(" # hello\nhello"),
+            Ok(("hello", Mark::new(16, 0)))
         );
-        assert_eq!(
-            skip_blank_lines_ln(mark)(" #hello\nhello"),
-            Ok((" #hello\nhello", Mark::new(15, 10)))
-        );
+        assert!(skip_blank_lines_ln(mark)(" #hello\nhello").is_err());
     }
 }

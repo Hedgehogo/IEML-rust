@@ -24,11 +24,13 @@ fn analyze<'input>(
         }
         Err(_) => Err(MakeError::new_with(cursor.mark, file_path, ExpectedTab)),
     };
+    
     let analyze_any = |input, any: char, offset| {
         let mark = cursor.mark + Mark::new(0, 1 + offset);
         let capacity = capacity + any.len_utf8() + offset;
         analyze(file_path, (input, mark).into(), indent, capacity)
     };
+
     match anychar::<_, nom::error::Error<_>>(cursor.input) {
         Ok((input, result)) => match result {
             '\"' => {
