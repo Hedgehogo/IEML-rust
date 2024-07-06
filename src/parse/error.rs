@@ -50,6 +50,8 @@ pub mod marked {
 
     pub type MakeError = marked::MakeError<super::Error>;
     pub type MakeResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
+    pub type MakeListResult<'maker, 'input> = marked::MakeListResult<'maker, Cursor<'input>, super::Error>;
+    pub type MakeMapResult<'maker, 'input> = marked::MakeMapResult<'maker, Cursor<'input>, super::Error>;
     /*
        trait Isolate {
            type Error;

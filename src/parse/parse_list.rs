@@ -3,8 +3,8 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult},
-        Error::{ExpectedListItem, FailedDetermineType},
+        marked::{MakeError, MakeListResult, MakeResult},
+        Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
     utils::combinator::{skip_blank_lines_ln, skip_indent},
@@ -27,18 +27,29 @@ fn skip_special<'input>(cursor: Cursor<'input>) -> Option<Cursor<'input>> {
     }
 }
 
+fn parse_list_item<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
+    indent: usize,
+    error: Error,
+) -> impl FnOnce(make::ListToken) -> MakeListResult<'_, 'input> {
+    move |token| match skip_special(cursor) {
+        Some(cursor) => token.add(parse_node(file_path, cursor, indent + 1)),
+        None => {
+            let error = MakeError::new_with(cursor.mark, file_path, error);
+            Err((token, error))
+        }
+    }
+}
+
 pub(crate) fn parse_list_one<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let make_error = |mark, error| MakeError::new_with(mark, file_path, error);
-
-        make::list(cursor.mark, |token| match skip_special(cursor) {
-            Some(cursor) => token.add(parse_node(file_path, cursor, indent + 1)),
-            None => Err((token, make_error(cursor.mark, FailedDetermineType))),
-        })(token)
+        let f = parse_list_item(file_path, cursor, indent, FailedDetermineType);
+        make::list(cursor.mark, f)(token)
     }
 }
 
@@ -48,8 +59,6 @@ pub(crate) fn parse_list<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let make_error = |mark, error| MakeError::new_with(mark, file_path, error);
-
         let skip_whitespace = |cursor: Cursor<'input>| {
             let cursor: Cursor = skip_blank_lines_ln(cursor.mark)(cursor.input).ok()?.into();
             let cursor = skip_indent(indent, cursor.mark)(cursor.input).ok()?.into();
@@ -57,21 +66,15 @@ pub(crate) fn parse_list<'input>(
         };
 
         make::list(cursor.mark, |token| {
-            let (mut token, mut cursor) = match skip_special(cursor) {
-                Some(cursor) => token.add(parse_node(file_path, cursor, indent + 1))?,
-                None => return Err((token, make_error(cursor.mark, FailedDetermineType))),
-            };
+            let result = parse_list_item(file_path, cursor, indent, FailedDetermineType)(token)?;
 
+            let (mut token, mut cursor) = result;
             loop {
-                (token, cursor) = {
-                    let cursor = match skip_whitespace(cursor) {
-                        Some(i) => i,
-                        None => return Ok((token, cursor)),
-                    };
-                    match skip_special(cursor) {
-                        Some(cursor) => token.add(parse_node(file_path, cursor, indent + 1))?,
-                        None => return Err((token, make_error(cursor.mark, ExpectedListItem))),
+                (token, cursor) = match skip_whitespace(cursor) {
+                    Some(cursor) => {
+                        parse_list_item(file_path, cursor, indent, ExpectedListItem)(token)?
                     }
+                    None => return Ok((token, cursor)),
                 }
             }
         })(token)
