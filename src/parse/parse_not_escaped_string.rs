@@ -6,12 +6,10 @@ use super::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
-    utils::combinator::{
-        match_indent, match_line, match_newline, skip_blank_line, skip_indent, skip_newline,
-    },
+    utils::combinator::{char, match_line, skip_blank_line, skip_indent, skip_newline},
 };
-use crate::data::{make, mark::Mark};
-use nom::bytes::complete::tag;
+use crate::data::make;
+use nom::sequence::tuple;
 
 fn analyze<'input>(
     file_path: &'input Path,
@@ -20,18 +18,17 @@ fn analyze<'input>(
     capacity: usize,
     lines: usize,
 ) -> (Cursor<'input>, (usize, usize)) {
-    let match_whitespace =
-        match_newline(cursor.input).and_then(|(input, _)| match_indent(indent)(input).into());
+    let match_whitespace = skip_newline(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
 
-    let input = match match_whitespace {
-        Ok((input, _)) => input,
+    let cursor = match match_whitespace {
+        Ok((cursor, _)) => cursor,
         Err(_) => return (cursor, (capacity - 1, lines)),
     };
 
-    let (input, (line, mark)) = match_line(cursor.mark + Mark::new(1, indent))(input);
+    let (cursor, line) = match_line(cursor);
     let capacity = capacity + line.len() + 1;
     let lines = lines + 1;
-    analyze(file_path, (input, mark).into(), indent, capacity, lines)
+    analyze(file_path, cursor, indent, capacity, lines)
 }
 
 fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut String) {
@@ -51,24 +48,24 @@ pub(crate) fn not_escaped_string<'input>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> ParseResult<'input, String> {
-    let (input, _) = tag::<_, _, nom::error::Error<_>>(">>")(cursor.input)
+    let (cursor, _) = tuple((char('>'), char('>')))(cursor)
         .map_err(|_| MakeError::new_with(cursor.mark, file_path, FailedDetermineType))?;
-    let (input, mark) = skip_blank_line(cursor.mark + Mark::new(0, 2))(input);
+    let cursor = skip_blank_line(cursor);
 
-    let (input, mark) = skip_newline(mark)(input)
-        .map_err(|_| MakeError::new_with(mark, file_path, IncompleteString))?;
-    let (input, mark) = skip_indent(indent, mark)(input)
-        .map_err(|_| MakeError::new_with(mark, file_path, ExpectedTab))?;
-    let (input, (line, mark)) = match_line(mark)(input);
+    let (cursor, _) = skip_newline(cursor)
+        .map_err(|_| MakeError::new_with(cursor.mark, file_path, IncompleteString))?;
+    let (cursor, _) = skip_indent(indent)(cursor)
+        .map_err(|_| MakeError::new_with(cursor.mark, file_path, ExpectedTab))?;
+    let (cursor, line) = match_line(cursor);
 
     let capacity = line.len() + 1;
-    let (cursor, (capacity, lines)) = analyze(file_path, (input, mark).into(), indent, capacity, 1);
+    let (output, (capacity, lines)) = analyze(file_path, cursor, indent, capacity, 1);
 
     let mut result = String::with_capacity(capacity);
     result.push_str(line);
-    parse(input, indent, lines, &mut result);
+    parse(cursor.input, indent, lines, &mut result);
 
-    Ok((cursor, result))
+    Ok((output, result))
 }
 
 pub(crate) fn parse_not_escaped_string<'input>(
@@ -85,6 +82,8 @@ pub(crate) fn parse_not_escaped_string<'input>(
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use crate::data::mark::Mark;
 
     use super::*;
 

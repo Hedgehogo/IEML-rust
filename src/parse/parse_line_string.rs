@@ -6,21 +6,25 @@ use super::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::FailedDetermineType,
     },
-    utils::combinator::match_line,
+    utils::combinator::{char, match_line},
 };
-use crate::data::{make, mark::Mark};
-use nom::bytes::complete::tag;
+use crate::data::make;
+use nom::sequence::tuple;
 
 pub(crate) fn line_string<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
 ) -> ParseResult<'input, String> {
-    match tag::<_, _, nom::error::Error<_>>("> ")(cursor.input) {
-        Ok((input, _)) => {
-            let (input, (result, mark)) = match_line(cursor.mark + Mark::new(0, 2))(input);
-            Ok(((input, mark).into(), result.into()))
+    match tuple((char('>'), char(' ')))(cursor) {
+        Ok((cursor, _)) => {
+            let (cursor, result) = match_line(cursor);
+            Ok((cursor, result.into()))
         }
-        Err(_) => Err(MakeError::new_with(cursor.mark, file_path, FailedDetermineType)),
+        Err(_) => Err(MakeError::new_with(
+            cursor.mark,
+            file_path,
+            FailedDetermineType,
+        )),
     }
 }
 
@@ -37,6 +41,8 @@ pub(crate) fn parse_line_string<'input>(
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use crate::data::mark::Mark;
 
     use super::*;
 

@@ -1,15 +1,14 @@
+use super::combinator::skip_blank_line;
 pub use super::number::*;
-use super::combinator::match_blank_line;
-use nom::{branch::alt, bytes::complete::*, combinator::value, *};
+use nom::{bytes::complete::*, combinator::value, *};
 
 pub fn to_bool(input: &str) -> Option<bool> {
-    let (input, result) = alt::<&str, bool, error::Error<_>, _>((
-        value(true, tag("yes")),
-        value(false, tag("no")),
-    ))(input)
-    .ok()?;
-    let (input, _) = match_blank_line(input);
-    input.is_empty().then_some(result)
+    let (input, result) = value(true, tag::<_, _, error::Error<_>>("yes"))
+        .or(value(false, tag("no")))
+        .parse(input)
+        .ok()?;
+    let cursor = skip_blank_line((input, Default::default()).into());
+    cursor.input.is_empty().then_some(result)
 }
 
 #[cfg(test)]

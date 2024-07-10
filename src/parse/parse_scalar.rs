@@ -135,7 +135,7 @@ mod tests {
             let input = r#""hello
 	world""#;
             let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
-            let error_mark = Mark::new(0, 6);
+            let error_mark = Mark::new(1, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
                 Err(MakeError::new_with(error_mark, file_path, ExpectedTab))

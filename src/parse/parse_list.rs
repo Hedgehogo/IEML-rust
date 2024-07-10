@@ -7,16 +7,10 @@ use super::{
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
-    utils::combinator::{skip_blank_lines_ln, skip_indent, match_space},
+    utils::combinator::{char, skip_blank_lines_ln, skip_indent, skip_space},
 };
-use crate::data::{make, mark::Mark};
-use nom::{character::complete::char, combinator::recognize, sequence::tuple};
-
-fn skip_special<'input>(cursor: Cursor<'input>) -> Option<Cursor<'input>> {
-    let (input, result) = recognize(tuple((char('-'), match_space)))(cursor.input).ok()?;
-    let mark = cursor.mark + Mark::new(0, result.len());
-    Some((input, mark).into())
-}
+use crate::data::make;
+use nom::sequence::tuple;
 
 fn parse_list_item<'input>(
     file_path: &'input Path,
@@ -24,9 +18,9 @@ fn parse_list_item<'input>(
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::ListToken) -> MakeListResult<'_, 'input> {
-    move |token| match skip_special(cursor) {
-        Some(cursor) => token.add(parse_node(file_path, cursor, indent + 1)),
-        None => {
+    move |token| match tuple((char('-'), skip_space))(cursor) {
+        Ok((cursor, _)) => token.add(parse_node(file_path, cursor, indent + 1)),
+        Err(_) => {
             let error = MakeError::new_with(cursor.mark, file_path, error);
             Err((token, error))
         }
@@ -50,9 +44,9 @@ pub(crate) fn parse_list<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let skip_whitespace = |cursor: Cursor<'input>| {
-            let cursor: Cursor = skip_blank_lines_ln(cursor.mark)(cursor.input).ok()?.into();
-            let cursor = skip_indent(indent, cursor.mark)(cursor.input).ok()?.into();
+        let skip_whitespace = |cursor| {
+            let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
+            let (cursor, _) = skip_indent(indent)(cursor).ok()?;
             Some(cursor)
         };
 

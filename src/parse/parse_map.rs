@@ -11,24 +11,18 @@ use super::{
 };
 use crate::data::make;
 
-fn match_key(cursor: Cursor) -> Option<(&str, Cursor)> {
-    match_name(cursor.mark)(cursor.input)
-        .ok()
-        .map(|(input, (result, mark))| (result, (input, mark).into()))
-}
-
 fn parse_map_item<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
-    move |token| match match_key(cursor) {
-        Some((key, new_cursor)) => {
+    move |token| match match_name(cursor) {
+        Ok((new_cursor, key)) => {
             let f = parse_node(file_path, new_cursor, indent + 1);
             token.add(cursor.mark, key, f)
         }
-        None => {
+        Err(_) => {
             let error = MakeError::new_with(cursor.mark, file_path, error);
             Err((token, error))
         }
@@ -52,9 +46,9 @@ pub(crate) fn parse_map<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let skip_whitespace = |cursor: Cursor<'input>| {
-            let cursor: Cursor = skip_blank_lines_ln(cursor.mark)(cursor.input).ok()?.into();
-            let cursor = skip_indent(indent, cursor.mark)(cursor.input).ok()?.into();
+        let skip_whitespace = |cursor| {
+            let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
+            let (cursor, _) = skip_indent(indent)(cursor).ok()?;
             Some(cursor)
         };
 

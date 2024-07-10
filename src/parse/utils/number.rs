@@ -1,12 +1,12 @@
-use super::{number_traits::Number, combinator::match_blank_line};
+use super::{combinator::skip_blank_line, number_traits::Number};
 
 pub trait ToNumber: Number {
     fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self>;
-    
+
     fn parse_fractional_part(input: &str, radix: u8, number: Self) -> Option<(&str, Self)>;
-    
+
     fn parse_minus(input: &str) -> (&str, bool);
-    
+
     fn add_minus(number: Self, minus: bool) -> Self;
 }
 
@@ -48,7 +48,7 @@ pub fn add_minus_unsigned<T: Number>(number: T, _minus: bool) -> T {
 
 pub fn parse_minus_signed(input: &str) -> (&str, bool) {
     let mut chars = input.chars();
-    
+
     match chars.next() {
         Some(i) => match i {
             '-' => (chars.as_str(), true),
@@ -69,7 +69,7 @@ pub fn to_digit(input: char, radix: u8) -> Option<u8> {
         'A'..='Z' => Some(10 + (input as u8) - ('A' as u8)),
         _ => None,
     }
-        .and_then(|i| if i < radix { Some(i) } else { None })
+    .and_then(|i| if i < radix { Some(i) } else { None })
 }
 
 pub fn parse_number_part<T: Number>(input: &str, radix: u8) -> Option<(&str, (T, T))> {
@@ -226,28 +226,28 @@ impl_parse_number!(
 );
 
 pub fn to_number<T: ToNumber>(input: &str) -> Option<T> {
-    let (new_input, number) = parse_number_scientific(input)?;
-    let (new_input, _) = match_blank_line(new_input);
-    new_input.is_empty().then_some(number)
+    let (input, number) = parse_number_scientific(input)?;
+    let cursor = skip_blank_line((input, Default::default()).into());
+    cursor.input.is_empty().then_some(number)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_to_digit() {
         assert_eq!(to_digit('0', 10), Some(0));
         assert_eq!(to_digit('9', 10), Some(9));
         assert_eq!(to_digit('A', 10), None);
-        
+
         assert_eq!(to_digit('0', 16), Some(0));
         assert_eq!(to_digit('9', 16), Some(9));
         assert_eq!(to_digit('A', 16), Some(10));
         assert_eq!(to_digit('F', 16), Some(15));
         assert_eq!(to_digit('G', 16), None);
     }
-    
+
     #[test]
     fn test_parse_number_part() {
         assert_eq!(
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(parse_number_part::<i32>("F8", 16).unwrap().1, (0xF8, 0x100));
         assert_eq!(parse_number_part::<i32>("A5", 10).unwrap().1, (0, 1));
     }
-    
+
     #[test]
     fn test_parse_number() {
         assert_eq!(parse_number::<i32>("120", 10).unwrap().1, 120);
@@ -266,7 +266,7 @@ mod tests {
         assert_eq!(parse_number::<i32>("F8", 16).unwrap().1, 0xF8);
         assert_eq!(parse_number::<i32>("A5", 10), None);
     }
-    
+
     #[test]
     fn test_parse_number_radix() {
         assert_eq!(parse_number_radix::<i32>("120").unwrap().1, (120, 10));
@@ -274,7 +274,7 @@ mod tests {
         assert_eq!(parse_number_radix::<i32>("16'F8").unwrap().1, (0xF8, 16));
         assert_eq!(parse_number_radix::<f32>("-2'101.1").unwrap().1, (-5.5, 2));
     }
-    
+
     #[test]
     fn test_parse_number_scientific() {
         assert_eq!(parse_number_scientific::<i32>("120").unwrap().1, 120);
@@ -288,7 +288,7 @@ mod tests {
             0.6875
         );
     }
-    
+
     #[test]
     fn test_to_number() {
         assert_eq!(to_number::<i32>("2'10e1"), Some(4));
