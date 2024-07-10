@@ -7,24 +7,15 @@ use super::{
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
-    utils::combinator::{skip_blank_lines_ln, skip_indent},
+    utils::combinator::{skip_blank_lines_ln, skip_indent, match_space},
 };
 use crate::data::{make, mark::Mark};
-use nom::character::complete::char;
+use nom::{character::complete::char, combinator::recognize, sequence::tuple};
 
 fn skip_special<'input>(cursor: Cursor<'input>) -> Option<Cursor<'input>> {
-    match char::<_, nom::error::Error<_>>('-')(cursor.input) {
-        Ok((input, _)) => {
-            if let Ok((input, _)) = char::<_, nom::error::Error<_>>(' ')(input) {
-                return Some((input, cursor.mark + Mark::new(0, 2)).into());
-            }
-            if let Ok(_) = char::<_, nom::error::Error<_>>('\n')(input) {
-                return Some((input, cursor.mark + Mark::new(0, 1)).into());
-            }
-            None
-        }
-        Err(_) => None,
-    }
+    let (input, result) = recognize(tuple((char('-'), match_space)))(cursor.input).ok()?;
+    let mark = cursor.mark + Mark::new(0, result.len());
+    Some((input, mark).into())
 }
 
 fn parse_list_item<'input>(

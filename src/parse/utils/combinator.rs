@@ -1,14 +1,21 @@
+use super::nom::many_till_count;
 use crate::data::mark::Mark;
-use nom::error::Error;
-use nom::sequence::Tuple;
-use nom::{bytes::complete::*, character::complete::*, multi::*, *};
+use nom::{
+    bytes::complete::*,
+    character::complete::*,
+    combinator::{peek, recognize},
+    error::Error,
+    multi::*,
+    sequence::tuple,
+    *,
+};
 
 pub fn match_newline(input: &str) -> IResult<&str, ()> {
     Ok((tag("\n")(input)?.0, ()))
 }
 
 pub fn skip_newline(mark: Mark) -> impl FnMut(&str) -> IResult<&str, Mark> {
-    move |input| match_newline(input).map(|(output, _)| (output, mark + Mark::new(1, 0)))
+    move |input| match_newline(input).map(|(output, _)| (output, mark.newline()))
 }
 
 pub fn match_indent(indent: usize) -> impl FnMut(&str) -> IResult<&str, ()> {
@@ -19,15 +26,19 @@ pub fn skip_indent(indent: usize, mark: Mark) -> impl FnMut(&str) -> IResult<&st
     move |input| match_indent(indent)(input).map(|(input, _)| (input, mark + Mark::new(0, indent)))
 }
 
+pub fn match_space(input: &str) -> IResult<&str, ()> {
+    char(' ').or(peek(char('\n'))).map(|_| ()).parse(input)
+}
+
 pub fn match_blank_line(input: &str) -> (&str, usize) {
     let (input, count) = many0_count(one_of::<_, _, nom::error::Error<_>>(" \t"))(input)
         .expect("Internal error in `match_blank_line` function operation.");
-    let mut parse_comment = (
+    let mut parse_comment = tuple((
         tag::<&str, &str, Error<&str>>("#"),
         one_of("! "),
         many0_count(none_of("\n")),
-    );
-    match parse_comment.parse(input) {
+    ));
+    match parse_comment(input) {
         Ok((input, (_, _, comment_count))) => (input, count + 2 + comment_count),
         _ => (input, count),
     }
@@ -61,6 +72,20 @@ pub fn match_line(mark: Mark) -> impl FnMut(&str) -> (&str, (&str, Mark)) {
         let capacity = input.len() - output.len();
         let (result, _) = input.split_at(capacity);
         (output, (result, mark))
+    }
+}
+
+pub fn match_name(mark: Mark) -> impl FnMut(&str) -> IResult<&str, (&str, Mark)> {
+    move |input| {
+        let match_special = recognize(tuple((char(':'), match_space)));
+        let (new_input, (len, special)) = many_till_count(none_of("\n"), match_special)(input)?;
+
+        let bytes = input.len() - new_input.len() - special.len();
+        let (result, _) = input.split_at(bytes);
+
+        let mark = mark + Mark::new(0, len + special.len());
+
+        Ok((new_input, (result, mark)))
     }
 }
 
@@ -157,5 +182,24 @@ mod tests {
             Ok(("hello", Mark::new(16, 0)))
         );
         assert!(skip_blank_lines_ln(mark)(" #hello\nhello").is_err());
+    }
+
+    #[test]
+    fn test_match_name() {
+        let mark = Mark::new(15, 10);
+        assert_eq!(
+            match_name(mark)("key: value"),
+            Ok(("value", ("key", Mark::new(15, 15))))
+        );
+        assert_eq!(
+            match_name(mark)("key:\n"),
+            Ok(("\n", ("key", Mark::new(15, 14))))
+        );
+        assert_eq!(
+            match_name(mark)("key key: "),
+            Ok(("", ("key key", Mark::new(15, 19))))
+        );
+        assert!(skip_blank_lines_ln(mark)("key:").is_err());
+        assert!(skip_blank_lines_ln(mark)("key\n: ").is_err());
     }
 }

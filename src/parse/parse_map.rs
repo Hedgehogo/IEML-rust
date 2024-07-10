@@ -7,33 +7,14 @@ use super::{
         Error::{self, ExpectedMapKey, FailedDetermineType},
     },
     parse_node::parse_node,
-    utils::combinator::{skip_blank_lines_ln, skip_indent},
+    utils::combinator::{match_name, skip_blank_lines_ln, skip_indent},
 };
-use crate::data::{make, mark::Mark};
-use nom::character::complete::{char, none_of, one_of};
-use nom::combinator::{cut, not};
-use nom::multi::fold_many0;
-use nom::sequence::Tuple;
+use crate::data::make;
 
-fn match_key<'input>(cursor: Cursor<'input>) -> Option<(&'input str, Cursor<'input>)> {
-    let (input, mark) = fold_many0(
-        |input| {
-            not(|input| (char(':'), one_of(" \n")).parse(input))(input)?;
-            cut(none_of::<_, _, nom::error::Error<_>>("\n"))(input)
-        },
-        || cursor.mark,
-        |mark, _| mark + Mark::new(0, 1),
-    )(cursor.input)
-    .ok()?;
-
-    let bytes = cursor.input.len() - input.len();
-    let (result, _) = cursor.input.split_at(bytes);
-    let (input, mark) = match input.bytes().nth(1).unwrap() {
-        32 => (input.split_at(2).1, mark + Mark::new(0, 2)),
-        _ => (input.split_at(1).1, mark + Mark::new(0, 1)),
-    };
-
-    Some((result, (input, mark).into()))
+fn match_key(cursor: Cursor) -> Option<(&str, Cursor)> {
+    match_name(cursor.mark)(cursor.input)
+        .ok()
+        .map(|(input, (result, mark))| (result, (input, mark).into()))
 }
 
 fn parse_map_item<'input>(
