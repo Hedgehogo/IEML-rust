@@ -10,4 +10,5 @@ pub mod parse_null;
 pub mod parse_raw;
 pub mod parse_scalar;
 pub mod parse_tagged;
+pub mod parse_acnhor;
 pub mod utils;
