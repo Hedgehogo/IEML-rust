@@ -7,7 +7,7 @@ use super::{
         Error::{self, ExpectedMapKey, FailedDetermineType},
     },
     parse_node::parse_node,
-    utils::combinator::{match_name, skip_blank_lines_ln, skip_indent},
+    utils::combinator::parse::{match_name, skip_blank_lines_ln, skip_indent},
 };
 use crate::data::make;
 

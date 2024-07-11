@@ -6,7 +6,10 @@ use super::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
-    utils::combinator::{anychar, char, skip_blank_line, skip_indent},
+    utils::combinator::{
+        cursor::{anychar, char},
+        parse::{skip_blank_line, skip_indent},
+    },
 };
 use crate::data::make;
 

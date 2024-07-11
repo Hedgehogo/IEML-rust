@@ -1,4 +1,4 @@
-use super::{combinator::skip_blank_line, number_traits::Number};
+use super::{combinator::parse::skip_blank_line, number_traits::Number};
 
 pub trait ToNumber: Number {
     fn parse_exponent(number: Self, exponent: isize, radix: u8) -> Option<Self>;

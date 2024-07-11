@@ -7,7 +7,10 @@ use super::{
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
-    utils::combinator::{char, skip_blank_lines_ln, skip_indent, skip_space},
+    utils::combinator::{
+        cursor::char,
+        parse::{skip_blank_lines_ln, skip_indent, skip_space},
+    },
 };
 use crate::data::make;
 use nom::sequence::tuple;

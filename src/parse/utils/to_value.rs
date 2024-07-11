@@ -1,4 +1,4 @@
-use super::combinator::skip_blank_line;
+use super::combinator::parse::skip_blank_line;
 pub use super::number::*;
 use nom::{bytes::complete::*, combinator::value, *};
 

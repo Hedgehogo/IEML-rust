@@ -6,7 +6,10 @@ use super::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
-    utils::combinator::{char, match_line, skip_blank_line, skip_indent, skip_newline},
+    utils::combinator::{
+        cursor::char,
+        parse::{match_line, skip_blank_line, skip_indent, skip_line_ending},
+    },
 };
 use crate::data::make;
 use nom::sequence::tuple;
@@ -18,7 +21,7 @@ fn analyze<'input>(
     capacity: usize,
     lines: usize,
 ) -> (Cursor<'input>, (usize, usize)) {
-    let match_whitespace = skip_newline(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
+    let match_whitespace = skip_line_ending(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
 
     let cursor = match match_whitespace {
         Ok((cursor, _)) => cursor,
@@ -52,7 +55,7 @@ pub(crate) fn not_escaped_string<'input>(
         .map_err(|_| MakeError::new_with(cursor.mark, file_path, FailedDetermineType))?;
     let cursor = skip_blank_line(cursor);
 
-    let (cursor, _) = skip_newline(cursor)
+    let (cursor, _) = skip_line_ending(cursor)
         .map_err(|_| MakeError::new_with(cursor.mark, file_path, IncompleteString))?;
     let (cursor, _) = skip_indent(indent)(cursor)
         .map_err(|_| MakeError::new_with(cursor.mark, file_path, ExpectedTab))?;

@@ -6,7 +6,7 @@ use super::{
         marked::{MakeError, MakeResult, ParseResult},
         Error::FailedDetermineType,
     },
-    utils::combinator::{char, match_line},
+    utils::combinator::{cursor::char, parse::match_line},
 };
 use crate::data::make;
 use nom::sequence::tuple;

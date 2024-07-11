@@ -1,99 +1,43 @@
-use super::super::cursor::Cursor;
-use super::nom::many_till_count;
+use super::super::super::cursor::Cursor;
+use super::cursor::*;
+use super::many::*;
 use nom::{
-    combinator::peek,
-    error::{Error, ErrorKind, ParseError},
+    combinator::{not, opt, peek},
     multi::*,
     sequence::tuple,
     *,
 };
 
-pub fn anychar(input: Cursor) -> IResult<Cursor, char> {
-    let mut iter = input.chars();
-    match iter.next() {
-        Some(ch) => Ok((iter.cursor(), ch)),
-        None => Err(nom::Err::Error(Error::from_error_kind(
-            input,
-            ErrorKind::NoneOf,
-        ))),
-    }
+pub fn skip_line_ending(input: Cursor) -> IResult<Cursor, ()> {
+    tuple((opt(char('\r')), char('\n')))
+        .map(|_| ())
+        .parse(input)
 }
 
-pub fn char(ch: char) -> impl FnMut(Cursor) -> IResult<Cursor, char> {
-    move |input| {
-        let mut iter = input.chars();
-        match iter.next().and_then(|i| (i == ch).then_some(())) {
-            Some(_) => Ok((iter.cursor(), ch)),
-            None => Err(nom::Err::Error(Error::from_char(input, ch))),
-        }
-    }
-}
-
-pub fn one_of<'input>(
-    chars: &'input str,
-) -> impl FnMut(Cursor<'input>) -> IResult<Cursor<'input>, char> {
-    move |input| {
-        let mut iter = input.chars();
-        match iter.next().and_then(|i| chars.contains(i).then_some(i)) {
-            Some(i) => Ok((iter.cursor(), i)),
-            None => Err(nom::Err::Error(Error::from_error_kind(
-                input,
-                ErrorKind::NoneOf,
-            ))),
-        }
-    }
-}
-
-pub fn none_of<'input>(
-    chars: &'input str,
-) -> impl FnMut(Cursor<'input>) -> IResult<Cursor<'input>, char> {
-    move |input| {
-        let mut iter = input.chars();
-        match iter.next().and_then(|i| (!chars.contains(i)).then_some(i)) {
-            Some(i) => Ok((iter.cursor(), i)),
-            None => Err(nom::Err::Error(Error::from_error_kind(
-                input,
-                ErrorKind::NoneOf,
-            ))),
-        }
-    }
-}
-
-pub fn recognize_str<'input, O, F>(
-    mut f: F,
-) -> impl FnMut(Cursor<'input>) -> IResult<Cursor<'input>, &str>
-where
-    F: Parser<Cursor<'input>, O, Error<Cursor<'input>>>,
-{
-    move |input| {
-        let (output, _) = f.parse(input)?;
-        let bytes = input.input.len() - output.input.len();
-        let (result, _) = input.input.split_at(bytes);
-        Ok((output, result))
-    }
-}
-
-pub fn skip_newline(input: Cursor) -> IResult<Cursor, ()> {
-    Ok((char('\n')(input)?.0, ()))
+pub fn skip_not_line_ending(input: Cursor) -> IResult<Cursor, ()> {
+    tuple((not(skip_line_ending), anychar))
+        .map(|_| ())
+        .parse(input)
 }
 
 pub fn skip_indent(indent: usize) -> impl FnMut(Cursor) -> IResult<Cursor, ()> {
-    move |mut input| {
-        for i in 0..indent {
-            (input, _) = char('\t')(input)?;
-        }
+    move |input| {
+        let (input, _) = many_m_n_count(indent, indent, char('\t'))(input)?;
         Ok((input, ()))
     }
 }
 
 pub fn skip_space(input: Cursor) -> IResult<Cursor, ()> {
-    char(' ').or(peek(char('\n'))).map(|_| ()).parse(input)
+    char(' ')
+        .map(|_| ())
+        .or(peek(skip_line_ending))
+        .parse(input)
 }
 
 pub fn skip_blank_line(input: Cursor) -> Cursor {
-    let (input, count) = many0_count(one_of(" \t"))(input)
+    let (input, _) = many0_count(one_of(" \t"))(input)
         .expect("Internal error in `skip_blank_line` function operation.");
-    let mut parse_comment = tuple((char('#'), one_of("! "), many0_count(none_of("\n"))));
+    let mut parse_comment = tuple((char('#'), one_of("! "), many0_count(skip_not_line_ending)));
     parse_comment(input)
         .map(|(input, _)| input)
         .unwrap_or(input)
@@ -102,20 +46,21 @@ pub fn skip_blank_line(input: Cursor) -> Cursor {
 pub fn skip_blank_lines_ln(input: Cursor) -> IResult<Cursor, usize> {
     many1_count(|input| {
         let input = skip_blank_line(input);
-        skip_newline(input)
+        skip_line_ending(input)
     })(input)
 }
 
 pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, &'input str) {
-    recognize_str(many0_count(none_of("\n")))(input)
-        .expect("Internal error in `match_line` function operation.")
+    let (output, result) = recognize(many0_count(skip_not_line_ending))(input)
+        .expect("Internal error in `match_line` function operation.");
+    (output, result.input)
 }
 
 pub fn match_name<'input>(input: Cursor<'input>) -> IResult<Cursor<'input>, &str> {
-    let match_special = recognize_str(tuple((char(':'), skip_space)));
-    let (output, (len, special)) = many_till_count(none_of("\n"), match_special)(input)?;
+    let match_special = recognize(tuple((char(':'), skip_space)));
+    let (output, (_, special)) = many_till_count(skip_not_line_ending, match_special)(input)?;
 
-    let bytes = input.input.len() - output.input.len() - special.len();
+    let bytes = input.input.len() - output.input.len() - special.input.len();
     let (result, _) = input.input.split_at(bytes);
 
     Ok((output, result))
@@ -131,10 +76,10 @@ mod tests {
     fn test_skip_newline() {
         let mark = Mark::new(15, 10);
         assert_eq!(
-            skip_newline(("\nhello", mark).into()),
+            skip_line_ending(("\nhello", mark).into()),
             Ok((("hello", Mark::new(16, 0)).into(), ()))
         );
-        assert!(skip_newline(("hello", mark).into()).is_err());
+        assert!(skip_line_ending(("hello", mark).into()).is_err());
     }
 
     #[test]
