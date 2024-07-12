@@ -12,7 +12,7 @@ use nom::multi::many1_count;
 use nom::{character::complete::*, combinator::recognize};
 
 pub(crate) fn raw<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
 ) -> ParseResult<'input, String> {
     let match_special = many1_count(none_of("\"\n<>"));
@@ -23,17 +23,17 @@ pub(crate) fn raw<'input>(
         }
         Err(_) => Err(MakeError::new_with(
             cursor.mark,
-            file_path,
+            path,
             FailedDetermineType,
         )),
     }
 }
 
 pub(crate) fn parse_raw<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| match raw(file_path, cursor) {
+    move |token| match raw(path, cursor) {
         Ok((output, raw)) => make::raw(cursor.mark, output, raw)(token),
         Err(error) => Err((token, error)),
     }
@@ -48,21 +48,21 @@ mod tests {
     #[test]
     fn test_raw() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         assert_eq!(
-            raw(file_path, ("hello", begin_mark).into()),
+            raw(path, ("hello", begin_mark).into()),
             Ok((("", Mark::new(0, 5)).into(), "hello".into()))
         );
         assert_eq!(
-            raw(file_path, ("hello\n", begin_mark).into()),
+            raw(path, ("hello\n", begin_mark).into()),
             Ok((("\n", Mark::new(0, 5)).into(), "hello".into()))
         );
         assert_eq!(
-            raw(file_path, ("< \n", begin_mark).into()),
+            raw(path, ("< \n", begin_mark).into()),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path,
+                path,
                 FailedDetermineType
             ))
         );

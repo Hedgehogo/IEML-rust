@@ -7,6 +7,7 @@ use super::{
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
+    read_file::ReadFile,
     utils::combinator::{
         cursor::char,
         parse::{skip_blank_lines_ln, skip_indent, skip_space},
@@ -16,41 +17,41 @@ use crate::data::make;
 use nom::sequence::tuple;
 
 fn special<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
     error: Error,
 ) -> ParseResult<'input, ()> {
     match tuple((char('-'), skip_space))(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
-        Err(_) => Err(MakeError::new_with(cursor.mark, file_path, error)),
+        Err(_) => Err(MakeError::new_with(cursor.mark, path, error)),
     }
 }
 
-fn parse_list_item<'input>(
-    file_path: &'input Path,
+fn parse_list_item<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::ListToken) -> MakeListResult<'_, 'input> {
-    move |token| match special(file_path, cursor, error) {
-        Ok((cursor, _)) => token.add(parse_node(file_path, cursor, indent + 1)),
+    move |token| match special(reader.path(), cursor, error) {
+        Ok((cursor, _)) => token.add(parse_node(reader, cursor, indent + 1)),
         Err(error) => Err((token, error)),
     }
 }
 
-pub(crate) fn parse_list_one<'input>(
-    file_path: &'input Path,
+pub(crate) fn parse_list_one<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let f = parse_list_item(file_path, cursor, indent, FailedDetermineType);
+        let f = parse_list_item(reader, cursor, indent, FailedDetermineType);
         make::list(cursor.mark, f)(token)
     }
 }
 
-pub(crate) fn parse_list<'input>(
-    file_path: &'input Path,
+pub(crate) fn parse_list<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -62,13 +63,14 @@ pub(crate) fn parse_list<'input>(
         };
 
         make::list(cursor.mark, |token| {
-            let result = parse_list_item(file_path, cursor, indent, FailedDetermineType)(token)?;
+            let f = parse_list_item(reader.clone(), cursor, indent, FailedDetermineType);
+            let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_list_item(file_path, cursor, indent, ExpectedListItem)(token)?
+                        parse_list_item(reader.clone(), cursor, indent, ExpectedListItem)(token)?
                     }
                     None => return Ok((token, cursor)),
                 }
@@ -91,11 +93,11 @@ mod tests {
     #[test]
     fn test_parse_list_one() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         {
             let input = "- null";
-            let data_f = parse_list_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 6)).into();
             let result_f = make::list::<_, Error, _>(begin_mark, |token| {
@@ -106,7 +108,7 @@ mod tests {
         }
         {
             let input = "- null\n\t\t- null";
-            let data_f = parse_list_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\t- null", Mark::new(0, 6)).into();
             let result_f = make::list::<_, Error, _>(begin_mark, |token| {
@@ -117,15 +119,11 @@ mod tests {
         }
         {
             let input = "-null";
-            let data_f = parse_list_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    file_path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }
@@ -133,11 +131,11 @@ mod tests {
     #[test]
     fn test_parse_list() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         {
             let input = "- null";
-            let data_f = parse_list(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 6)).into();
             let result_f = make::list(begin_mark, |token| {
@@ -148,7 +146,7 @@ mod tests {
         }
         {
             let input = "- null\n\t\t- > hello";
-            let data_f = parse_list(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(1, 11)).into();
             let result_f = make::list::<_, Error, _>(begin_mark, |token| {
@@ -161,7 +159,7 @@ mod tests {
         }
         {
             let input = "- null\n# hello\n\t\t- > hello";
-            let data_f = parse_list(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(2, 11)).into();
             let result_f = make::list::<_, Error, _>(begin_mark, |token| {
@@ -175,24 +173,20 @@ mod tests {
         }
         {
             let input = "- null\n# hello\n\t\t-> hello";
-            let data_f = parse_list(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, ExpectedListItem))
+                Err(MakeError::new_with(error_mark, path, ExpectedListItem))
             );
         }
         {
             let input = "-null";
-            let data_f = parse_list(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    file_path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

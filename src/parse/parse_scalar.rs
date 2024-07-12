@@ -12,29 +12,29 @@ use super::{
 use crate::data::make;
 
 pub(crate) fn parse_scalar<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
         let parsers: [fn(_, _, _, _) -> _; 3] = [
-            |file_path, cursor, indent, token| {
-                parse_classic_string(file_path, cursor, indent)(token)
+            |path, cursor, indent, token| {
+                parse_classic_string(path, cursor, indent)(token)
             },
-            |file_path, cursor, _indent, token| parse_line_string(file_path, cursor)(token),
-            |file_path, cursor, indent, token| {
-                parse_not_escaped_string(file_path, cursor, indent)(token)
+            |path, cursor, _indent, token| parse_line_string(path, cursor)(token),
+            |path, cursor, indent, token| {
+                parse_not_escaped_string(path, cursor, indent)(token)
             },
         ];
 
-        let token = match parse_null(file_path, cursor)(token) {
+        let token = match parse_null(path, cursor)(token) {
             Ok(i) => return Ok(i),
             Err((token, _)) => token,
         };
 
         let mut token = token;
         for parse in parsers {
-            token = match parse(file_path, cursor, indent, token) {
+            token = match parse(path, cursor, indent, token) {
                 Ok(i) => return Ok(i),
                 Err((token, i)) => match &i.data.reason {
                     make::error::MakeErrorReason::Parse(FailedDetermineType) => token,
@@ -43,7 +43,7 @@ pub(crate) fn parse_scalar<'input>(
             };
         }
 
-        parse_raw(file_path, cursor)(token)
+        parse_raw(path, cursor)(token)
     }
 }
 
@@ -61,11 +61,11 @@ mod tests {
     #[test]
     fn test_parse_scalar() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         {
             let input = r#"null # hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("# hello", Mark::new(0, 5)).into();
             let result_f = make::null::<_, Error>(begin_mark, result_output);
@@ -74,7 +74,7 @@ mod tests {
         }
         {
             let input = r#"hello # hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 13)).into();
             let result_f = make::raw::<_, Error, _>(begin_mark, result_output, "hello # hello");
@@ -83,7 +83,7 @@ mod tests {
         }
         {
             let input = r#"> hello # hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 15)).into();
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello # hello");
@@ -93,7 +93,7 @@ mod tests {
         {
             let input = r#">>
 		hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 7)).into();
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
@@ -105,26 +105,26 @@ mod tests {
 		hello
 		hello
 	hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 4);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, IncompleteString))
+                Err(MakeError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
             let input = r#">>
 	hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, ExpectedTab))
+                Err(MakeError::new_with(error_mark, path, ExpectedTab))
             );
         }
         {
             let input = r#""hello" # hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 15)).into();
             let result_f = make::string::<_, Error, _>(begin_mark, result_output, "hello");
@@ -134,29 +134,29 @@ mod tests {
         {
             let input = r#""hello
 	world""#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, ExpectedTab))
+                Err(MakeError::new_with(error_mark, path, ExpectedTab))
             );
         }
         {
             let input = r#""hello"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 6);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, IncompleteString))
+                Err(MakeError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
             let input = r#""hello\"#;
-            let data_f = parse_scalar(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 7);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, IncompleteString))
+                Err(MakeError::new_with(error_mark, path, IncompleteString))
             );
         }
     }

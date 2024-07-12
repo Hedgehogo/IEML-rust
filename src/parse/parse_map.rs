@@ -8,16 +8,17 @@ use super::{
     },
     name::name,
     parse_node::parse_node,
+    read_file::ReadFile,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
 use crate::data::make::{self, error::MakeErrorReason::Parse};
 
 fn key<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
     error: Error,
 ) -> ParseResult<'input, &'input str> {
-    match name(file_path, cursor, false) {
+    match name(path, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {
             if let Parse(FailedDetermineType) = e.data.reason {
@@ -28,34 +29,34 @@ fn key<'input>(
     }
 }
 
-fn parse_map_item<'input>(
-    file_path: &'input Path,
+fn parse_map_item<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
-    move |token| match key(file_path, cursor, error) {
+    move |token| match key(reader.path(), cursor, error) {
         Ok((new_cursor, key)) => {
-            let f = parse_node(file_path, new_cursor, indent + 1);
+            let f = parse_node(reader, new_cursor, indent + 1);
             token.add(cursor.mark, key, f)
         }
         Err(error) => Err((token, error)),
     }
 }
 
-pub(crate) fn parse_map_one<'input>(
-    file_path: &'input Path,
+pub(crate) fn parse_map_one<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let f = parse_map_item(file_path, cursor, indent, FailedDetermineType);
+        let f = parse_map_item(reader, cursor, indent, FailedDetermineType);
         make::map(cursor.mark, f)(token)
     }
 }
 
-pub(crate) fn parse_map<'input>(
-    file_path: &'input Path,
+pub(crate) fn parse_map<'input, R: ReadFile<'input>>(
+    reader: R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -67,13 +68,14 @@ pub(crate) fn parse_map<'input>(
         };
 
         make::map(cursor.mark, |token| {
-            let result = parse_map_item(file_path, cursor, indent, FailedDetermineType)(token)?;
+            let f = parse_map_item(reader.clone(), cursor, indent, FailedDetermineType);
+            let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_map_item(file_path, cursor, indent, ExpectedMapKey)(token)?
+                        parse_map_item(reader.clone(), cursor, indent, ExpectedMapKey)(token)?
                     }
                     None => return Ok((token, cursor)),
                 }
@@ -96,11 +98,11 @@ mod tests {
     #[test]
     fn test_parse_map_one() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         {
             let input = "key: null";
-            let data_f = parse_map_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
@@ -115,7 +117,7 @@ mod tests {
         }
         {
             let input = "first: null\n\t\tsecond: null";
-            let data_f = parse_map_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\tsecond: null", Mark::new(0, 11)).into();
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
@@ -130,15 +132,11 @@ mod tests {
         }
         {
             let input = "key:null";
-            let data_f = parse_map_one(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    file_path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }
@@ -146,11 +144,11 @@ mod tests {
     #[test]
     fn test_parse_map() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         {
             let input = "key: null";
-            let data_f = parse_map(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
             let result_f = make::map(begin_mark, |token| {
@@ -165,7 +163,7 @@ mod tests {
         }
         {
             let input = "first: null\n\t\tsecond: > hello";
-            let data_f = parse_map(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(1, 17)).into();
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
@@ -186,7 +184,7 @@ mod tests {
         }
         {
             let input = "first: null\n# hello\n\t\tsecond: > hello";
-            let data_f = parse_map(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(2, 17)).into();
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
@@ -207,24 +205,20 @@ mod tests {
         }
         {
             let input = "first: null\n# hello\n\t\tsecond:> hello";
-            let data_f = parse_map(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, file_path, ExpectedMapKey))
+                Err(MakeError::new_with(error_mark, path, ExpectedMapKey))
             );
         }
         {
             let input = "-null";
-            let data_f = parse_map(file_path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(path, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    file_path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

@@ -10,7 +10,7 @@ use super::{
 };
 
 pub(crate) fn name<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
     line_ending: bool,
 ) -> ParseResult<'input, (&'input str, bool)> {
@@ -26,7 +26,7 @@ pub(crate) fn name<'input>(
         FailedDetermineType
     };
 
-    Err(MakeError::new_with(cursor.mark, file_path, error_reason))
+    Err(MakeError::new_with(cursor.mark, path, error_reason))
 }
 
 #[cfg(test)]
@@ -40,45 +40,45 @@ mod tests {
     #[test]
     fn test_name() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         assert_eq!(
-            name(file_path, ("name: value", begin_mark).into(), true),
+            name(path, ("name: value", begin_mark).into(), true),
             Ok((("value", Mark::new(0, 6)).into(), ("name", true)))
         );
         assert_eq!(
-            name(file_path, ("name:\nhello", begin_mark).into(), true),
+            name(path, ("name:\nhello", begin_mark).into(), true),
             Ok((("\nhello", Mark::new(0, 5)).into(), ("name", true)))
         );
         assert_eq!(
-            name(file_path, ("name\nhello", begin_mark).into(), true),
+            name(path, ("name\nhello", begin_mark).into(), true),
             Ok((("\nhello", Mark::new(0, 4)).into(), ("name", false)))
         );
         assert_eq!(
-            name(file_path, (": ", begin_mark).into(), true),
+            name(path, (": ", begin_mark).into(), true),
             Ok((("", Mark::new(0, 2)).into(), ("", true)))
         );
         assert_eq!(
-            name(file_path, ("", begin_mark).into(), true),
+            name(path, ("", begin_mark).into(), true),
             Ok((("", Mark::new(0, 0)).into(), ("", false)))
         );
         assert_eq!(
-            name(file_path, (" name", begin_mark).into(), true),
+            name(path, (" name", begin_mark).into(), true),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path,
+                path,
                 ImpermissibleSpace
             ))
         );
         assert_eq!(
-            name(file_path, ("\tname", begin_mark).into(), true),
-            Err(MakeError::new_with(begin_mark, file_path, ImpermissibleTab))
+            name(path, ("\tname", begin_mark).into(), true),
+            Err(MakeError::new_with(begin_mark, path, ImpermissibleTab))
         );
         assert_eq!(
-            name(file_path, (" name", begin_mark).into(), false),
+            name(path, (" name", begin_mark).into(), false),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path,
+                path,
                 FailedDetermineType
             ))
         );

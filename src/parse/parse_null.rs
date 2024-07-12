@@ -16,7 +16,7 @@ use nom::{
 };
 
 pub(crate) fn null<'input>(
-    file_path: &'input Path,
+    path: &'input Path,
     cursor: Cursor<'input>,
 ) -> ParseResult<'input, ()> {
     let match_special = tuple((tag("null"), opt(char(' '))));
@@ -27,17 +27,17 @@ pub(crate) fn null<'input>(
         }
         Err(_) => Err(MakeError::new_with(
             cursor.mark,
-            file_path,
+            path,
             FailedDetermineType,
         )),
     }
 }
 
 pub(crate) fn parse_null<'input, 'path: 'input>(
-    file_path: &'path Path,
+    path: &'path Path,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| match null(file_path, cursor) {
+    move |token| match null(path, cursor) {
         Ok((output, _)) => make::null(cursor.mark, output)(token),
         Err(error) => Err((token, error)),
     }
@@ -52,29 +52,29 @@ mod tests {
     #[test]
     fn test_null() {
         let begin_mark = Mark::new(0, 0);
-        let file_path = PathBuf::from("test.ieml");
-        let file_path = file_path.as_path();
+        let path = PathBuf::from("test.ieml");
+        let path = path.as_path();
         assert_eq!(
-            null(file_path, ("null", begin_mark).into()),
+            null(path, ("null", begin_mark).into()),
             Ok((("", Mark::new(0, 4)).into(), ()))
         );
         assert_eq!(
-            null(file_path, ("null ", begin_mark).into()),
+            null(path, ("null ", begin_mark).into()),
             Ok((("", Mark::new(0, 5)).into(), ()))
         );
         assert_eq!(
-            null(file_path, ("null# is null", begin_mark).into()),
+            null(path, ("null# is null", begin_mark).into()),
             Ok((("# is null", Mark::new(0, 4)).into(), ()))
         );
         assert_eq!(
-            null(file_path, ("null # is null", begin_mark).into()),
+            null(path, ("null # is null", begin_mark).into()),
             Ok((("# is null", Mark::new(0, 5)).into(), ()))
         );
         assert_eq!(
-            null(file_path, (" null", begin_mark).into()),
+            null(path, (" null", begin_mark).into()),
             Err(MakeError::new_with(
                 begin_mark,
-                file_path,
+                path,
                 FailedDetermineType
             ))
         );
