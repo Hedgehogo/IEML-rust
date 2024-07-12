@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeListResult, MakeResult},
+        marked::{MakeError, MakeListResult, MakeResult, ParseResult},
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
@@ -15,18 +15,26 @@ use super::{
 use crate::data::make;
 use nom::sequence::tuple;
 
+fn special<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
+    error: Error,
+) -> ParseResult<'input, ()> {
+    match tuple((char('-'), skip_space))(cursor) {
+        Ok((cursor, _)) => Ok((cursor, ())),
+        Err(_) => Err(MakeError::new_with(cursor.mark, file_path, error)),
+    }
+}
+
 fn parse_list_item<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::ListToken) -> MakeListResult<'_, 'input> {
-    move |token| match tuple((char('-'), skip_space))(cursor) {
+    move |token| match special(file_path, cursor, error) {
         Ok((cursor, _)) => token.add(parse_node(file_path, cursor, indent + 1)),
-        Err(_) => {
-            let error = MakeError::new_with(cursor.mark, file_path, error);
-            Err((token, error))
-        }
+        Err(error) => Err((token, error)),
     }
 }
 

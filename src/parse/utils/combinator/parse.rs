@@ -2,7 +2,7 @@ use super::super::super::cursor::Cursor;
 use super::cursor::*;
 use super::many::*;
 use nom::{
-    combinator::{not, opt, peek},
+    combinator::{eof, not, opt, peek},
     multi::*,
     sequence::tuple,
     *,
@@ -56,13 +56,14 @@ pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, &'input str
     (output, result.input)
 }
 
-pub fn match_name<'input>(input: Cursor<'input>) -> IResult<Cursor<'input>, (Cursor<'input>, bool)> {
+pub fn match_name<'input>(input: Cursor<'input>) -> (Cursor<'input>, (Cursor<'input>, bool)) {
     let (output, result, special) = {
-        let match_line_ending = peek(skip_line_ending).map(|_| false);
+        let match_line_ending = peek(skip_line_ending.or(eof.map(|_| ()))).map(|_| false);
         let match_special = tuple((char(':'), skip_space)).map(|_| true);
         let match_ending = consumed(match_special.or(match_line_ending));
 
-        let (output, (_, (ending, special))) = many_till_count(anychar, match_ending)(input)?;
+        let (output, (_, (ending, special))) = many_till_count(anychar, match_ending)(input)
+            .expect("Internal error in `match_name` function operation.");
 
         let bytes = input.input.len() - output.input.len() - ending.input.len();
         let (result, _) = input.input.split_at(bytes);
@@ -70,9 +71,7 @@ pub fn match_name<'input>(input: Cursor<'input>) -> IResult<Cursor<'input>, (Cur
         (output, (result, input.mark).into(), special)
     };
 
-    not(one_of("\t "))(result)?;
-
-    Ok((output, (result, special)))
+    (output, (result, special))
 }
 
 #[cfg(test)]
@@ -154,20 +153,46 @@ mod tests {
         let mark = Mark::new(15, 10);
         assert_eq!(
             match_name(("key: value", mark).into()),
-            Ok((("value", Mark::new(15, 15)).into(), (("key", mark).into(), true)))
+            (
+                ("value", Mark::new(15, 15)).into(),
+                (("key", mark).into(), true)
+            )
         );
         assert_eq!(
             match_name(("key:\n", mark).into()),
-            Ok((("\n", Mark::new(15, 14)).into(), (("key", mark).into(), true)))
+            (
+                ("\n", Mark::new(15, 14)).into(),
+                (("key", mark).into(), true)
+            )
         );
         assert_eq!(
             match_name(("key:key: ", mark).into()),
-            Ok((("", Mark::new(15, 19)).into(), (("key:key", mark).into(), true)))
+            (
+                ("", Mark::new(15, 19)).into(),
+                (("key:key", mark).into(), true)
+            )
         );
         assert_eq!(
             match_name(("key\n: ", mark).into()),
-            Ok((("\n: ", Mark::new(15, 13)).into(), (("key", mark).into(), false)))
+            (
+                ("\n: ", Mark::new(15, 13)).into(),
+                (("key", mark).into(), false)
+            )
         );
-        assert!(skip_blank_lines_ln(("key:", mark).into()).is_err());
+        assert_eq!(
+            match_name((": ", mark).into()),
+            (("", Mark::new(15, 12)).into(), (("", mark).into(), true))
+        );
+        assert_eq!(
+            match_name(("", mark).into()),
+            (("", Mark::new(15, 10)).into(), (("", mark).into(), false))
+        );
+        assert_eq!(
+            match_name(("key:", mark).into()),
+            (
+                ("", Mark::new(15, 14)).into(),
+                (("key:", mark).into(), false)
+            )
+        );
     }
 }

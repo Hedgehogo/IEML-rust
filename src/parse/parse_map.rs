@@ -3,13 +3,30 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeMapResult, MakeResult},
+        marked::{MakeMapResult, MakeResult, ParseResult},
         Error::{self, ExpectedMapKey, FailedDetermineType},
     },
+    name::name,
     parse_node::parse_node,
-    utils::combinator::parse::{match_name, skip_blank_lines_ln, skip_indent},
+    utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
-use crate::data::make;
+use crate::data::make::{self, error::MakeErrorReason::Parse};
+
+fn key<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
+    error: Error,
+) -> ParseResult<'input, &'input str> {
+    match name(file_path, cursor, false) {
+        Ok((cursor, (result, _))) => Ok((cursor, result)),
+        Err(mut e) => {
+            if let Parse(FailedDetermineType) = e.data.reason {
+                e.data.reason = Parse(error)
+            }
+            Err(e)
+        }
+    }
+}
 
 fn parse_map_item<'input>(
     file_path: &'input Path,
@@ -17,15 +34,12 @@ fn parse_map_item<'input>(
     indent: usize,
     error: Error,
 ) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
-    move |token| match match_name(cursor) {
-        Ok((new_cursor, (key, true))) => {
+    move |token| match key(file_path, cursor, error) {
+        Ok((new_cursor, key)) => {
             let f = parse_node(file_path, new_cursor, indent + 1);
-            token.add(cursor.mark, key.input, f)
+            token.add(cursor.mark, key, f)
         }
-        _ => {
-            let error = MakeError::new_with(cursor.mark, file_path, error);
-            Err((token, error))
-        }
+        Err(error) => Err((token, error)),
     }
 }
 

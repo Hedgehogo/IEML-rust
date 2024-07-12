@@ -4,32 +4,22 @@ use super::{
     cursor::Cursor,
     error::{
         marked::{MakeError, MakeResult, ParseResult},
-        Error::{FailedDetermineType, ImpermissibleSpace, ImpermissibleTab},
+        Error,
     },
+    name::name,
     parse_node::parse_node,
-    utils::combinator::{cursor::char, parse::match_name},
+    utils::combinator::cursor::char,
 };
 use crate::data::make;
 
-fn anchor<'input>(
+fn anchor_name<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
 ) -> ParseResult<'input, (&'input str, bool)> {
-    let (cursor, _) = match char('@')(cursor) {
-        Ok(i) => i,
+    match char('@')(cursor) {
+        Ok((cursor, _)) => name(file_path, cursor, true),
         Err(_) => {
-            let error = MakeError::new_with(cursor.mark, file_path, FailedDetermineType);
-            return Err(error);
-        }
-    };
-
-    match match_name(cursor) {
-        Ok((cursor, (result, ending))) => Ok((cursor, (result.input, ending))),
-        Err(_) => {
-            let reason = match char(' ')(cursor) {
-                Ok(_) => ImpermissibleSpace,
-                Err(_) => ImpermissibleTab,
-            };
+            let reason = Error::FailedDetermineType;
             Err(MakeError::new_with(cursor.mark, file_path, reason))
         }
     }
@@ -40,7 +30,7 @@ pub(crate) fn parse_anchor<'input>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| match anchor(file_path, cursor) {
+    move |token| match anchor_name(file_path, cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(file_path, output, indent);
             make::take_anchor(cursor.mark, name, f)(token)
@@ -53,7 +43,6 @@ pub(crate) fn parse_anchor<'input>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::MakeError,
         Error::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;

@@ -3,29 +3,43 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult},
-        Error::FailedDetermineType,
+        marked::{MakeError, MakeResult, ParseResult},
+        Error,
     },
+    name::name,
     parse_node::parse_node,
-    utils::combinator::{cursor::char, parse::match_name},
+    utils::combinator::cursor::char,
 };
 use crate::data::make;
 use nom::sequence::tuple;
+
+fn tag<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
+) -> ParseResult<'input, &'input str> {
+    match tuple((char('='), char(' ')))(cursor) {
+        Ok((cursor, _)) => {
+            let (cursor, (result, _)) = name(file_path, cursor, false)?;
+            return Ok((cursor, result));
+        }
+        Err(_) => {
+            let error_reason = Error::FailedDetermineType;
+            Err(MakeError::new_with(cursor.mark, file_path, error_reason))
+        }
+    }
+}
 
 pub(crate) fn parse_tagged<'input>(
     file_path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| match tuple((char('='), char(' '), match_name))(cursor) {
-        Ok((new_cursor, (_, _, (tag, true)))) => {
+    move |token| match tag(file_path, cursor) {
+        Ok((new_cursor, tag)) => {
             let f = parse_node(file_path, new_cursor, indent);
-            make::tagged(cursor.mark, tag.input, f)(token)
+            make::tagged(cursor.mark, tag, f)(token)
         }
-        _ => {
-            let error = MakeError::new_with(cursor.mark, file_path, FailedDetermineType);
-            Err((token, error))
-        }
+        Err(error) => Err((token, error)),
     }
 }
 
