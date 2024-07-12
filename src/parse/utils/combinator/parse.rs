@@ -56,14 +56,23 @@ pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, &'input str
     (output, result.input)
 }
 
-pub fn match_name<'input>(input: Cursor<'input>) -> IResult<Cursor<'input>, &str> {
-    let match_special = recognize(tuple((char(':'), skip_space)));
-    let (output, (_, special)) = many_till_count(skip_not_line_ending, match_special)(input)?;
+pub fn match_name<'input>(input: Cursor<'input>) -> IResult<Cursor<'input>, (Cursor<'input>, bool)> {
+    let (output, result, special) = {
+        let match_line_ending = peek(skip_line_ending).map(|_| false);
+        let match_special = tuple((char(':'), skip_space)).map(|_| true);
+        let match_ending = consumed(match_special.or(match_line_ending));
 
-    let bytes = input.input.len() - output.input.len() - special.input.len();
-    let (result, _) = input.input.split_at(bytes);
+        let (output, (_, (ending, special))) = many_till_count(anychar, match_ending)(input)?;
 
-    Ok((output, result))
+        let bytes = input.input.len() - output.input.len() - ending.input.len();
+        let (result, _) = input.input.split_at(bytes);
+
+        (output, (result, input.mark).into(), special)
+    };
+
+    not(one_of("\t "))(result)?;
+
+    Ok((output, (result, special)))
 }
 
 #[cfg(test)]
@@ -145,17 +154,20 @@ mod tests {
         let mark = Mark::new(15, 10);
         assert_eq!(
             match_name(("key: value", mark).into()),
-            Ok((("value", Mark::new(15, 15)).into(), "key"))
+            Ok((("value", Mark::new(15, 15)).into(), (("key", mark).into(), true)))
         );
         assert_eq!(
             match_name(("key:\n", mark).into()),
-            Ok((("\n", Mark::new(15, 14)).into(), "key"))
+            Ok((("\n", Mark::new(15, 14)).into(), (("key", mark).into(), true)))
         );
         assert_eq!(
-            match_name(("key key: ", mark).into()),
-            Ok((("", Mark::new(15, 19)).into(), "key key"))
+            match_name(("key:key: ", mark).into()),
+            Ok((("", Mark::new(15, 19)).into(), (("key:key", mark).into(), true)))
+        );
+        assert_eq!(
+            match_name(("key\n: ", mark).into()),
+            Ok((("\n: ", Mark::new(15, 13)).into(), (("key", mark).into(), false)))
         );
         assert!(skip_blank_lines_ln(("key:", mark).into()).is_err());
-        assert!(skip_blank_lines_ln(("key\n: ", mark).into()).is_err());
     }
 }

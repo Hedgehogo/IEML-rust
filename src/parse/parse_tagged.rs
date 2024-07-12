@@ -18,10 +18,11 @@ pub(crate) fn parse_tagged<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| match tuple((char('='), char(' '), match_name))(cursor) {
-        Ok((new_cursor, (_, _, tag))) => {
-            make::tagged(cursor.mark, tag, parse_node(file_path, new_cursor, indent))(token)
+        Ok((new_cursor, (_, _, (tag, true)))) => {
+            let f = parse_node(file_path, new_cursor, indent);
+            make::tagged(cursor.mark, tag.input, f)(token)
         }
-        Err(_) => {
+        _ => {
             let error = MakeError::new_with(cursor.mark, file_path, FailedDetermineType);
             Err((token, error))
         }

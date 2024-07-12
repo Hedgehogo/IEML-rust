@@ -18,11 +18,11 @@ fn parse_map_item<'input>(
     error: Error,
 ) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
     move |token| match match_name(cursor) {
-        Ok((new_cursor, key)) => {
+        Ok((new_cursor, (key, true))) => {
             let f = parse_node(file_path, new_cursor, indent + 1);
-            token.add(cursor.mark, key, f)
+            token.add(cursor.mark, key.input, f)
         }
-        Err(_) => {
+        _ => {
             let error = MakeError::new_with(cursor.mark, file_path, error);
             Err((token, error))
         }

@@ -72,7 +72,7 @@ pub fn char(ch: char) -> impl FnMut(Cursor) -> IResult<Cursor, char> {
 /// # use nom::{Err, error::{Error, ErrorKind, ParseError}};
 /// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
 /// use serde_ieml::parse::utils::combinator::cursor::one_of;
-/// 
+///
 /// let mark = Default::default();
 /// assert_eq!(one_of("abc")(("b", mark).into()), Ok((("", Mark::new(0, 1)).into(), 'b')));
 /// assert_eq!(one_of("a")(("bc", mark).into()), Err(Err::Error(Error::from_error_kind(("bc", mark).into(), ErrorKind::OneOf))));
@@ -102,7 +102,7 @@ pub fn one_of<'input>(
 /// # use nom::{Err, error::{Error, ErrorKind, ParseError}};
 /// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
 /// use serde_ieml::parse::utils::combinator::cursor::none_of;
-/// 
+///
 /// let mark = Default::default();
 /// assert_eq!(none_of("abc")(("z", mark).into()), Ok((("", Mark::new(0, 1)).into(), 'z')));
 /// assert_eq!(none_of("ab")(("a", mark).into()), Err(Err::Error(Error::from_error_kind(("a", mark).into(), ErrorKind::NoneOf))));
@@ -133,9 +133,9 @@ pub fn none_of<'input>(
 /// use nom::combinator::value;
 /// use serde_ieml::parse::utils::combinator::cursor::char;
 /// use serde_ieml::parse::utils::combinator::cursor::recognize;
-/// 
+///
 /// let mut parser = recognize(char('0').or(char('1')));
-/// 
+///
 /// let mark = Default::default();
 /// assert_eq!(parser(("1def", mark).into()), Ok((("def", Mark::new(0, 1)).into(), ("1", mark).into())));
 /// assert_eq!(parser(("2def", mark).into()), Err(Err::Error(Error::from_error_kind(("2def", mark).into(), ErrorKind::Char))));
@@ -151,5 +151,43 @@ where
         let bytes = input.input.len() - output.input.len();
         let (result, _) = input.input.split_at(bytes);
         Ok((output, (result, input.mark).into()))
+    }
+}
+
+/// if the child parser was successful, return the consumed input with the output
+/// as a tuple. Functions similarly to [recognize](fn.recognize.html) except it
+/// returns the parser output as well.
+///
+/// This can be useful especially in cases where the output is not the same type
+/// as the input, or the input is a user defined type.
+///
+/// Returned tuple is of the format `(consumed input, produced output)`.
+///
+/// # Example
+///
+/// ```rust
+/// # use nom::{Err, Parser, error::{Error, ErrorKind, ParseError}};
+/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
+/// use nom::combinator::value;
+/// use serde_ieml::parse::utils::combinator::cursor::char;
+/// use serde_ieml::parse::utils::combinator::cursor::consumed;
+///
+/// let mut parser = consumed(char('0').or(char('1')));
+///
+/// let mark = Default::default();
+/// assert_eq!(parser(("1def", mark).into()), Ok((("def", Mark::new(0, 1)).into(), (("1", mark).into(), '1'))));
+/// assert_eq!(parser(("2def", mark).into()), Err(Err::Error(Error::from_error_kind(("2def", mark).into(), ErrorKind::Char))));
+/// ```
+pub fn consumed<'input, O, F>(
+    mut f: F,
+) -> impl FnMut(Cursor<'input>) -> IResult<Cursor<'input>, (Cursor<'input>, O)>
+where
+    F: Parser<Cursor<'input>, O, Error<Cursor<'input>>>,
+{
+    move |input| {
+        let (output, produced_result) = f.parse(input)?;
+        let bytes = input.input.len() - output.input.len();
+        let (result, _) = input.input.split_at(bytes);
+        Ok((output, ((result, input.mark).into(), produced_result)))
     }
 }

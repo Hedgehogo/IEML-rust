@@ -3,36 +3,36 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult},
-        Error::FailedDetermineType,
+        marked::{MakeError, MakeResult, ParseResult},
+        Error::{FailedDetermineType, ImpermissibleSpace, ImpermissibleTab},
     },
     parse_node::parse_node,
-    utils::combinator::{
-        cursor::{anychar, char, recognize},
-        many::many_till_count,
-        parse::{skip_line_ending, skip_space},
-    },
+    utils::combinator::{cursor::char, parse::match_name},
 };
 use crate::data::make;
-use nom::{branch::alt, combinator::peek, sequence::tuple, Parser};
 
-fn match_acnhor_name(input: Cursor) -> (Cursor, &str, bool) {
-    let match_ending = |input| {
-        let match_special = recognize(tuple((char(':'), skip_space)));
-        let match_line_ending = recognize(peek(skip_line_ending));
-        alt((
-            match_special.map(|i| (i.input.len(), true)),
-            match_line_ending.map(|i| (i.input.len(), false)),
-        ))(input)
+fn anchor<'input>(
+    file_path: &'input Path,
+    cursor: Cursor<'input>,
+) -> ParseResult<'input, (&'input str, bool)> {
+    let (cursor, _) = match char('@')(cursor) {
+        Ok(i) => i,
+        Err(_) => {
+            let error = MakeError::new_with(cursor.mark, file_path, FailedDetermineType);
+            return Err(error);
+        }
     };
 
-    let (output, (_, special)) = many_till_count(anychar, match_ending)(input).unwrap();
-    let (len_special, is_take) = special;
-
-    let bytes = input.input.len() - output.input.len() - len_special;
-    let (name, _) = input.input.split_at(bytes);
-
-    (output, name, is_take)
+    match match_name(cursor) {
+        Ok((cursor, (result, ending))) => Ok((cursor, (result.input, ending))),
+        Err(_) => {
+            let reason = match char(' ')(cursor) {
+                Ok(_) => ImpermissibleSpace,
+                Err(_) => ImpermissibleTab,
+            };
+            Err(MakeError::new_with(cursor.mark, file_path, reason))
+        }
+    }
 }
 
 pub(crate) fn parse_anchor<'input>(
@@ -40,22 +40,13 @@ pub(crate) fn parse_anchor<'input>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
-    move |token| {
-        let (output, _) = match char('@')(cursor) {
-            Ok(i) => i,
-            Err(_) => {
-                let error = MakeError::new_with(cursor.mark, file_path, FailedDetermineType);
-                return Err((token, error));
-            }
-        };
-
-        let (output, name, is_take) = match_acnhor_name(output);
-
-        if is_take {
-            make::take_anchor(cursor.mark, name, parse_node(file_path, output, indent))(token)
-        } else {
-            make::get_anchor(cursor.mark, output, name)(token)
+    move |token| match anchor(file_path, cursor) {
+        Ok((output, (name, true))) => {
+            let f = parse_node(file_path, output, indent);
+            make::take_anchor(cursor.mark, name, f)(token)
         }
+        Ok((output, (name, false))) => make::get_anchor(cursor.mark, output, name)(token),
+        Err(error) => Err((token, error)),
     }
 }
 
