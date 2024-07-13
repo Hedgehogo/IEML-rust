@@ -30,8 +30,8 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'inpu
     }
 }
 
-pub(crate) fn parse_tagged<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -60,7 +60,7 @@ pub(crate) fn parse_tagged<'input, R: ReadFile<'input>>(
                 }
             };
 
-            let f = move |token, reader: R, cursor: Cursor<'_>| {
+            let f = move |token, reader: &R, cursor| {
                 let path = reader.path().to_path_buf();
                 let f = parse_node(reader, cursor, 0);
                 make::file(cursor.mark, path, acnhors, f)(token)
@@ -95,40 +95,40 @@ mod tests {
 
     type Files = HashMap<PathBuf, String>;
 
-    #[derive(Clone, Copy)]
-    struct Reader<'files, 'path> {
+    #[derive(Clone)]
+    struct Reader<'files> {
         files: &'files Files,
-        path: &'path Path,
+        path: PathBuf,
     }
 
-    impl<'files, 'path> Reader<'files, 'path> {
-        fn new(files: &'files Files, path: &'path Path) -> Self {
+    impl<'files> Reader<'files> {
+        fn new(files: &'files Files, path: PathBuf) -> Self {
             Self { files, path }
         }
     }
 
-    impl<'files, 'path> ReadFile<'path> for Reader<'files, 'path> {
+    impl<'files> ReadFile for Reader<'files> {
         fn child<'maker, F, R>(
-            self,
+            &self,
             token: make::Token<'maker>,
             path: &Path,
             f: F,
         ) -> ReadResult<'maker, R>
         where
-            F: FnOnce(make::Token<'maker>, Self, Cursor) -> R,
+            F: for<'input> FnOnce(make::Token<'maker>, &'input Self, Cursor<'input>) -> R,
         {
             match self.files.get(path) {
                 Some(result) => {
                     let cursor = (result.as_str(), Default::default()).into();
-                    let reader = Reader::new(self.files, path);
-                    Ok(f(token, reader, cursor))
+                    let reader = Reader::new(self.files, path.to_path_buf());
+                    Ok(f(token, &reader, cursor))
                 }
                 None => Err(token)
             }
         }
 
-        fn path(&self) -> &'path Path {
-            self.path
+        fn path(&self) -> &Path {
+            &self.path
         }
     }
 

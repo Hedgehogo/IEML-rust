@@ -27,8 +27,8 @@ fn special<'input>(
     }
 }
 
-fn parse_list_item<'input, R: ReadFile<'input>>(
-    reader: R,
+fn parse_list_item<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
@@ -39,8 +39,8 @@ fn parse_list_item<'input, R: ReadFile<'input>>(
     }
 }
 
-pub(crate) fn parse_list_one<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_list_one<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -50,8 +50,8 @@ pub(crate) fn parse_list_one<'input, R: ReadFile<'input>>(
     }
 }
 
-pub(crate) fn parse_list<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_list<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -63,14 +63,14 @@ pub(crate) fn parse_list<'input, R: ReadFile<'input>>(
         };
 
         make::list(cursor.mark, |token| {
-            let f = parse_list_item(reader.clone(), cursor, indent, FailedDetermineType);
+            let f = parse_list_item(reader, cursor, indent, FailedDetermineType);
             let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_list_item(reader.clone(), cursor, indent, ExpectedListItem)(token)?
+                        parse_list_item(reader, cursor, indent, ExpectedListItem)(token)?
                     }
                     None => return Ok((token, cursor)),
                 }

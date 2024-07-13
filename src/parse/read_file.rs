@@ -9,18 +9,18 @@ use super::cursor::Cursor;
 
 pub type ReadResult<'maker, R> = Result<R, Token<'maker>>;
 
-pub trait ReadFile<'path>: Clone {
-    fn child<'maker, F, R>(self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
+pub trait ReadFile {
+    fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: FnOnce(Token<'maker>, Self, Cursor) -> R;
+        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R;
 
-    fn path(&self) -> &'path Path;
+    fn path(&self) -> &Path;
 }
 
-impl<'path> ReadFile<'path> for &'path Path {
-    fn child<'maker, F, R>(self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
+impl ReadFile for Path {
+    fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: FnOnce(Token<'maker>, Self, Cursor) -> R,
+        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R,
     {
         let read = |path| fs::read_to_string(&path).map(|i| (path, i));
 
@@ -43,7 +43,7 @@ impl<'path> ReadFile<'path> for &'path Path {
         Ok(f(token, path.as_path(), cursor))
     }
 
-    fn path(&self) -> &'path Path {
+    fn path(&self) -> &Path {
         self
     }
 }

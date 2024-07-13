@@ -27,8 +27,8 @@ fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'input
     }
 }
 
-pub(crate) fn parse_tagged<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {

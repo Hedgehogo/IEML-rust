@@ -26,8 +26,8 @@ fn anchor_name<'input>(
     }
 }
 
-pub(crate) fn parse_anchor<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {

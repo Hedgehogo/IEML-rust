@@ -32,8 +32,8 @@ fn key<'input>(
     }
 }
 
-pub(crate) fn parse_map_item<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_map_item<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
@@ -47,8 +47,8 @@ pub(crate) fn parse_map_item<'input, R: ReadFile<'input>>(
     }
 }
 
-pub(crate) fn parse_map_one<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_map_one<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -58,8 +58,8 @@ pub(crate) fn parse_map_one<'input, R: ReadFile<'input>>(
     }
 }
 
-pub(crate) fn parse_map<'input, R: ReadFile<'input>>(
-    reader: R,
+pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
@@ -71,14 +71,14 @@ pub(crate) fn parse_map<'input, R: ReadFile<'input>>(
         };
 
         make::map(cursor.mark, |token| {
-            let f = parse_map_item(reader.clone(), cursor, indent, FailedDetermineType);
+            let f = parse_map_item(reader, cursor, indent, FailedDetermineType);
             let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_map_item(reader.clone(), cursor, indent, ExpectedMapKey)(token)?
+                        parse_map_item(reader, cursor, indent, ExpectedMapKey)(token)?
                     }
                     None => return Ok((token, cursor)),
                 }
