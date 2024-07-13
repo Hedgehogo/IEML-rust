@@ -5,7 +5,7 @@ use super::super::super::{
     },
 };
 use super::*;
-use std::{borrow::Borrow, collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 fn test_data() -> Data {
     let name = |i: &str| Name::new(i.into()).unwrap();

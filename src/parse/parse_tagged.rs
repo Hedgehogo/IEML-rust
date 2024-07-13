@@ -8,15 +8,13 @@ use super::{
     },
     name::name,
     parse_node::parse_node,
-    utils::combinator::cursor::char, read_file::ReadFile,
+    read_file::ReadFile,
+    utils::combinator::cursor::char,
 };
 use crate::data::{make, name::NameRef};
 use nom::sequence::tuple;
 
-fn tag<'input>(
-    path: &'input Path,
-    cursor: Cursor<'input>,
-) -> ParseResult<'input, NameRef<'input>> {
+fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'input, NameRef<'input>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;
@@ -95,11 +93,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

@@ -32,7 +32,7 @@ fn key<'input>(
     }
 }
 
-fn parse_map_item<'input, R: ReadFile<'input>>(
+pub(crate) fn parse_map_item<'input, R: ReadFile<'input>>(
     reader: R,
     cursor: Cursor<'input>,
     indent: usize,

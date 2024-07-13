@@ -8,7 +8,8 @@ use super::{
     },
     name::name,
     parse_node::parse_node,
-    utils::combinator::cursor::char, read_file::ReadFile,
+    read_file::ReadFile,
+    utils::combinator::cursor::char,
 };
 use crate::data::{make, name::NameRef};
 
@@ -42,9 +43,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile<'input>>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::error::{
-        Error::{self, FailedDetermineType},
-    };
+    use super::super::error::Error::{self, FailedDetermineType};
     use crate::data::mark::Mark;
     use std::path::PathBuf;
 
@@ -91,11 +90,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(
-                    error_mark,
-                    path,
-                    FailedDetermineType
-                ))
+                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }
