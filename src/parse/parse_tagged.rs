@@ -10,13 +10,13 @@ use super::{
     parse_node::parse_node,
     utils::combinator::cursor::char, read_file::ReadFile,
 };
-use crate::data::make;
+use crate::data::{make, name::NameRef};
 use nom::sequence::tuple;
 
 fn tag<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, &'input str> {
+) -> ParseResult<'input, NameRef<'input>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;
@@ -54,6 +54,10 @@ mod tests {
 
     use super::*;
 
+    fn name(i: &str) -> NameRef {
+        NameRef::new(i.into()).unwrap()
+    }
+
     #[test]
     fn test_parse_tagged() {
         let begin_mark = Mark::new(0, 0);
@@ -66,7 +70,7 @@ mod tests {
             let result_output = ("", Mark::new(0, 11)).into();
             let result_f = make::tagged::<_, Error, _, _>(
                 begin_mark,
-                "tag",
+                name("tag"),
                 make::null(Mark::new(0, 7), result_output),
             );
             let result = make::make(begin_mark, result_f).unwrap();
@@ -79,7 +83,7 @@ mod tests {
             let result_output = ("\n\t\thello", Mark::new(0, 8)).into();
             let result_f = make::tagged::<_, Error, _, _>(
                 begin_mark,
-                "",
+                name(""),
                 make::null(Mark::new(0, 4), result_output),
             );
             let result = make::make(begin_mark, result_f).unwrap();

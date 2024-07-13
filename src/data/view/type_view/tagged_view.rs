@@ -1,5 +1,5 @@
 use super::super::{
-    super::{data::Data, mark::Mark, node::tag_node::TaggedNode},
+    super::{name::NameRef, data::Data, mark::Mark, node::tag_node::TaggedNode},
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
@@ -32,8 +32,8 @@ impl<'data, A: AnalyseAnchors<'data>> TaggedView<'data, A> {
         self.mark
     }
 
-    pub fn tag(&self) -> &'data str {
-        self.node.tag.as_str()
+    pub fn tag(&self) -> NameRef<'data> {
+        (&self.node.tag).into()
     }
 
     pub fn view(&self) -> View<'data, A> {

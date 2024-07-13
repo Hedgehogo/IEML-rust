@@ -2,6 +2,7 @@ use super::{
     super::{
         data::Data,
         mark::Mark,
+        name::Name,
         node::node::{
             FileNode, GetAnchorNode, ListNode, MapNode, Node, TaggedNode, TakeAnchorNode,
         },
@@ -93,7 +94,7 @@ pub fn tagged<O, E, F, S>(
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token) -> marked::MakeResult<O, E>,
-    S: Into<String>,
+    S: Into<Name>,
 {
     move |token| {
         f(token).map(|(used_token, output)| {
@@ -154,7 +155,7 @@ pub fn take_anchor<O, E, F, S>(
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token) -> marked::MakeResult<O, E>,
-    S: Into<String>,
+    S: Into<Name>,
 {
     move |token| {
         f(Token::new(token.maker)).and_then(|(used_token, output)| {
@@ -184,7 +185,7 @@ pub fn get_anchor<O, E, S>(
 ) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
-    S: Into<String>,
+    S: Into<Name>,
 {
     move |token| {
         let result = GetAnchorNode::new(name.into(), 0);
@@ -242,9 +243,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::node_type::NodeType;
+    use super::super::super::{name::NameRef, node_type::NodeType};
     use super::*;
     use std::convert::Infallible;
+
+    fn name(i: &str) -> NameRef {
+        NameRef::new(i).unwrap()
+    }
 
     #[test]
     fn test_null() {
@@ -309,9 +314,9 @@ mod tests {
             begin_mark,
             map(begin_mark, |map_token| {
                 let (map_token, _) =
-                    map_token.add(begin_mark, "first", raw(begin_mark, (), "hello"))?;
+                    map_token.add(begin_mark, name("first"), raw(begin_mark, (), "hello"))?;
                 let (map_token, _) =
-                    map_token.add(begin_mark, "second", string(begin_mark, (), "hello"))?;
+                    map_token.add(begin_mark, name("second"), string(begin_mark, (), "hello"))?;
                 Ok((map_token, ()))
             }),
         )
@@ -330,14 +335,16 @@ mod tests {
     #[test]
     fn test_tagged() {
         let begin_mark = Mark::default();
-        let (data, _) =
-            make::<_, Infallible, _>(begin_mark, tagged(begin_mark, "tag", null(begin_mark, ())))
-                .unwrap();
+        let (data, _) = make::<_, Infallible, _>(
+            begin_mark,
+            tagged(begin_mark, name("tag"), null(begin_mark, ())),
+        )
+        .unwrap();
         let view = data.view();
         let clear_view = view.clear_step_file().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::Tagged);
-        assert_eq!(view.tagged().unwrap().tag(), "tag");
+        assert_eq!(view.tagged().unwrap().tag(), name("tag"));
 
         assert!(view.is_null());
     }
@@ -351,7 +358,7 @@ mod tests {
                 "dir/name.ieml".into(),
                 |map_token| {
                     let (map_token, _) =
-                        map_token.add(begin_mark, "file-anchor", null(begin_mark, ()))?;
+                        map_token.add(begin_mark, name("file-anchor"), null(begin_mark, ()))?;
                     Ok((map_token, ()))
                 },
                 raw(begin_mark, (), "hello"),

@@ -1,4 +1,4 @@
-use crate::data::make::error;
+use crate::data::{make::error, name};
 use std::fmt::{Display, Formatter};
 
 #[derive(PartialEq, Eq, Debug)]
@@ -38,6 +38,15 @@ impl Display for Error {
                 write!(f, "There are extra characters at the end of the document.")
             }
             Error::NonexistentFile => write!(f, "The requested file does not exist."),
+        }
+    }
+}
+
+impl From<name::Error> for Error {
+    fn from(value: name::Error) -> Self {
+        match value {
+            name::Error::Space => Error::ImpermissibleSpace,
+            name::Error::Tab => Error::ImpermissibleTab,
         }
     }
 }

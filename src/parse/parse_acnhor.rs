@@ -10,12 +10,12 @@ use super::{
     parse_node::parse_node,
     utils::combinator::cursor::char, read_file::ReadFile,
 };
-use crate::data::make;
+use crate::data::{make, name::NameRef};
 
 fn anchor_name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, (&'input str, bool)> {
+) -> ParseResult<'input, (NameRef<'input>, bool)> {
     match char('@')(cursor) {
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {
@@ -50,6 +50,10 @@ mod tests {
 
     use super::*;
 
+    fn name(i: &str) -> NameRef {
+        NameRef::new(i.into()).unwrap()
+    }
+
     #[test]
     fn test_parse_anchor() {
         let begin_mark = Mark::new(0, 0);
@@ -62,7 +66,7 @@ mod tests {
             let result_output = ("\nhello", Mark::new(0, 13)).into();
             let result_f = make::take_anchor::<_, Error, _, _>(
                 begin_mark,
-                "acnhor",
+                name("acnhor"),
                 make::null(Mark::new(0, 9), result_output),
             );
             let result = make::make(begin_mark, result_f).unwrap();
@@ -75,7 +79,7 @@ mod tests {
             let result_output = ("\n\t\thello", Mark::new(0, 7)).into();
             let result_f = make::take_anchor::<_, Error, _, _>(
                 begin_mark,
-                "",
+                name(""),
                 make::null(Mark::new(0, 3), result_output),
             );
             let result = make::make(begin_mark, result_f).unwrap();

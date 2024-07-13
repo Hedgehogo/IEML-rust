@@ -3,6 +3,7 @@ use super::super::{
         data::Data,
         error::{marked, InvalidKeyError},
         mark::Mark,
+        name::Name,
         node::map_node::MapNode,
     },
     analyse_anchors::AnalyseAnchors,
@@ -10,19 +11,19 @@ use super::super::{
 };
 use std::{
     collections::hash_map,
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Debug, Formatter}, borrow::Borrow,
 };
 
 #[derive(Clone)]
 pub struct MapIter<'data, A: AnalyseAnchors<'data>> {
-    iter: hash_map::Iter<'data, String, usize>,
+    iter: hash_map::Iter<'data, Name, usize>,
     data: &'data Data,
     anchor_analyser: A,
 }
 
 impl<'data, A: AnalyseAnchors<'data>> MapIter<'data, A> {
     fn new(
-        iter: hash_map::Iter<'data, String, usize>,
+        iter: hash_map::Iter<'data, Name, usize>,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -41,7 +42,7 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for MapIter<'data, A> {
 }
 
 impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
-    type Item = (&'data String, View<'data, A>);
+    type Item = (&'data Name, View<'data, A>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(key, i)| {
@@ -113,7 +114,7 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for MapView<'data, A> {
         }
         self.iter().all(|(k, v)| {
             other
-                .get(k)
+                .get(k.borrow())
                 .ok()
                 .and_then(|i| (i == v).then(|| ()))
                 .is_some()
@@ -133,7 +134,7 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for MapView<'data, A> {
 
 impl<'data, A: AnalyseAnchors<'data>> IntoIterator for MapView<'data, A> {
     type IntoIter = MapIter<'data, A>;
-    type Item = (&'data String, View<'data, A>);
+    type Item = (&'data Name, View<'data, A>);
 
     fn into_iter(self) -> Self::IntoIter {
         MapIter::new(self.node.data.iter(), self.data, self.anchor_analyser)
@@ -147,20 +148,21 @@ mod tests {
         node::node::{MarkedNode, Node, TaggedNode},
         node_type::NodeType,
     };
-    use std::collections::HashMap;
+    use std::{collections::HashMap, borrow::Borrow};
 
     fn test_data() -> Data {
+        let name = |i: &str| Name::new(i.into()).unwrap();
         Data::new([
             MarkedNode::new(Node::Null, Default::default()),
             MarkedNode::new(Node::Null, Default::default()),
             MarkedNode::new(
-                Node::Tagged(TaggedNode::new("tag".into(), 0)),
+                Node::Tagged(TaggedNode::new(name("tag"), 0)),
                 Default::default(),
             ),
             MarkedNode::new(
                 Node::Map(MapNode::new(HashMap::from([
-                    ("first".into(), 1),
-                    ("second".into(), 2),
+                    (name("first"), 1),
+                    (name("second"), 2),
                 ]))),
                 Default::default(),
             ),
@@ -178,13 +180,13 @@ mod tests {
 
             let second = list.get("second").unwrap();
             assert_eq!(second.node_type(), NodeType::Tagged);
-            assert_eq!(second.tagged().map(|i| i.tag()), Ok("tag"));
+            assert_eq!(second.tagged().unwrap().tag().as_str(), "tag");
 
             assert_eq!(list.len(), 2);
 
             for (key, i) in list.iter() {
-                assert!(list.contains_key(key));
-                assert_eq!(list.get(key).unwrap(), i);
+                assert!(list.contains_key(key.borrow()));
+                assert_eq!(list.get(key.borrow()).unwrap(), i);
             }
         } else {
             panic!("The node is not a map");

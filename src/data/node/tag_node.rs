@@ -1,4 +1,5 @@
-pub(crate) type Tag = String;
+use super::super::name::Name;
+pub(crate) type Tag = Name;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct TaggedNode {

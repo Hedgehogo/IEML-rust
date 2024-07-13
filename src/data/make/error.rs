@@ -1,10 +1,12 @@
 use std::fmt::{Display, Formatter};
 use std::{error::Error, path::PathBuf};
 
+use super::super::name::Name;
+
 #[derive(PartialEq, Eq, Debug)]
 pub enum MakeErrorReason<E: Error + PartialEq + Eq> {
-    AnchorAlreadyExist(String),
-    AnchorDoesntExist(String),
+    AnchorAlreadyExist(Name),
+    AnchorDoesntExist(Name),
     RepeatedKey,
     Parse(E),
 }

@@ -1,5 +1,5 @@
 use super::super::{
-    super::{data::Data, mark::Mark, node::take_anchor_node::TakeAnchorNode},
+    super::{name::NameRef, data::Data, mark::Mark, node::take_anchor_node::TakeAnchorNode},
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
@@ -32,8 +32,8 @@ impl<'data, A: AnalyseAnchors<'data>> TakeAnchorView<'data, A> {
         self.mark
     }
 
-    pub fn name(&self) -> &'data str {
-        self.node.name.as_str()
+    pub fn name(&self) -> NameRef<'data> {
+        (&self.node.name).into()
     }
 
     pub fn view(&self) -> View<'data, A> {

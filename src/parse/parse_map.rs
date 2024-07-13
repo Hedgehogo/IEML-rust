@@ -11,13 +11,16 @@ use super::{
     read_file::ReadFile,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
-use crate::data::make::{self, error::MakeErrorReason::Parse};
+use crate::data::{
+    make::{self, error::MakeErrorReason::Parse},
+    name::NameRef,
+};
 
 fn key<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error: Error,
-) -> ParseResult<'input, &'input str> {
+) -> ParseResult<'input, NameRef<'input>> {
     match name(path, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {
@@ -90,10 +93,14 @@ mod tests {
         marked::MakeError,
         Error::{self, FailedDetermineType},
     };
-    use crate::data::mark::Mark;
+    use crate::data::{mark::Mark};
     use std::path::PathBuf;
 
     use super::*;
+
+    fn name(i: &str) -> NameRef {
+        NameRef::new(i.into()).unwrap()
+    }
 
     #[test]
     fn test_parse_map_one() {
@@ -108,7 +115,7 @@ mod tests {
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
                 token.add(
                     Mark::new(0, 0),
-                    "key",
+                    name("key"),
                     make::null(Mark::new(0, 5), result_output),
                 )
             });
@@ -123,7 +130,7 @@ mod tests {
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
                 token.add(
                     Mark::new(0, 0),
-                    "first",
+                    name("first"),
                     make::null(Mark::new(0, 7), result_output),
                 )
             });
@@ -154,7 +161,7 @@ mod tests {
             let result_f = make::map(begin_mark, |token| {
                 token.add(
                     Mark::new(0, 0),
-                    "key",
+                    name("key"),
                     make::null::<_, Error>(Mark::new(0, 5), result_output),
                 )
             });
@@ -169,12 +176,12 @@ mod tests {
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
                 let (token, cursor) = token.add(
                     Mark::new(0, 0),
-                    "first",
+                    name("first"),
                     make::null(Mark::new(0, 7), result_cursor),
                 )?;
                 let (token, cursor) = token.add(
                     Mark::new(1, 2),
-                    "second",
+                    name("second"),
                     make::string(Mark::new(1, 10), cursor, "hello"),
                 )?;
                 Ok((token, cursor))
@@ -190,12 +197,12 @@ mod tests {
             let result_f = make::map::<_, Error, _>(begin_mark, |token| {
                 let (token, _) = token.add(
                     Mark::new(0, 0),
-                    "first",
+                    name("first"),
                     make::null(Mark::new(0, 7), result_cursor),
                 )?;
                 let (token, _) = token.add(
                     Mark::new(2, 2),
-                    "second",
+                    name("second"),
                     make::string(Mark::new(2, 10), result_cursor, "hello"),
                 )?;
                 Ok((token, result_cursor))

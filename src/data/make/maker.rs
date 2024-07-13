@@ -2,6 +2,7 @@ use super::{
     super::{
         data::Data,
         mark::Mark,
+        name::Name,
         node::node::{MapNode, MarkedNode, Node},
     },
     error::{marked, MakeErrorReason::RepeatedKey},
@@ -48,7 +49,7 @@ impl Maker {
         self.data.data.len() - 1
     }
 
-    pub(super) fn add_anchor(&mut self, name: String, index: usize) -> Option<()> {
+    pub(super) fn add_anchor(&mut self, name: Name, index: usize) -> Option<()> {
         self.anchors
             .data
             .insert(name, index)
@@ -131,7 +132,7 @@ impl<'maker> ListToken<'maker> {
 }
 
 pub struct MapToken<'maker> {
-    pub(super) result: HashMap<String, usize>,
+    pub(super) result: HashMap<Name, usize>,
     pub(super) maker: &'maker mut Maker,
 }
 
@@ -152,7 +153,7 @@ impl<'maker> MapToken<'maker> {
     where
         E: Error + PartialEq + Eq,
         F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
-        S: Into<String>,
+        S: Into<Name>,
     {
         match f(Token::new(self.maker)) {
             Ok((used_token, output)) => {

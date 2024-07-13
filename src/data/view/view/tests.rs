@@ -1,10 +1,14 @@
-use super::super::super::node::node::{
-    FileNode, GetAnchorNode, ListNode, MapNode, MarkedNode, Node, TaggedNode, TakeAnchorNode,
+use super::super::super::{
+    name::Name,
+    node::node::{
+        FileNode, GetAnchorNode, ListNode, MapNode, MarkedNode, Node, TaggedNode, TakeAnchorNode,
+    },
 };
 use super::*;
-use std::{collections::HashMap, path::PathBuf};
+use std::{borrow::Borrow, collections::HashMap, path::PathBuf};
 
 fn test_data() -> Data {
+    let name = |i: &str| Name::new(i.into()).unwrap();
     Data::new([
         MarkedNode::new(Node::Null, Mark { line: 2, symbol: 5 }),
         MarkedNode::new(Node::Raw("hello".into()), Default::default()),
@@ -12,14 +16,14 @@ fn test_data() -> Data {
         MarkedNode::new(Node::List(ListNode::new(vec![0, 1])), Default::default()),
         MarkedNode::new(
             Node::Map(MapNode::new(HashMap::from([
-                ("first".to_string(), 2),
-                ("second".to_string(), 3),
-                ("third".to_string(), 8),
+                (name("first"), 2),
+                (name("second"), 3),
+                (name("third"), 8),
             ]))),
             Default::default(),
         ),
         MarkedNode::new(
-            Node::Tagged(TaggedNode::new("tag".into(), 7)),
+            Node::Tagged(TaggedNode::new(name("tag"), 7)),
             Default::default(),
         ),
         MarkedNode::new(
@@ -33,11 +37,11 @@ fn test_data() -> Data {
             Default::default(),
         ),
         MarkedNode::new(
-            Node::TakeAnchor(TakeAnchorNode::new("anchor".into(), 4)),
+            Node::TakeAnchor(TakeAnchorNode::new(name("anchor"), 4)),
             Default::default(),
         ),
         MarkedNode::new(
-            Node::GetAnchor(GetAnchorNode::new("anchor".into(), 4)),
+            Node::GetAnchor(GetAnchorNode::new(name("anchor"), 4)),
             Default::default(),
         ),
     ])
@@ -545,7 +549,7 @@ fn test_tagged() {
             mark
         ))
     );
-    assert_eq!(view.anchor_name(), Ok("anchor"));
+    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -627,7 +631,7 @@ fn test_file() {
             mark
         ))
     );
-    assert_eq!(view.anchor_name(), Ok("anchor"));
+    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -713,7 +717,7 @@ fn test_take_anchor() {
             mark
         ))
     );
-    assert_eq!(view.anchor_name(), Ok("anchor"));
+    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -799,5 +803,5 @@ fn test_get_anchor() {
     } else {
         panic!("The node is not a get anchor");
     }
-    assert_eq!(view.anchor_name(), Ok("anchor"));
+    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
