@@ -9,16 +9,17 @@ use super::{
     },
     error::*,
     init::init,
+    maker::Maker,
 };
 use std::{error::Error, path::PathBuf};
 
-pub use super::maker::{ListToken, Maker, MapToken, Token};
+pub use super::maker::{ListToken, MapToken, Token};
 
 pub fn null<O, E>(begin_mark: Mark, output: O) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
 where
     E: Error + PartialEq + Eq,
 {
-    move |token| Ok((token.maker.add(begin_mark, Node::Null), output))
+    move |token| Ok((token.add_node(begin_mark, Node::Null), output))
 }
 
 pub fn raw<O, E, S>(
@@ -30,7 +31,10 @@ where
     E: Error + PartialEq + Eq,
     S: Into<String>,
 {
-    move |token| Ok((token.maker.add(begin_mark, Node::Raw(raw.into())), output))
+    move |token| {
+        let used_token = token.add_node(begin_mark, Node::Raw(raw.into()));
+        Ok((used_token, output))
+    }
 }
 
 pub fn string<O, E, S>(
@@ -43,7 +47,7 @@ where
     S: Into<String>,
 {
     move |token| {
-        let used_token = token.maker.add(begin_mark, Node::String(string.into()));
+        let used_token = token.add_node(begin_mark, Node::String(string.into()));
         Ok((used_token, output))
     }
 }
@@ -54,15 +58,20 @@ where
     F: FnOnce(ListToken) -> marked::MakeListResult<O, E>,
 {
     move |token| {
-        let list_token = ListToken::new(token.maker);
+        let list_token = token.add_list();
+
         return match f(list_token) {
             Ok((list_token, output)) => {
-                let maker = list_token.maker;
-                let result = list_token.result;
-                let used_token = maker.add(begin_mark, Node::List(ListNode::new(result)));
+                let (token, result) = list_token.split();
+                let node = Node::List(ListNode::new(result));
+                let used_token = token.add_node(begin_mark, node);
                 Ok((used_token, output))
             }
-            Err((list_token, error)) => Err((Token::new(list_token.maker), error)),
+
+            Err((list_token, error)) => {
+                let (token, _) = list_token.split();
+                Err((token, error))
+            }
         };
     }
 }
@@ -73,15 +82,20 @@ where
     F: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
 {
     move |token| {
-        let map_token = MapToken::new(token.maker);
+        let map_token = token.add_map();
+
         return match f(map_token) {
             Ok((map_token, output)) => {
-                let maker = map_token.maker;
-                let result = map_token.result;
-                let used_token = maker.add(begin_mark, Node::Map(MapNode::new(result)));
+                let (token, result) = map_token.split();
+                let node = Node::Map(MapNode::new(result));
+                let used_token = token.add_node(begin_mark, node);
                 Ok((used_token, output))
             }
-            Err((map_token, error)) => Err((Token::new(map_token.maker), error)),
+
+            Err((map_token, error)) => {
+                let (token, _) = map_token.split();
+                Err((token, error))
+            }
         };
     }
 }
@@ -98,10 +112,9 @@ where
 {
     move |token| {
         f(token).map(|(used_token, output)| {
-            let maker = used_token.maker;
-            let index = used_token.index;
+            let (token, index) = used_token.split();
             let result = TaggedNode::new(tag.into(), index);
-            let used_token = maker.add(begin_mark, Node::Tagged(result));
+            let used_token = token.add_node(begin_mark, Node::Tagged(result));
             (used_token, output)
         })
     }
@@ -119,30 +132,36 @@ where
     A: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
 {
     move |token| {
-        let map_token = MapToken::new(token.maker);
-        let (maker, file_anchors, output) = match anchors(map_token) {
-            Ok((map_token, output)) => (map_token.maker, map_token.result, output),
-            Err((map_token, error)) => return Err((Token::new(map_token.maker), error)),
-        };
-        let (maker, result) = maker.child(|maker| match f(Token::new(maker)) {
-            Ok((used_token, _)) => {
-                let file = FileNode::new(
-                    path,
-                    used_token.index,
-                    std::mem::take(used_token.maker.anchors()),
-                    MapNode::new(file_anchors),
-                    None,
-                );
-                (used_token.maker, Ok(file))
+        let map_token = token.add_map();
+
+        let ((token, file_anchors), output) = match anchors(map_token) {
+            Ok((map_token, output)) => (map_token.split(), output),
+
+            Err((map_token, error)) => {
+                let (token, _) = map_token.split();
+                return Err((token, error));
             }
-            Err((token, error)) => (token.maker, Err(error)),
+        };
+
+        let (token, result) = token.child(|token| match f(token) {
+            Ok((used_token, _)) => {
+                let (token, index) = used_token.split();
+                let (token, anchors) = token.anchors();
+                let file_anchors = MapNode::new(file_anchors);
+                let file = FileNode::new(path, index, anchors, file_anchors, None);
+                (token, Ok(file))
+            }
+
+            Err((token, error)) => (token, Err(error)),
         });
+
         match result {
             Ok(file) => {
-                let used_token = maker.add(begin_mark, Node::File(file));
+                let used_token = token.add_node(begin_mark, Node::File(file));
                 Ok((used_token, output))
             }
-            Err(error) => Err((Token::new(maker), error)),
+
+            Err(error) => Err((token, error)),
         }
     }
 }
@@ -158,21 +177,18 @@ where
     S: Into<Name>,
 {
     move |token| {
-        f(Token::new(token.maker)).and_then(|(used_token, output)| {
+        f(token).and_then(|(used_token, output)| {
             let name = name.into();
-            let maker = used_token.maker;
-            let index = used_token.index;
+            let (token, index) = used_token.split();
             let result = TakeAnchorNode::new(name.clone(), index);
-            match maker.add_anchor(name.clone(), index) {
-                Some(_) => {
-                    let used_token = maker.add(begin_mark, Node::TakeAnchor(result));
+
+            match token.add_anchor(begin_mark, name, index) {
+                Ok((token, _)) => {
+                    let used_token = token.add_node(begin_mark, Node::TakeAnchor(result));
                     Ok((used_token, output))
                 }
-                None => {
-                    let reason = MakeErrorReason::AnchorAlreadyExist(name);
-                    let error = marked::MakeError::new_with(begin_mark, maker.path(), reason);
-                    Err((Token::new(maker), error))
-                }
+
+                Err(error) => Err(error),
             }
         })
     }
@@ -189,7 +205,7 @@ where
 {
     move |token| {
         let result = GetAnchorNode::new(name.into(), 0);
-        let used_token = token.maker.add(begin_mark, Node::GetAnchor(result));
+        let used_token = token.add_node(begin_mark, Node::GetAnchor(result));
         Ok((used_token, output))
     }
 }
@@ -200,23 +216,31 @@ where
     F: FnOnce(Token) -> marked::MakeResult<O, E>,
 {
     let mut maker = Maker::new(PathBuf::new());
-    let (_, result) = maker.child(|maker| match f(Token::new(maker)) {
+
+    let (token, result) = Token::new(&mut maker).child(|token| match f(token) {
         Ok((used_token, output)) => {
+            let (token, index) = used_token.split();
+            let (token, anchors) = token.anchors();
             let file = FileNode {
-                node_index: used_token.index,
-                anchors: std::mem::take(used_token.maker.anchors()),
+                node_index: index,
+                anchors,
                 ..Default::default()
             };
-            (used_token.maker, Ok((file, output)))
+            (token, Ok((file, output)))
         }
-        Err((token, error)) => (token.maker, Err(error)),
+
+        Err((token, error)) => (token, Err(error)),
     });
-    result.and_then(|(file, output)| {
-        maker.add(begin_mark, Node::File(file));
-        let mut data = maker.data();
-        init(&mut data)?;
-        Ok((data, output))
-    })
+
+    match result {
+        Ok((file, output)) => {
+            let _ = token.add_node(begin_mark, Node::File(file));
+            let mut data = maker.data();
+            init(&mut data)?;
+            Ok((data, output))
+        }
+        Err(error) => Err(error),
+    }
 }
 
 pub fn make_file<O, E, F, A>(
@@ -231,12 +255,14 @@ where
     A: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
 {
     let mut maker = Maker::new(path.clone());
+
     match file(begin_mark, path, anchors, f)(Token::new(&mut maker)) {
-        Ok((_added, output)) => {
+        Ok((_, output)) => {
             let mut data = maker.data();
             init(&mut data)?;
             Ok((data, output))
         }
+
         Err((_, error)) => Err(error),
     }
 }
