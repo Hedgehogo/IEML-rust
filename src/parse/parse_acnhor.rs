@@ -1,16 +1,10 @@
 use std::path::Path;
 
 use super::{
-    cursor::Cursor,
-    error::{
-        marked::{ParseError, ParseResult, LexResult},
-        Error,
-    },
-    name::name,
-    parse_node::parse_node,
-    read_file::ReadFile,
+    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
     utils::combinator::cursor::char,
 };
+use super::{Error, ErrorKind, LexResult, Result};
 use crate::data::{make, name::NameRef};
 
 fn anchor_name<'input>(
@@ -20,8 +14,8 @@ fn anchor_name<'input>(
     match char('@')(cursor) {
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {
-            let reason = Error::FailedDetermineType;
-            Err(ParseError::new_with(cursor.mark, path, reason))
+            let reason = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, reason))
         }
     }
 }
@@ -30,7 +24,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match anchor_name(reader.path(), cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(reader, output, indent);
@@ -43,9 +37,9 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::error::Error::{self, FailedDetermineType};
+    use super::super::error::ErrorKind::{self, FailedDetermineType};
     use crate::data::mark::Mark;
-    
+
     use super::*;
 
     fn name(i: &str) -> NameRef {
@@ -61,7 +55,7 @@ mod tests {
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(0, 13)).into();
-            let result_f = make::take_anchor::<_, Error, _, _>(
+            let result_f = make::take_anchor::<_, ErrorKind, _, _>(
                 begin_mark,
                 name("acnhor"),
                 make::null(Mark::new(0, 9), result_output),
@@ -74,7 +68,7 @@ mod tests {
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\thello", Mark::new(0, 7)).into();
-            let result_f = make::take_anchor::<_, Error, _, _>(
+            let result_f = make::take_anchor::<_, ErrorKind, _, _>(
                 begin_mark,
                 name(""),
                 make::null(Mark::new(0, 3), result_output),
@@ -88,7 +82,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
+                Err(Error::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

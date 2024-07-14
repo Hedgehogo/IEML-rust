@@ -1,12 +1,11 @@
 use super::super::{data::Data, node::node::Node, view::anchors::Anchors};
 use super::error::*;
-use std::error::Error;
 
-pub(crate) fn init_step<E: Error + PartialEq + Eq>(
+pub(crate) fn init_step<E: std::error::Error + PartialEq + Eq>(
     data: &mut Data,
     file_index: usize,
     index: usize,
-) -> Result<(), marked::MakeError<E>> {
+) -> Result<(), marked::Error<E>> {
     let mut node = std::mem::take(data.get_mut(index));
     match &mut node.node {
         Node::List(i) => {
@@ -30,12 +29,10 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
                     match anchors.get_index(i.name.as_str()) {
                         Some(j) => i.node_index = j,
                         None => {
-                            return Err(marked::MakeError::new(
+                            return Err(marked::Error::new_with(
                                 node.mark,
-                                MakeError::new(
-                                    file.path.clone(),
-                                    MakeErrorReason::AnchorDoesntExist(i.name.clone()),
-                                ),
+                                file.path.clone(),
+                                ErrorKind::AnchorDoesntExist(i.name.clone()),
                             ))
                         }
                     };
@@ -57,7 +54,9 @@ pub(crate) fn init_step<E: Error + PartialEq + Eq>(
     Ok(())
 }
 
-pub(crate) fn init<E: Error + PartialEq + Eq>(data: &mut Data) -> Result<(), marked::MakeError<E>> {
+pub(crate) fn init<E: std::error::Error + PartialEq + Eq>(
+    data: &mut Data,
+) -> Result<(), marked::Error<E>> {
     match &data.get(data.data.len() - 1).node {
         Node::File(i) => init_step(data, data.data.len() - 1, i.node_index),
         _ => Ok(()),

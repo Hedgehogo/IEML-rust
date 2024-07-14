@@ -7,7 +7,7 @@ use super::{
     },
     error::{
         marked,
-        MakeErrorReason::{AnchorAlreadyExist, RepeatedKey},
+        ErrorKind::{AnchorAlreadyExist, RepeatedKey},
     },
 };
 use std::{
@@ -77,7 +77,7 @@ impl<'maker> Token<'maker> {
         mark: Mark,
         name: Name,
         index: usize,
-    ) -> Result<(Self, ()), (Self, marked::MakeError<E>)>
+    ) -> Result<(Self, ()), (Self, marked::Error<E>)>
     where
         E: Error + PartialEq + Eq,
     {
@@ -86,7 +86,7 @@ impl<'maker> Token<'maker> {
             Some(_) => {
                 let path = PathBuf::from(self.maker.path());
                 let reason = AnchorAlreadyExist(name);
-                let error = marked::MakeError::new_with(mark, path, reason);
+                let error = marked::Error::new_with(mark, path, reason);
                 Err((self, error))
             }
         }
@@ -107,10 +107,10 @@ impl<'maker> Token<'maker> {
         (self, anchors)
     }
 
-    pub fn add<O, E, F>(self, f: F) -> marked::MakeResult<'maker, O, E>
+    pub fn add<O, E, F>(self, f: F) -> marked::Result<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
-        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
+        F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
     {
         f(self)
     }
@@ -137,10 +137,10 @@ impl<'maker> ListToken<'maker> {
         (Token::new(self.maker), self.result)
     }
 
-    pub fn add<O, E, F>(mut self, f: F) -> marked::MakeListResult<'maker, O, E>
+    pub fn add<O, E, F>(mut self, f: F) -> marked::ListResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
-        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
+        F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
     {
         match f(Token::new(self.maker)) {
             Ok((used_token, output)) => {
@@ -171,10 +171,10 @@ impl<'maker> MapToken<'maker> {
         mark: Mark,
         key: S,
         f: F,
-    ) -> marked::MakeMapResult<'maker, O, E>
+    ) -> marked::MapResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
-        F: FnOnce(Token<'maker>) -> marked::MakeResult<'maker, O, E>,
+        F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
         S: Into<Name>,
     {
         match f(Token::new(self.maker)) {
@@ -184,7 +184,7 @@ impl<'maker> MapToken<'maker> {
                     None => Ok((self, output)),
                     Some(_) => {
                         let path = PathBuf::from(self.maker.path());
-                        let error = marked::MakeError::new_with(mark, path, RepeatedKey);
+                        let error = marked::Error::new_with(mark, path, RepeatedKey);
                         Err((self, error))
                     }
                 }

@@ -15,7 +15,7 @@ use std::{error::Error, path::PathBuf};
 
 pub use super::maker::{ListToken, MapToken, Token};
 
-pub fn null<O, E>(begin_mark: Mark, output: O) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+pub fn null<O, E>(begin_mark: Mark, output: O) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
 {
@@ -26,7 +26,7 @@ pub fn raw<O, E, S>(
     begin_mark: Mark,
     output: O,
     raw: S,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
     S: Into<String>,
@@ -41,7 +41,7 @@ pub fn string<O, E, S>(
     begin_mark: Mark,
     output: O,
     string: S,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
     S: Into<String>,
@@ -52,10 +52,10 @@ where
     }
 }
 
-pub fn list<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+pub fn list<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(ListToken) -> marked::MakeListResult<O, E>,
+    F: FnOnce(ListToken) -> marked::ListResult<O, E>,
 {
     move |token| {
         let list_token = token.add_list();
@@ -76,10 +76,10 @@ where
     }
 }
 
-pub fn map<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+pub fn map<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
+    F: FnOnce(MapToken) -> marked::MapResult<O, E>,
 {
     move |token| {
         let map_token = token.add_map();
@@ -104,10 +104,10 @@ pub fn tagged<O, E, F, S>(
     begin_mark: Mark,
     tag: S,
     f: F,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token) -> marked::MakeResult<O, E>,
+    F: FnOnce(Token) -> marked::Result<O, E>,
     S: Into<Name>,
 {
     move |token| {
@@ -125,11 +125,11 @@ pub fn file<O, E, F, A>(
     path: PathBuf,
     anchors: A,
     f: F,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token) -> marked::MakeResult<O, E>,
-    A: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
+    F: FnOnce(Token) -> marked::Result<O, E>,
+    A: FnOnce(MapToken) -> marked::MapResult<O, E>,
 {
     move |token| {
         let map_token = token.add_map();
@@ -170,10 +170,10 @@ pub fn take_anchor<O, E, F, S>(
     begin_mark: Mark,
     name: S,
     f: F,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token) -> marked::MakeResult<O, E>,
+    F: FnOnce(Token) -> marked::Result<O, E>,
     S: Into<Name>,
 {
     move |token| {
@@ -198,7 +198,7 @@ pub fn get_anchor<O, E, S>(
     begin_mark: Mark,
     output: O,
     name: S,
-) -> impl FnOnce(Token) -> marked::MakeResult<O, E>
+) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
     S: Into<Name>,
@@ -210,10 +210,10 @@ where
     }
 }
 
-pub fn make<O, E, F>(begin_mark: Mark, f: F) -> Result<(Data, O), marked::MakeError<E>>
+pub fn make<O, E, F>(begin_mark: Mark, f: F) -> Result<(Data, O), marked::Error<E>>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token) -> marked::MakeResult<O, E>,
+    F: FnOnce(Token) -> marked::Result<O, E>,
 {
     let mut maker = Maker::new(PathBuf::new());
 
@@ -248,11 +248,11 @@ pub fn make_file<O, E, F, A>(
     path: PathBuf,
     anchors: A,
     f: F,
-) -> Result<(Data, O), marked::MakeError<E>>
+) -> Result<(Data, O), marked::Error<E>>
 where
     E: Error + PartialEq + Eq,
-    F: FnOnce(Token) -> marked::MakeResult<O, E>,
-    A: FnOnce(MapToken) -> marked::MakeMapResult<O, E>,
+    F: FnOnce(Token) -> marked::Result<O, E>,
+    A: FnOnce(MapToken) -> marked::MapResult<O, E>,
 {
     let mut maker = Maker::new(path.clone());
 

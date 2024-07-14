@@ -1,12 +1,7 @@
 use std::path::Path;
 
-use super::{
-    cursor::Cursor,
-    error::{
-        marked::{ParseError, ParseResult, LexResult},
-        Error::FailedDetermineType,
-    },
-};
+use super::cursor::Cursor;
+use super::{Error, ErrorKind, LexResult, Result};
 use crate::data::{make, mark::Mark};
 use nom::{
     bytes::complete::*,
@@ -15,28 +10,24 @@ use nom::{
     sequence::tuple,
 };
 
-pub(crate) fn null<'input>(
-    path: &'input Path,
-    cursor: Cursor<'input>,
-) -> LexResult<'input, ()> {
+pub(crate) fn null<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, ()> {
     let match_special = tuple((tag("null"), opt(char(' '))));
     match recognize::<_, _, nom::error::Error<_>, _>(match_special)(cursor.input) {
         Ok((input, result)) => {
             let new_mark = cursor.mark + Mark::new(0, result.len());
             Ok(((input, new_mark).into(), ()))
         }
-        Err(_) => Err(ParseError::new_with(
-            cursor.mark,
-            path,
-            FailedDetermineType,
-        )),
+        Err(_) => {
+            let reason = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, reason))
+        }
     }
 }
 
 pub(crate) fn parse_null<'input, 'path: 'input>(
     path: &'path Path,
     cursor: Cursor<'input>,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match null(path, cursor) {
         Ok((output, _)) => make::null(cursor.mark, output)(token),
         Err(error) => Err((token, error)),
@@ -45,6 +36,8 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
 
 #[cfg(test)]
 mod tests {
+    use crate::data::mark::Mark;
+
     use super::*;
 
     #[test]
@@ -69,10 +62,10 @@ mod tests {
         );
         assert_eq!(
             null(path, (" null", begin_mark).into()),
-            Err(ParseError::new_with(
+            Err(Error::new_with(
                 begin_mark,
                 path,
-                FailedDetermineType
+                ErrorKind::FailedDetermineType
             ))
         );
     }

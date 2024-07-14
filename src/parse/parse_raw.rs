@@ -2,37 +2,27 @@ use std::path::Path;
 
 use super::{
     cursor::Cursor,
-    error::{
-        marked::{ParseError, ParseResult, LexResult},
-        Error::FailedDetermineType,
-    },
+    utils::combinator::cursor::{none_of, recognize},
 };
-use crate::data::{make, mark::Mark};
+use super::{Error, ErrorKind, LexResult, Result};
+use crate::data::make;
 use nom::multi::many1_count;
-use nom::{character::complete::*, combinator::recognize};
 
-pub(crate) fn raw<'input>(
-    path: &'input Path,
-    cursor: Cursor<'input>,
-) -> LexResult<'input, String> {
+pub(crate) fn raw<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, String> {
     let match_special = many1_count(none_of("\"\n<>"));
-    match recognize::<_, _, nom::error::Error<_>, _>(match_special)(cursor.input) {
-        Ok((input, result)) => {
-            let new_mark = cursor.mark + Mark::new(0, result.len());
-            Ok(((input, new_mark).into(), result.into()))
+    match recognize(match_special)(cursor) {
+        Ok((input, result)) => Ok((input, result.input.into())),
+        Err(_) => {
+            let reason = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, reason))
         }
-        Err(_) => Err(ParseError::new_with(
-            cursor.mark,
-            path,
-            FailedDetermineType,
-        )),
     }
 }
 
 pub(crate) fn parse_raw<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match raw(path, cursor) {
         Ok((output, raw)) => make::raw(cursor.mark, output, raw)(token),
         Err(error) => Err((token, error)),
@@ -41,6 +31,8 @@ pub(crate) fn parse_raw<'input>(
 
 #[cfg(test)]
 mod tests {
+    use crate::data::mark::Mark;
+
     use super::*;
 
     #[test]
@@ -57,10 +49,10 @@ mod tests {
         );
         assert_eq!(
             raw(path, ("< \n", begin_mark).into()),
-            Err(ParseError::new_with(
+            Err(Error::new_with(
                 begin_mark,
                 path,
-                FailedDetermineType
+                ErrorKind::FailedDetermineType
             ))
         );
     }

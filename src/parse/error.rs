@@ -2,7 +2,7 @@ use crate::data::{make::error, name};
 use std::fmt::{Display, Formatter};
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum Error {
+pub enum ErrorKind {
     FailedDetermineType,
     ExpectedMapKey,
     ExpectedListItem,
@@ -15,52 +15,53 @@ pub enum Error {
     NonexistentFile,
 }
 
-pub type MakeError = error::MakeError<Error>;
+pub type MakeError = error::Error<ErrorKind>;
 
-impl Display for Error {
+impl Display for ErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::FailedDetermineType => write!(f, "Node type couldn't be determined."),
-            Error::ExpectedMapKey => write!(f, "Expected a map key."),
-            Error::ExpectedListItem => write!(f, "Expected a list item."),
-            Error::ExpectedTab => write!(f, "Expected a tab."),
-            Error::ExpectedBlankLine => write!(f, "Expected a blank line."),
-            Error::ImpermissibleSpace => write!(
+            ErrorKind::FailedDetermineType => write!(f, "Node type couldn't be determined."),
+            ErrorKind::ExpectedMapKey => write!(f, "Expected a map key."),
+            ErrorKind::ExpectedListItem => write!(f, "Expected a list item."),
+            ErrorKind::ExpectedTab => write!(f, "Expected a tab."),
+            ErrorKind::ExpectedBlankLine => write!(f, "Expected a blank line."),
+            ErrorKind::ImpermissibleSpace => write!(
                 f,
                 "A space was detected. Perhaps you meant to write a tab as an indentation."
             ),
-            Error::ImpermissibleTab => write!(
+            ErrorKind::ImpermissibleTab => write!(
                 f,
                 "A tab was detected. A lower level of indentation was expected."
             ),
-            Error::IncompleteString => write!(f, "The string is incomplete."),
-            Error::IncompleteDocument => {
+            ErrorKind::IncompleteString => write!(f, "The string is incomplete."),
+            ErrorKind::IncompleteDocument => {
                 write!(f, "There are extra characters at the end of the document.")
             }
-            Error::NonexistentFile => write!(f, "The requested file does not exist."),
+            ErrorKind::NonexistentFile => write!(f, "The requested file does not exist."),
         }
     }
 }
 
-impl From<name::Error> for Error {
+impl From<name::Error> for ErrorKind {
     fn from(value: name::Error) -> Self {
         match value {
-            name::Error::Space => Error::ImpermissibleSpace,
-            name::Error::Tab => Error::ImpermissibleTab,
+            name::Error::Space => ErrorKind::ImpermissibleSpace,
+            name::Error::Tab => ErrorKind::ImpermissibleTab,
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for ErrorKind {}
 
 pub mod marked {
     use super::super::cursor::Cursor;
-    use crate::data::make::error::marked;
+    use crate::data::make;
+    use std::result;
 
-    pub type ParseError = marked::MakeError<super::Error>;
-    pub type ParseResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
-    pub type ParseListResult<'maker, 'input> = marked::MakeListResult<'maker, Cursor<'input>, super::Error>;
-    pub type ParseMapResult<'maker, 'input> = marked::MakeMapResult<'maker, Cursor<'input>, super::Error>;
+    pub type Error = make::Error<super::ErrorKind>;
+    pub type Result<'maker, 'input> = make::Result<'maker, Cursor<'input>, super::ErrorKind>;
+    pub type ListResult<'maker, 'input> = make::ListResult<'maker, Cursor<'input>, super::ErrorKind>;
+    pub type MapResult<'maker, 'input> = make::MapResult<'maker, Cursor<'input>, super::ErrorKind>;
     
-    pub type LexResult<'input, T> = Result<(Cursor<'input>, T), ParseError>;
+    pub type LexResult<'input, T> = result::Result<(Cursor<'input>, T), Error>;
 }

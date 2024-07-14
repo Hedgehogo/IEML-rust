@@ -2,12 +2,9 @@ use std::path::Path;
 
 use super::{
     cursor::Cursor,
-    error::{
-        marked::{ParseError, ParseResult, LexResult},
-        Error::FailedDetermineType,
-    },
     utils::combinator::{cursor::char, parse::match_line},
 };
+use super::{Error, ErrorKind, LexResult, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -20,18 +17,17 @@ pub(crate) fn line_string<'input>(
             let (cursor, result) = match_line(cursor);
             Ok((cursor, result.into()))
         }
-        Err(_) => Err(ParseError::new_with(
-            cursor.mark,
-            path,
-            FailedDetermineType,
-        )),
+        Err(_) => {
+            let kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, kind))
+        }
     }
 }
 
 pub(crate) fn parse_line_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match line_string(path, cursor) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => Err((token, error)),
@@ -58,10 +54,10 @@ mod tests {
         );
         assert_eq!(
             line_string(path, (">hello", begin_mark).into()),
-            Err(ParseError::new_with(
+            Err(Error::new_with(
                 begin_mark,
                 path,
-                FailedDetermineType
+                ErrorKind::FailedDetermineType
             ))
         );
     }

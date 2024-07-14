@@ -1,14 +1,12 @@
 use std::path::Path;
 
-use crate::data::name::NameRef;
+use crate::{
+    data::name::NameRef,
+    parse::{Error, LexResult},
+};
 
 use super::{
-    cursor::Cursor,
-    error::{
-        marked::{ParseError, LexResult},
-        Error::FailedDetermineType,
-    },
-    utils::combinator::parse::match_name,
+    cursor::Cursor, error::ErrorKind::FailedDetermineType, utils::combinator::parse::match_name,
 };
 
 pub(crate) fn name<'input>(
@@ -27,14 +25,14 @@ pub(crate) fn name<'input>(
         FailedDetermineType
     };
 
-    Err(ParseError::new_with(cursor.mark, path, error_reason))
+    Err(Error::new_with(cursor.mark, path, error_reason))
 }
 
 #[cfg(test)]
 mod tests {
     use crate::data::mark::Mark;
 
-    use super::super::error::Error::{ImpermissibleSpace, ImpermissibleTab};
+    use super::super::error::ErrorKind::{ImpermissibleSpace, ImpermissibleTab};
 
     use super::*;
 
@@ -74,15 +72,15 @@ mod tests {
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), true),
-            Err(ParseError::new_with(begin_mark, path, ImpermissibleSpace))
+            Err(Error::new_with(begin_mark, path, ImpermissibleSpace))
         );
         assert_eq!(
             name(path, ("\tname", begin_mark).into(), true),
-            Err(ParseError::new_with(begin_mark, path, ImpermissibleTab))
+            Err(Error::new_with(begin_mark, path, ImpermissibleTab))
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), false),
-            Err(ParseError::new_with(begin_mark, path, FailedDetermineType))
+            Err(Error::new_with(begin_mark, path, FailedDetermineType))
         );
     }
 }

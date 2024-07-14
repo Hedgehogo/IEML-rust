@@ -1,13 +1,12 @@
-use super::{
-    cursor::Cursor, error::marked::ParseResult, parse_scalar::parse_scalar, read_file::ReadFile,
-};
+use super::Result;
+use super::{cursor::Cursor, parse_scalar::parse_scalar, read_file::ReadFile};
 use crate::data::make;
 
 pub(crate) fn parse_node<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     parse_scalar(reader.path(), cursor, indent)
 }
 

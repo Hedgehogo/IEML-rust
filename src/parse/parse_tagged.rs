@@ -3,8 +3,8 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{ParseError, ParseResult, LexResult},
-        Error,
+        marked::{Error, Result, LexResult},
+        ErrorKind,
     },
     name::name,
     parse_node::parse_node,
@@ -21,8 +21,8 @@ fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, 
             return Ok((cursor, result));
         }
         Err(_) => {
-            let error_reason = Error::FailedDetermineType;
-            Err(ParseError::new_with(cursor.mark, path, error_reason))
+            let error_reason = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, error_reason))
         }
     }
 }
@@ -31,7 +31,7 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match tag(reader.path(), cursor) {
         Ok((new_cursor, tag)) => {
             let f = parse_node(reader, new_cursor, indent);
@@ -44,8 +44,8 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::ParseError,
-        Error::{self, FailedDetermineType},
+        marked::Error,
+        ErrorKind::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;
     
@@ -64,7 +64,7 @@ mod tests {
             let data_f = parse_tagged(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 11)).into();
-            let result_f = make::tagged::<_, Error, _, _>(
+            let result_f = make::tagged::<_, ErrorKind, _, _>(
                 begin_mark,
                 name("tag"),
                 make::null(Mark::new(0, 7), result_output),
@@ -77,7 +77,7 @@ mod tests {
             let data_f = parse_tagged(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\thello", Mark::new(0, 8)).into();
-            let result_f = make::tagged::<_, Error, _, _>(
+            let result_f = make::tagged::<_, ErrorKind, _, _>(
                 begin_mark,
                 name(""),
                 make::null(Mark::new(0, 4), result_output),
@@ -91,7 +91,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
+                Err(Error::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

@@ -1,62 +1,62 @@
 use std::fmt::{Display, Formatter};
-use std::{error::Error, path::PathBuf};
+use std::path::PathBuf;
 
 use super::super::name::Name;
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum MakeErrorReason<E: Error + PartialEq + Eq> {
+pub enum ErrorKind<E: std::error::Error + PartialEq + Eq> {
     AnchorAlreadyExist(Name),
     AnchorDoesntExist(Name),
     RepeatedKey,
     Parse(E),
 }
 
-impl<E: Error + PartialEq + Eq> Display for MakeErrorReason<E> {
+impl<E: std::error::Error + PartialEq + Eq> Display for ErrorKind<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            MakeErrorReason::AnchorAlreadyExist(i) => write!(f, "An attempt was made to take an anchor with the name of an anchor that already exists. Anchor name: {:?}.", i),
-            MakeErrorReason::AnchorDoesntExist(i) => write!(f, "There is no requested anchor. Anchor name: {:?}.", i),
-            MakeErrorReason::RepeatedKey => write!(f,"An attempt was made to add a key to the map that already exists."),
-            MakeErrorReason::Parse(i) => write!(f, "{i}"),
+            ErrorKind::AnchorAlreadyExist(i) => write!(f, "An attempt was made to take an anchor with the name of an anchor that already exists. Anchor name: {:?}.", i),
+            ErrorKind::AnchorDoesntExist(i) => write!(f, "There is no requested anchor. Anchor name: {:?}.", i),
+            ErrorKind::RepeatedKey => write!(f,"An attempt was made to add a key to the map that already exists."),
+            ErrorKind::Parse(i) => write!(f, "{i}"),
         }
     }
 }
 
-impl<E: Error + PartialEq + Eq> Error for MakeErrorReason<E> {}
+impl<E: std::error::Error + PartialEq + Eq> std::error::Error for ErrorKind<E> {}
 
-impl<E: Error + PartialEq + Eq> From<E> for MakeErrorReason<E> {
+impl<E: std::error::Error + PartialEq + Eq> From<E> for ErrorKind<E> {
     fn from(value: E) -> Self {
-        MakeErrorReason::Parse(value)
+        ErrorKind::Parse(value)
     }
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct MakeError<E: Error + PartialEq + Eq> {
+pub struct Error<E: std::error::Error + PartialEq + Eq> {
     pub path: PathBuf,
-    pub reason: MakeErrorReason<E>,
+    pub kind: ErrorKind<E>,
 }
 
-impl<E: Error + PartialEq + Eq> MakeError<E> {
-    pub fn new(path: PathBuf, reason: MakeErrorReason<E>) -> Self {
-        Self { path, reason }
+impl<E: std::error::Error + PartialEq + Eq> Error<E> {
+    pub fn new(path: PathBuf, reason: ErrorKind<E>) -> Self {
+        Self { path, kind: reason }
     }
 }
 
-impl<E: Error + PartialEq + Eq> Display for MakeError<E> {
+impl<E: std::error::Error + PartialEq + Eq> Display for Error<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if !self.path.as_os_str().is_empty() {
             write!(
                 f,
                 "Failed to parse the data in the file {:?}. {}",
-                self.path, self.reason
+                self.path, self.kind
             )
         } else {
-            write!(f, "Failed to parse the data. {}", self.reason)
+            write!(f, "Failed to parse the data. {}", self.kind)
         }
     }
 }
 
-impl<E: Error + PartialEq + Eq> Error for MakeError<E> {}
+impl<E: std::error::Error + PartialEq + Eq> std::error::Error for Error<E> {}
 
 // Add after specializations appear
 /*impl<F, I: From<F>> From<ParseError<F>> for ParseError<I> {
@@ -68,22 +68,26 @@ impl<E: Error + PartialEq + Eq> Error for MakeError<E> {}
 pub mod marked {
     use super::super::{
         super::{error::marked::WithMarkError, mark::Mark},
-        maker::{UsedToken, ListToken, MapToken, Token},
+        maker::{ListToken, MapToken, Token, UsedToken},
     };
-    use std::{error::Error, path::PathBuf};
+    use std::path::PathBuf;
+    use std::result;
 
-    pub type MakeError<E> = WithMarkError<super::MakeError<E>>;
-    pub type MakeResult<'maker, O, E> = Result<(UsedToken<'maker>, O), (Token<'maker>, MakeError<E>)>;
-    pub type MakeListResult<'maker, O, E> = Result<(ListToken<'maker>, O), (ListToken<'maker>, MakeError<E>)>;
-    pub type MakeMapResult<'maker, O, E> = Result<(MapToken<'maker>, O), (MapToken<'maker>, MakeError<E>)>;
+    pub type Error<E> = WithMarkError<super::Error<E>>;
+    pub type Result<'maker, O, E> =
+        result::Result<(UsedToken<'maker>, O), (Token<'maker>, Error<E>)>;
+    pub type ListResult<'maker, O, E> =
+        result::Result<(ListToken<'maker>, O), (ListToken<'maker>, Error<E>)>;
+    pub type MapResult<'maker, O, E> =
+        result::Result<(MapToken<'maker>, O), (MapToken<'maker>, Error<E>)>;
 
-    impl<E: Error + PartialEq + Eq> MakeError<E> {
+    impl<E: std::error::Error + PartialEq + Eq> Error<E> {
         pub fn new_with<P, R>(mark: Mark, path: P, reason: R) -> Self
         where
             P: Into<PathBuf>,
-            R: Into<super::MakeErrorReason<E>>,
+            R: Into<super::ErrorKind<E>>,
         {
-            Self::new(mark, super::MakeError::new(path.into(), reason.into()))
+            Self::new(mark, super::Error::new(path.into(), reason.into()))
         }
     }
 }

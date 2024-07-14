@@ -2,10 +2,6 @@ use std::path::Path;
 
 use super::{
     cursor::Cursor,
-    error::{
-        marked::{ParseError, ParseMapResult, ParseResult, LexResult},
-        Error,
-    },
     parse_map::parse_map_item,
     parse_node::parse_node,
     read_file::ReadFile,
@@ -14,6 +10,7 @@ use super::{
         parse::{match_line, skip_blank_lines_ln, skip_indent},
     },
 };
+use super::{Error, ErrorKind, LexResult, MapResult, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -24,8 +21,8 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
             return Ok((cursor, Path::new(result)));
         }
         Err(_) => {
-            let error_reason = Error::FailedDetermineType;
-            Err(ParseError::new_with(cursor.mark, path, error_reason))
+            let error_reason = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, error_reason))
         }
     }
 }
@@ -34,7 +31,7 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::MapToken) -> ParseMapResult<'_, 'input> {
+) -> impl FnOnce(make::MapToken) -> MapResult<'_, 'input> {
     move |token| {
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
@@ -46,7 +43,7 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
         loop {
             (token, cursor) = match skip_whitespace(cursor) {
                 Some(cursor) => {
-                    let error_reason = Error::ExpectedMapKey;
+                    let error_reason = ErrorKind::ExpectedMapKey;
                     parse_map_item(reader, cursor, indent, error_reason)(token)?
                 }
                 None => return Ok((token, cursor)),
@@ -59,7 +56,7 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     path: &'input Path,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
         let f = move |token, reader: &R, inner_cursor: Cursor<'_>| {
             /*
@@ -78,8 +75,8 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
         match reader.child(token, path, f) {
             Ok(i) => i,
             Err(token) => {
-                let error_reason = Error::NonexistentFile;
-                let error = ParseError::new_with(cursor.mark, reader.path(), error_reason);
+                let error_reason = ErrorKind::NonexistentFile;
+                let error = Error::new_with(cursor.mark, reader.path(), error_reason);
                 Err((token, error))
             }
         }
@@ -90,7 +87,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match path(reader.path(), cursor) {
         Ok((new_cursor, path)) => {
             let anchors = parse_anchors(reader, new_cursor, indent);
@@ -105,12 +102,9 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::{
-        error::{marked::ParseError, Error},
-        read_file::{ReadFile, ReadResult},
-    };
+    use super::super::read_file::ReadResult;
     use crate::data::{data::Data, mark::Mark, name::NameRef};
-    use std::collections::HashMap;
+    use std::{collections::HashMap, result};
 
     use super::*;
 
@@ -161,7 +155,7 @@ mod tests {
         begin_mark: Mark,
         reader: &'input Reader,
         files: &'input Files,
-    ) -> Result<(Data, Cursor<'input>), ParseError> {
+    ) -> result::Result<(Data, Cursor<'input>), Error> {
         let cursor = (files.get(reader.path).unwrap().as_str(), begin_mark).into();
         let data_f = parse_file(reader, cursor, 2);
         make::make(begin_mark, data_f)
@@ -179,7 +173,7 @@ mod tests {
             let reader = Reader::new(&files, path);
             let data = parse(begin_mark, &reader, &files).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
-            let result_f = make::file::<_, Error, _, _>(
+            let result_f = make::file::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| Ok((token, result_output)),
@@ -196,7 +190,7 @@ mod tests {
             let reader = Reader::new(&files, path);
             let data = parse(begin_mark, &reader, &files).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
-            let result_f = make::file::<_, Error, _, _>(
+            let result_f = make::file::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| {
@@ -219,7 +213,7 @@ mod tests {
             let reader = Reader::new(&files, path);
             let data = parse(begin_mark, &reader, &files).unwrap();
             let result_output = ("", Mark::new(2, 14)).into();
-            let result_f = make::file::<_, Error, _, _>(
+            let result_f = make::file::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| {
@@ -240,10 +234,10 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 parse(begin_mark, &reader, &files),
-                Err(ParseError::new_with(
+                Err(Error::new_with(
                     error_mark,
                     path,
-                    Error::NonexistentFile
+                    ErrorKind::NonexistentFile
                 ))
             );
         }
@@ -256,7 +250,7 @@ mod tests {
             let error_mark = Mark::new(1, 2);
             assert_eq!(
                 parse(begin_mark, &reader, &files),
-                Err(ParseError::new_with(error_mark, path, Error::ExpectedMapKey))
+                Err(Error::new_with(error_mark, path, ErrorKind::ExpectedMapKey))
             );
         }
     }

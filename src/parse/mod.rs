@@ -15,3 +15,6 @@ pub mod parse_scalar;
 pub mod parse_tagged;
 pub mod read_file;
 pub mod utils;
+
+pub use error::marked::*;
+pub use error::ErrorKind;
