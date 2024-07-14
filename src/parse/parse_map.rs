@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeMapResult, MakeResult, LexResult},
+        marked::{ParseMapResult, ParseResult, LexResult},
         Error::{self, ExpectedMapKey, FailedDetermineType},
     },
     name::name,
@@ -37,7 +37,7 @@ pub(crate) fn parse_map_item<'input, R: ReadFile + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
-) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
+) -> impl FnOnce(make::MapToken) -> ParseMapResult<'_, 'input> {
     move |token| match key(reader.path(), cursor, error) {
         Ok((new_cursor, key)) => {
             let f = parse_node(reader, new_cursor, indent + 1);
@@ -51,7 +51,7 @@ pub(crate) fn parse_map_one<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let f = parse_map_item(reader, cursor, indent, FailedDetermineType);
         make::map(cursor.mark, f)(token)
@@ -62,7 +62,7 @@ pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
@@ -90,7 +90,7 @@ pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::MakeError,
+        marked::ParseError,
         Error::{self, FailedDetermineType},
     };
     use crate::data::{mark::Mark};
@@ -141,7 +141,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }
@@ -213,7 +213,7 @@ mod tests {
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, ExpectedMapKey))
+                Err(ParseError::new_with(error_mark, path, ExpectedMapKey))
             );
         }
         {
@@ -222,7 +222,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

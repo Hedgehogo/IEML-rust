@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
     utils::combinator::{
@@ -52,13 +52,13 @@ pub(crate) fn not_escaped_string<'input>(
     indent: usize,
 ) -> LexResult<'input, String> {
     let (cursor, _) = tuple((char('>'), char('>')))(cursor)
-        .map_err(|_| MakeError::new_with(cursor.mark, path, FailedDetermineType))?;
+        .map_err(|_| ParseError::new_with(cursor.mark, path, FailedDetermineType))?;
     let cursor = skip_blank_line(cursor);
 
     let (cursor, _) = skip_line_ending(cursor)
-        .map_err(|_| MakeError::new_with(cursor.mark, path, IncompleteString))?;
+        .map_err(|_| ParseError::new_with(cursor.mark, path, IncompleteString))?;
     let (cursor, _) = skip_indent(indent)(cursor)
-        .map_err(|_| MakeError::new_with(cursor.mark, path, ExpectedTab))?;
+        .map_err(|_| ParseError::new_with(cursor.mark, path, ExpectedTab))?;
     let (cursor, line) = match_line(cursor);
 
     let capacity = line.len() + 1;
@@ -75,7 +75,7 @@ pub(crate) fn parse_not_escaped_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token: make::Token| match not_escaped_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => Err((token, error)),
@@ -145,7 +145,7 @@ mod tests {
             let error_mark = Mark::new(0, 4);
             assert_eq!(
                 not_escaped_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
@@ -154,7 +154,7 @@ mod tests {
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 not_escaped_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(error_mark, path, ExpectedTab))
+                Err(ParseError::new_with(error_mark, path, ExpectedTab))
             );
         }
     }

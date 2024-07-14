@@ -57,10 +57,10 @@ pub mod marked {
     use super::super::cursor::Cursor;
     use crate::data::make::error::marked;
 
-    pub type MakeError = marked::MakeError<super::Error>;
-    pub type MakeResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
-    pub type MakeListResult<'maker, 'input> = marked::MakeListResult<'maker, Cursor<'input>, super::Error>;
-    pub type MakeMapResult<'maker, 'input> = marked::MakeMapResult<'maker, Cursor<'input>, super::Error>;
+    pub type ParseError = marked::MakeError<super::Error>;
+    pub type ParseResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
+    pub type ParseListResult<'maker, 'input> = marked::MakeListResult<'maker, Cursor<'input>, super::Error>;
+    pub type ParseMapResult<'maker, 'input> = marked::MakeMapResult<'maker, Cursor<'input>, super::Error>;
     
-    pub type LexResult<'input, T> = Result<(Cursor<'input>, T), MakeError>;
+    pub type LexResult<'input, T> = Result<(Cursor<'input>, T), ParseError>;
 }

@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error,
     },
     name::name,
@@ -22,7 +22,7 @@ fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, 
         }
         Err(_) => {
             let error_reason = Error::FailedDetermineType;
-            Err(MakeError::new_with(cursor.mark, path, error_reason))
+            Err(ParseError::new_with(cursor.mark, path, error_reason))
         }
     }
 }
@@ -31,7 +31,7 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match tag(reader.path(), cursor) {
         Ok((new_cursor, tag)) => {
             let f = parse_node(reader, new_cursor, indent);
@@ -44,7 +44,7 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::MakeError,
+        marked::ParseError,
         Error::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;
@@ -91,7 +91,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

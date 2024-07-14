@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error::FailedDetermineType,
     },
 };
@@ -25,7 +25,7 @@ pub(crate) fn null<'input>(
             let new_mark = cursor.mark + Mark::new(0, result.len());
             Ok(((input, new_mark).into(), ()))
         }
-        Err(_) => Err(MakeError::new_with(
+        Err(_) => Err(ParseError::new_with(
             cursor.mark,
             path,
             FailedDetermineType,
@@ -36,7 +36,7 @@ pub(crate) fn null<'input>(
 pub(crate) fn parse_null<'input, 'path: 'input>(
     path: &'path Path,
     cursor: Cursor<'input>,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match null(path, cursor) {
         Ok((output, _)) => make::null(cursor.mark, output)(token),
         Err(error) => Err((token, error)),
@@ -69,7 +69,7 @@ mod tests {
         );
         assert_eq!(
             null(path, (" null", begin_mark).into()),
-            Err(MakeError::new_with(
+            Err(ParseError::new_with(
                 begin_mark,
                 path,
                 FailedDetermineType

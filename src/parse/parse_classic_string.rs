@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
     utils::combinator::{
@@ -21,7 +21,7 @@ fn analyze<'input>(
 ) -> LexResult<'input, usize> {
     let analyze_newline = |cursor, offset| match skip_indent(indent)(cursor) {
         Ok((cursor, _)) => analyze(path, cursor, indent, capacity + offset),
-        Err(_) => Err(MakeError::new_with(cursor.mark, path, ExpectedTab)),
+        Err(_) => Err(ParseError::new_with(cursor.mark, path, ExpectedTab)),
     };
 
     let analyze_any = |cursor, any: char, offset| {
@@ -42,7 +42,7 @@ fn analyze<'input>(
                     i => analyze_any(cursor, i, 1),
                 },
 
-                Err(_) => Err(MakeError::new_with(
+                Err(_) => Err(ParseError::new_with(
                     cursor.mark,
                     path,
                     IncompleteString,
@@ -54,7 +54,7 @@ fn analyze<'input>(
             i => analyze_any(cursor, i, 0),
         },
 
-        Err(_) => Err(MakeError::new_with(
+        Err(_) => Err(ParseError::new_with(
             cursor.mark,
             path,
             IncompleteString,
@@ -112,7 +112,7 @@ pub(crate) fn classic_string<'input>(
             let result = parse(cursor.input, indent, capacity);
             Ok((output, result))
         }
-        Err(_) => Err(MakeError::new_with(
+        Err(_) => Err(ParseError::new_with(
             cursor.mark,
             path,
             FailedDetermineType,
@@ -124,7 +124,7 @@ pub(crate) fn parse_classic_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match classic_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => Err((token, error)),
@@ -160,7 +160,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 classic_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(
+                Err(ParseError::new_with(
                     error_mark,
                     path,
                     FailedDetermineType
@@ -189,7 +189,7 @@ mod tests {
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 classic_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(error_mark, path, ExpectedTab))
+                Err(ParseError::new_with(error_mark, path, ExpectedTab))
             );
         }
         {
@@ -226,7 +226,7 @@ mod tests {
             let error_mark = Mark::new(0, 6);
             assert_eq!(
                 classic_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
@@ -234,7 +234,7 @@ mod tests {
             let error_mark = Mark::new(0, 7);
             assert_eq!(
                 classic_string(path, (input, begin_mark).into(), 2),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
     }

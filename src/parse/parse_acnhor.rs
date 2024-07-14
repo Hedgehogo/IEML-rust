@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error,
     },
     name::name,
@@ -21,7 +21,7 @@ fn anchor_name<'input>(
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {
             let reason = Error::FailedDetermineType;
-            Err(MakeError::new_with(cursor.mark, path, reason))
+            Err(ParseError::new_with(cursor.mark, path, reason))
         }
     }
 }
@@ -30,7 +30,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match anchor_name(reader.path(), cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(reader, output, indent);
@@ -88,7 +88,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

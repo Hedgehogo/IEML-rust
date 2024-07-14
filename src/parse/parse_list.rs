@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeListResult, MakeResult, LexResult},
+        marked::{ParseError, ParseListResult, ParseResult, LexResult},
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
@@ -23,7 +23,7 @@ fn special<'input>(
 ) -> LexResult<'input, ()> {
     match tuple((char('-'), skip_space))(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
-        Err(_) => Err(MakeError::new_with(cursor.mark, path, error)),
+        Err(_) => Err(ParseError::new_with(cursor.mark, path, error)),
     }
 }
 
@@ -32,7 +32,7 @@ fn parse_list_item<'input, R: ReadFile + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
     error: Error,
-) -> impl FnOnce(make::ListToken) -> MakeListResult<'_, 'input> {
+) -> impl FnOnce(make::ListToken) -> ParseListResult<'_, 'input> {
     move |token| match special(reader.path(), cursor, error) {
         Ok((cursor, _)) => token.add(parse_node(reader, cursor, indent + 1)),
         Err(error) => Err((token, error)),
@@ -43,7 +43,7 @@ pub(crate) fn parse_list_one<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let f = parse_list_item(reader, cursor, indent, FailedDetermineType);
         make::list(cursor.mark, f)(token)
@@ -54,7 +54,7 @@ pub(crate) fn parse_list<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
@@ -82,7 +82,7 @@ pub(crate) fn parse_list<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::MakeError,
+        marked::ParseError,
         Error::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;
@@ -121,7 +121,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }
@@ -174,7 +174,7 @@ mod tests {
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, ExpectedListItem))
+                Err(ParseError::new_with(error_mark, path, ExpectedListItem))
             );
         }
         {
@@ -183,7 +183,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, FailedDetermineType))
+                Err(ParseError::new_with(error_mark, path, FailedDetermineType))
             );
         }
     }

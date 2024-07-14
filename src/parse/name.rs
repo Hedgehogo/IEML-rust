@@ -5,7 +5,7 @@ use crate::data::name::NameRef;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, LexResult},
+        marked::{ParseError, LexResult},
         Error::FailedDetermineType,
     },
     utils::combinator::parse::match_name,
@@ -27,7 +27,7 @@ pub(crate) fn name<'input>(
         FailedDetermineType
     };
 
-    Err(MakeError::new_with(cursor.mark, path, error_reason))
+    Err(ParseError::new_with(cursor.mark, path, error_reason))
 }
 
 #[cfg(test)]
@@ -74,15 +74,15 @@ mod tests {
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), true),
-            Err(MakeError::new_with(begin_mark, path, ImpermissibleSpace))
+            Err(ParseError::new_with(begin_mark, path, ImpermissibleSpace))
         );
         assert_eq!(
             name(path, ("\tname", begin_mark).into(), true),
-            Err(MakeError::new_with(begin_mark, path, ImpermissibleTab))
+            Err(ParseError::new_with(begin_mark, path, ImpermissibleTab))
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), false),
-            Err(MakeError::new_with(begin_mark, path, FailedDetermineType))
+            Err(ParseError::new_with(begin_mark, path, FailedDetermineType))
         );
     }
 }

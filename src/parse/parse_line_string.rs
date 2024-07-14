@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, LexResult},
+        marked::{ParseError, ParseResult, LexResult},
         Error::FailedDetermineType,
     },
     utils::combinator::{cursor::char, parse::match_line},
@@ -20,7 +20,7 @@ pub(crate) fn line_string<'input>(
             let (cursor, result) = match_line(cursor);
             Ok((cursor, result.into()))
         }
-        Err(_) => Err(MakeError::new_with(
+        Err(_) => Err(ParseError::new_with(
             cursor.mark,
             path,
             FailedDetermineType,
@@ -31,7 +31,7 @@ pub(crate) fn line_string<'input>(
 pub(crate) fn parse_line_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match line_string(path, cursor) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => Err((token, error)),
@@ -58,7 +58,7 @@ mod tests {
         );
         assert_eq!(
             line_string(path, (">hello", begin_mark).into()),
-            Err(MakeError::new_with(
+            Err(ParseError::new_with(
                 begin_mark,
                 path,
                 FailedDetermineType

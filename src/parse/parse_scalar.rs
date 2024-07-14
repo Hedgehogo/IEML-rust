@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::{
     cursor::Cursor,
-    error::{marked::MakeResult, Error::FailedDetermineType},
+    error::{marked::ParseResult, Error::FailedDetermineType},
     parse_classic_string::parse_classic_string,
     parse_line_string::parse_line_string,
     parse_not_escaped_string::parse_not_escaped_string,
@@ -15,7 +15,7 @@ pub(crate) fn parse_scalar<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let parsers: [fn(_, _, _, _) -> _; 3] = [
             |path, cursor, indent, token| {
@@ -50,7 +50,7 @@ pub(crate) fn parse_scalar<'input>(
 #[cfg(test)]
 mod tests {
     use super::super::error::{
-        marked::MakeError,
+        marked::ParseError,
         Error::{self, ExpectedTab, IncompleteString},
     };
     use crate::data::mark::Mark;
@@ -107,7 +107,7 @@ mod tests {
             let error_mark = Mark::new(0, 4);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
@@ -117,7 +117,7 @@ mod tests {
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, ExpectedTab))
+                Err(ParseError::new_with(error_mark, path, ExpectedTab))
             );
         }
         {
@@ -136,7 +136,7 @@ mod tests {
             let error_mark = Mark::new(1, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, ExpectedTab))
+                Err(ParseError::new_with(error_mark, path, ExpectedTab))
             );
         }
         {
@@ -145,7 +145,7 @@ mod tests {
             let error_mark = Mark::new(0, 6);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
         {
@@ -154,7 +154,7 @@ mod tests {
             let error_mark = Mark::new(0, 7);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(MakeError::new_with(error_mark, path, IncompleteString))
+                Err(ParseError::new_with(error_mark, path, IncompleteString))
             );
         }
     }

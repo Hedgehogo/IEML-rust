@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeMapResult, MakeResult, LexResult},
+        marked::{ParseError, ParseMapResult, ParseResult, LexResult},
         Error,
     },
     parse_map::parse_map_item,
@@ -25,7 +25,7 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
         }
         Err(_) => {
             let error_reason = Error::FailedDetermineType;
-            Err(MakeError::new_with(cursor.mark, path, error_reason))
+            Err(ParseError::new_with(cursor.mark, path, error_reason))
         }
     }
 }
@@ -34,7 +34,7 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
+) -> impl FnOnce(make::MapToken) -> ParseMapResult<'_, 'input> {
     move |token| {
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
@@ -59,7 +59,7 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     path: &'input Path,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| {
         let f = move |token, reader: &R, inner_cursor: Cursor<'_>| {
             /*
@@ -79,7 +79,7 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
             Ok(i) => i,
             Err(token) => {
                 let error_reason = Error::NonexistentFile;
-                let error = MakeError::new_with(cursor.mark, reader.path(), error_reason);
+                let error = ParseError::new_with(cursor.mark, reader.path(), error_reason);
                 Err((token, error))
             }
         }
@@ -90,7 +90,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
-) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+) -> impl FnOnce(make::Token) -> ParseResult<'_, 'input> {
     move |token| match path(reader.path(), cursor) {
         Ok((new_cursor, path)) => {
             let anchors = parse_anchors(reader, new_cursor, indent);
@@ -106,7 +106,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::{
-        error::{marked::MakeError, Error},
+        error::{marked::ParseError, Error},
         read_file::{ReadFile, ReadResult},
     };
     use crate::data::{data::Data, mark::Mark, name::NameRef};
@@ -161,7 +161,7 @@ mod tests {
         begin_mark: Mark,
         reader: &'input Reader,
         files: &'input Files,
-    ) -> Result<(Data, Cursor<'input>), MakeError> {
+    ) -> Result<(Data, Cursor<'input>), ParseError> {
         let cursor = (files.get(reader.path).unwrap().as_str(), begin_mark).into();
         let data_f = parse_file(reader, cursor, 2);
         make::make(begin_mark, data_f)
@@ -240,7 +240,7 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 parse(begin_mark, &reader, &files),
-                Err(MakeError::new_with(
+                Err(ParseError::new_with(
                     error_mark,
                     path,
                     Error::NonexistentFile
@@ -256,7 +256,7 @@ mod tests {
             let error_mark = Mark::new(1, 2);
             assert_eq!(
                 parse(begin_mark, &reader, &files),
-                Err(MakeError::new_with(error_mark, path, Error::ExpectedMapKey))
+                Err(ParseError::new_with(error_mark, path, Error::ExpectedMapKey))
             );
         }
     }
