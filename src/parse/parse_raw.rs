@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error::FailedDetermineType,
     },
 };
@@ -14,7 +14,7 @@ use nom::{character::complete::*, combinator::recognize};
 pub(crate) fn raw<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, String> {
+) -> LexResult<'input, String> {
     let match_special = many1_count(none_of("\"\n<>"));
     match recognize::<_, _, nom::error::Error<_>, _>(match_special)(cursor.input) {
         Ok((input, result)) => {

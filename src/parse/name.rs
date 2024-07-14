@@ -5,7 +5,7 @@ use crate::data::name::NameRef;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, ParseResult},
+        marked::{MakeError, LexResult},
         Error::FailedDetermineType,
     },
     utils::combinator::parse::match_name,
@@ -15,7 +15,7 @@ pub(crate) fn name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     line_ending: bool,
-) -> ParseResult<'input, (NameRef<'input>, bool)> {
+) -> LexResult<'input, (NameRef<'input>, bool)> {
     let (output, (result, ending)) = match_name(cursor);
 
     let error_reason = if line_ending || ending {

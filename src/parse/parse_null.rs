@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error::FailedDetermineType,
     },
 };
@@ -18,7 +18,7 @@ use nom::{
 pub(crate) fn null<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, ()> {
+) -> LexResult<'input, ()> {
     let match_special = tuple((tag("null"), opt(char(' '))));
     match recognize::<_, _, nom::error::Error<_>, _>(match_special)(cursor.input) {
         Ok((input, result)) => {

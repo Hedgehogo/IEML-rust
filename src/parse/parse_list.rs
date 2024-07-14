@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeListResult, MakeResult, ParseResult},
+        marked::{MakeError, MakeListResult, MakeResult, LexResult},
         Error::{self, ExpectedListItem, FailedDetermineType},
     },
     parse_node::parse_node,
@@ -20,7 +20,7 @@ fn special<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error: Error,
-) -> ParseResult<'input, ()> {
+) -> LexResult<'input, ()> {
     match tuple((char('-'), skip_space))(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
         Err(_) => Err(MakeError::new_with(cursor.mark, path, error)),

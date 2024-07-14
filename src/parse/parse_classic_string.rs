@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
     utils::combinator::{
@@ -18,7 +18,7 @@ fn analyze<'input>(
     cursor: Cursor<'input>,
     indent: usize,
     capacity: usize,
-) -> ParseResult<'input, usize> {
+) -> LexResult<'input, usize> {
     let analyze_newline = |cursor, offset| match skip_indent(indent)(cursor) {
         Ok((cursor, _)) => analyze(path, cursor, indent, capacity + offset),
         Err(_) => Err(MakeError::new_with(cursor.mark, path, ExpectedTab)),
@@ -104,7 +104,7 @@ pub(crate) fn classic_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
-) -> ParseResult<'input, String> {
+) -> LexResult<'input, String> {
     match char('\"')(cursor) {
         Ok((cursor, _)) => {
             let (output, capacity) = analyze(path, cursor, indent, 0)?;

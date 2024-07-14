@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error,
     },
     name::name,
@@ -16,7 +16,7 @@ use crate::data::{make, name::NameRef};
 fn anchor_name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, (NameRef<'input>, bool)> {
+) -> LexResult<'input, (NameRef<'input>, bool)> {
     match char('@')(cursor) {
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {

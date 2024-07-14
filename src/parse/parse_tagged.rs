@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error,
     },
     name::name,
@@ -14,7 +14,7 @@ use super::{
 use crate::data::{make, name::NameRef};
 use nom::sequence::tuple;
 
-fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'input, NameRef<'input>> {
+fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, NameRef<'input>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;

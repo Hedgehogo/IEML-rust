@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error::FailedDetermineType,
     },
     utils::combinator::{cursor::char, parse::match_line},
@@ -14,7 +14,7 @@ use nom::sequence::tuple;
 pub(crate) fn line_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> ParseResult<'input, String> {
+) -> LexResult<'input, String> {
     match tuple((char('>'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);

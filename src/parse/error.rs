@@ -61,35 +61,6 @@ pub mod marked {
     pub type MakeResult<'maker, 'input> = marked::MakeResult<'maker, Cursor<'input>, super::Error>;
     pub type MakeListResult<'maker, 'input> = marked::MakeListResult<'maker, Cursor<'input>, super::Error>;
     pub type MakeMapResult<'maker, 'input> = marked::MakeMapResult<'maker, Cursor<'input>, super::Error>;
-    /*
-       trait Isolate {
-           type Error;
-           type Output;
-
-           fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error>;
-       }
-
-       impl<O, E> Isolate for Result<O, E> {
-           type Error = E;
-
-           type Output = O;
-
-           fn isolate<F: FnOnce(&Error) -> bool>(self, f: F) -> Result<Result<Output, Error>, Error> {
-               match self {
-                   Ok(i) => Ok(Ok(i)),
-                   Err(e) => if f(&e) {
-                       Err(e)
-                   } else {
-                       Ok(Err(e))
-                   }
-               }
-           }
-       }
-
-       pub(crate) fn is_failed<'input>(e: &(Token, MakeError)) -> bool {
-           let e = &e.1.data.reason;
-           matches!(e, error::MakeErrorReason::Parse(super::Error::FailedDetermineType))
-       }
-    */
-    pub type ParseResult<'input, T> = Result<(Cursor<'input>, T), MakeError>;
+    
+    pub type LexResult<'input, T> = Result<(Cursor<'input>, T), MakeError>;
 }

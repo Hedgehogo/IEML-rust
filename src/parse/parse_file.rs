@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeMapResult, MakeResult, ParseResult},
+        marked::{MakeError, MakeMapResult, MakeResult, LexResult},
         Error,
     },
     parse_map::parse_map_item,
@@ -17,7 +17,7 @@ use super::{
 use crate::data::make;
 use nom::sequence::tuple;
 
-fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'input, &'input Path> {
+fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, &'input Path> {
     match tuple((char('<'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);

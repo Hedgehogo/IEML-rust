@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeMapResult, MakeResult, ParseResult},
+        marked::{MakeMapResult, MakeResult, LexResult},
         Error::{self, ExpectedMapKey, FailedDetermineType},
     },
     name::name,
@@ -20,7 +20,7 @@ fn key<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error: Error,
-) -> ParseResult<'input, NameRef<'input>> {
+) -> LexResult<'input, NameRef<'input>> {
     match name(path, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {

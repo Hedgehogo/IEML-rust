@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeResult, LexResult},
         Error::{ExpectedTab, FailedDetermineType, IncompleteString},
     },
     utils::combinator::{
@@ -50,7 +50,7 @@ pub(crate) fn not_escaped_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
-) -> ParseResult<'input, String> {
+) -> LexResult<'input, String> {
     let (cursor, _) = tuple((char('>'), char('>')))(cursor)
         .map_err(|_| MakeError::new_with(cursor.mark, path, FailedDetermineType))?;
     let cursor = skip_blank_line(cursor);
