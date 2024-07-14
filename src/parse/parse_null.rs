@@ -45,15 +45,12 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::*;
 
     #[test]
     fn test_null() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         assert_eq!(
             null(path, ("null", begin_mark).into()),
             Ok((("", Mark::new(0, 4)).into(), ()))

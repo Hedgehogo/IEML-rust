@@ -86,15 +86,13 @@ mod tests {
         Error::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;
-    use std::path::PathBuf;
-
+    
     use super::*;
 
     #[test]
     fn test_parse_list_one() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = "- null";
             let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
@@ -131,8 +129,7 @@ mod tests {
     #[test]
     fn test_parse_list() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = "- null";
             let data_f = parse_list(path, (input, begin_mark).into(), 2);

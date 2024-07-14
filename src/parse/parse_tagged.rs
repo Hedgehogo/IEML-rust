@@ -48,8 +48,7 @@ mod tests {
         Error::{self, FailedDetermineType},
     };
     use crate::data::mark::Mark;
-    use std::path::PathBuf;
-
+    
     use super::*;
 
     fn name(i: &str) -> NameRef {
@@ -59,8 +58,7 @@ mod tests {
     #[test]
     fn test_parse_tagged() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = "= tag: null";
             let data_f = parse_tagged(path, (input, begin_mark).into(), 2);

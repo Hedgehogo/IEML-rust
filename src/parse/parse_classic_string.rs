@@ -133,8 +133,6 @@ pub(crate) fn parse_classic_string<'input>(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use crate::data::mark::Mark;
 
     use super::*;
@@ -142,8 +140,7 @@ mod tests {
     #[test]
     fn test_classic_string() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = r#""hello""#;
             assert_eq!(

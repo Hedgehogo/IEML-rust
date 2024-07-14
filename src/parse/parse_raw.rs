@@ -41,15 +41,12 @@ pub(crate) fn parse_raw<'input>(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::*;
 
     #[test]
     fn test_raw() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         assert_eq!(
             raw(path, ("hello", begin_mark).into()),
             Ok((("", Mark::new(0, 5)).into(), "hello".into()))

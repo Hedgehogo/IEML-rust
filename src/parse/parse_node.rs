@@ -14,14 +14,13 @@ pub(crate) fn parse_node<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use crate::data::mark::Mark;
-    use std::path::PathBuf;
+    use std::path::Path;
 
     use super::*;
 
     #[test]
     fn test_parse_node() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
     }
 }

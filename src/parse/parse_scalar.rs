@@ -54,15 +54,13 @@ mod tests {
         Error::{self, ExpectedTab, IncompleteString},
     };
     use crate::data::mark::Mark;
-    use std::path::PathBuf;
 
     use super::*;
 
     #[test]
     fn test_parse_scalar() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = r#"null # hello"#;
             let data_f = parse_scalar(path, (input, begin_mark).into(), 2);

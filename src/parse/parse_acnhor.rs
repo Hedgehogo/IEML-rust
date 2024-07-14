@@ -45,8 +45,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
 mod tests {
     use super::super::error::Error::{self, FailedDetermineType};
     use crate::data::mark::Mark;
-    use std::path::PathBuf;
-
+    
     use super::*;
 
     fn name(i: &str) -> NameRef {
@@ -56,8 +55,7 @@ mod tests {
     #[test]
     fn test_parse_anchor() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         {
             let input = "@acnhor: null\nhello";
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);

@@ -32,8 +32,6 @@ pub(crate) fn name<'input>(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use crate::data::mark::Mark;
 
     use super::super::error::Error::{ImpermissibleSpace, ImpermissibleTab};
@@ -47,8 +45,7 @@ mod tests {
     #[test]
     fn test_name() {
         let begin_mark = Mark::new(0, 0);
-        let path = PathBuf::from("test.ieml");
-        let path = path.as_path();
+        let path = Path::new("test.ieml");
         assert_eq!(
             name(path, ("name: value", begin_mark).into(), true),
             Ok((("value", Mark::new(0, 6)).into(), (name_ref("name"), true)))
