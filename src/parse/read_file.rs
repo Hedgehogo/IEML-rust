@@ -21,7 +21,7 @@ pub type ReadResult<'maker, R> = Result<R, Token<'maker>>;
 pub trait ReadFile {
     fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: for<'input> FnOnce(Token<'maker>, &Self, Cursor<'input>) -> R;
+        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R;
 
     fn path(&self) -> &Path;
 }
@@ -29,7 +29,7 @@ pub trait ReadFile {
 impl ReadFile for Path {
     fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: for<'input> FnOnce(Token<'maker>, &Self, Cursor<'input>) -> R,
+        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R,
     {
         let (path, input) = match read_file(self, path) {
             Some(i) => i,

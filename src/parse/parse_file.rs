@@ -55,14 +55,16 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
     }
 }
 
-fn parse_child<'input, 'path, R: ReadFile + ?Sized>(
+fn parse_child<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
-    path: &'path Path,
+    path: PathBuf,
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| {
-        let f = move |token, reader: &R, cursor| parse_node(reader, cursor, 0)(token);
-        match reader.child(token, path, f) {
+        let result = reader.child(token, path.as_path(), move |token, reader: &R, cursor| {
+            parse_node(reader, cursor, 0)(token)
+        });
+        match result {
             Ok(i) => i,
             Err(token) => {
                 let error_reason = Error::NonexistentFile;
@@ -82,7 +84,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
         Ok((new_cursor, path)) => {
             let anchors = parse_anchors(reader, new_cursor, indent);
 
-            let f = parse_child(reader, cursor, path.as_path());
+            let f = parse_child(reader, cursor, path.clone());
 
             make::file(cursor.mark, path, anchors, f)(token)
         }
