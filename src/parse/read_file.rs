@@ -7,12 +7,21 @@ use crate::data::make::maker::Token;
 
 use super::cursor::Cursor;
 
+fn read_file(parent: &Path, child: &Path) -> Option<(PathBuf, String)> {
+    let read = |path| fs::read_to_string(&path).map(|i| (path, i));
+
+    let canonical_path = child.canonicalize().ok()?;
+    let relative_path: PathBuf = [parent.parent()?, canonical_path.as_path()].iter().collect();
+
+    read(relative_path).or_else(|_| read(canonical_path)).ok()
+}
+
 pub type ReadResult<'maker, R> = Result<R, Token<'maker>>;
 
 pub trait ReadFile {
     fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R;
+        F: for<'input> FnOnce(Token<'maker>, &Self, Cursor<'input>) -> R;
 
     fn path(&self) -> &Path;
 }
@@ -20,21 +29,9 @@ pub trait ReadFile {
 impl ReadFile for Path {
     fn child<'maker, F, R>(&self, token: Token<'maker>, path: &Path, f: F) -> ReadResult<'maker, R>
     where
-        F: for<'input> FnOnce(Token<'maker>, &'input Self, Cursor<'input>) -> R,
+        F: for<'input> FnOnce(Token<'maker>, &Self, Cursor<'input>) -> R,
     {
-        let read = |path| fs::read_to_string(&path).map(|i| (path, i));
-
-        let canonical_path = match path.canonicalize().ok() {
-            Some(i) => i,
-            None => return Err(token),
-        };
-
-        let relative_path: PathBuf = match self.parent() {
-            Some(i) => [i, canonical_path.as_path()].iter().collect(),
-            None => return Err(token),
-        };
-
-        let (path, input) = match read(relative_path).or_else(|_| read(canonical_path)).ok() {
+        let (path, input) = match read_file(self, path) {
             Some(i) => i,
             None => return Err(token),
         };

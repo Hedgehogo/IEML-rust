@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use super::{
     cursor::Cursor,
     error::{
-        marked::{MakeError, MakeResult, ParseResult},
+        marked::{MakeError, MakeMapResult, MakeResult, ParseResult},
         Error,
     },
     parse_map::parse_map_item,
@@ -30,6 +30,49 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> ParseResult<'inpu
     }
 }
 
+fn parse_anchors<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
+    cursor: Cursor<'input>,
+    indent: usize,
+) -> impl FnOnce(make::MapToken) -> MakeMapResult<'_, 'input> {
+    move |token| {
+        let skip_whitespace = |cursor| {
+            let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
+            let (cursor, _) = skip_indent(indent)(cursor).ok()?;
+            Some(cursor)
+        };
+
+        let (mut cursor, mut token) = (cursor, token);
+        loop {
+            (token, cursor) = match skip_whitespace(cursor) {
+                Some(cursor) => {
+                    let error_reason = Error::ExpectedMapKey;
+                    parse_map_item(reader, cursor, indent, error_reason)(token)?
+                }
+                None => return Ok((token, cursor)),
+            }
+        }
+    }
+}
+
+fn parse_child<'input, 'path, R: ReadFile + ?Sized>(
+    reader: &'input R,
+    cursor: Cursor<'input>,
+    path: &'path Path,
+) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
+    move |token| {
+        let f = move |token, reader: &R, cursor| parse_node(reader, cursor, 0)(token);
+        match reader.child(token, path, f) {
+            Ok(i) => i,
+            Err(token) => {
+                let error_reason = Error::NonexistentFile;
+                let error = MakeError::new_with(cursor.mark, path, error_reason);
+                Err((token, error))
+            }
+        }
+    }
+}
+
 pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
@@ -37,43 +80,11 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 ) -> impl FnOnce(make::Token) -> MakeResult<'_, 'input> {
     move |token| match path(reader.path(), cursor) {
         Ok((new_cursor, path)) => {
-            let mark = cursor.mark;
+            let anchors = parse_anchors(reader, new_cursor, indent);
 
-            let reader_map = reader.clone();
-            let acnhors = move |token| {
-                let skip_whitespace = |cursor| {
-                    let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
-                    let (cursor, _) = skip_indent(indent)(cursor).ok()?;
-                    Some(cursor)
-                };
+            let f = parse_child(reader, cursor, path.as_path());
 
-                let (mut cursor, mut token) = (new_cursor, token);
-                loop {
-                    (token, cursor) = match skip_whitespace(cursor) {
-                        Some(cursor) => {
-                            let reader = reader_map.clone();
-                            let error_reason = Error::ExpectedMapKey;
-                            parse_map_item(reader, cursor, indent, error_reason)(token)?
-                        }
-                        None => return Ok((token, cursor)),
-                    }
-                }
-            };
-
-            let f = move |token, reader: &R, cursor| {
-                let path = reader.path().to_path_buf();
-                let f = parse_node(reader, cursor, 0);
-                make::file(cursor.mark, path, acnhors, f)(token)
-            };
-
-            match reader.child(token, path.as_path(), f) {
-                Ok(i) => i,
-                Err(token) => {
-                    let error_reason = Error::NonexistentFile;
-                    let error = MakeError::new_with(cursor.mark, path, error_reason);
-                    Err((token, error))
-                }
-            }
+            make::file(cursor.mark, path, anchors, f)(token)
         }
         Err(error) => Err((token, error)),
     }
@@ -123,7 +134,7 @@ mod tests {
                     let reader = Reader::new(self.files, path.to_path_buf());
                     Ok(f(token, &reader, cursor))
                 }
-                None => Err(token)
+                None => Err(token),
             }
         }
 
