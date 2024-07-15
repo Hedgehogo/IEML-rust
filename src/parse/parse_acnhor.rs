@@ -4,7 +4,7 @@ use super::{
     cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
     utils::combinator::cursor::char,
 };
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::{make, name::NameRef};
 
 fn anchor_name<'input>(
@@ -14,8 +14,8 @@ fn anchor_name<'input>(
     match char('@')(cursor) {
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {
-            let reason = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, reason))
+            let kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, kind))
         }
     }
 }
@@ -31,7 +31,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
             make::take_anchor(cursor.mark, name, f)(token)
         }
         Ok((output, (name, false))) => make::get_anchor(cursor.mark, output, name)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

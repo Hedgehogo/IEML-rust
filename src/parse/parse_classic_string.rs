@@ -7,7 +7,7 @@ use super::{
         parse::{skip_blank_line, skip_indent},
     },
 };
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{Error, ErrorKind, LexResult, RateError, Result};
 use crate::data::make;
 
 fn analyze<'input>(
@@ -121,7 +121,12 @@ pub(crate) fn parse_classic_string<'input>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match classic_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => match error.data.kind {
+            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+                Err(RateError::Recoverable((token, error)))
+            }
+            _ => Err(RateError::Unrecoverable((token.error(), error))),
+        },
     }
 }
 

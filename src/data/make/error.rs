@@ -37,8 +37,8 @@ pub struct Error<E: std::error::Error + PartialEq + Eq> {
 }
 
 impl<E: std::error::Error + PartialEq + Eq> Error<E> {
-    pub fn new(path: PathBuf, reason: ErrorKind<E>) -> Self {
-        Self { path, kind: reason }
+    pub fn new(path: PathBuf, kind: ErrorKind<E>) -> Self {
+        Self { path, kind: kind }
     }
 }
 
@@ -61,33 +61,64 @@ impl<E: std::error::Error + PartialEq + Eq> std::error::Error for Error<E> {}
 // Add after specializations appear
 /*impl<F, I: From<F>> From<ParseError<F>> for ParseError<I> {
     fn from(value: ParseError<F>) -> Self {
-        ParseError::new(value.path, value.reason.into())
+        ParseError::new(value.path, value.kind.into())
     }
 }*/
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum RateError<E1, E2> {
+    Recoverable(E1),
+    Unrecoverable(E2),
+}
+
+impl<E1, E2> Display for RateError<E1, E2>
+where
+    E1: Display,
+    E2: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RateError::Recoverable(i) => write!(f, "Recoverable: {}", i),
+            RateError::Unrecoverable(i) => write!(f, "Unrecoverable: {}", i),
+        }
+    }
+}
+
+impl<E1, E2> std::error::Error for RateError<E1, E2>
+where
+    E1: std::error::Error,
+    E2: std::error::Error,
+{
+}
 
 pub mod marked {
     use super::super::{
         super::{error::marked::WithMarkError, mark::Mark},
-        maker::{ListToken, MapToken, Token, UsedToken},
+        maker::{ListToken, MapToken, Token, UsedToken, ErrorToken},
     };
     use std::path::PathBuf;
     use std::result;
 
     pub type Error<E> = WithMarkError<super::Error<E>>;
+    pub type RateError<'maker, E, R> =
+        super::RateError<(R, Error<E>), (ErrorToken<'maker>, Error<E>)>;
     pub type Result<'maker, O, E> =
-        result::Result<(UsedToken<'maker>, O), (Token<'maker>, Error<E>)>;
+        result::Result<(UsedToken<'maker>, O), RateError<'maker, E, Token<'maker>>>;
     pub type ListResult<'maker, O, E> =
-        result::Result<(ListToken<'maker>, O), (ListToken<'maker>, Error<E>)>;
+        result::Result<(ListToken<'maker>, O), RateError<'maker, E, ListToken<'maker>>>;
     pub type MapResult<'maker, O, E> =
-        result::Result<(MapToken<'maker>, O), (MapToken<'maker>, Error<E>)>;
+        result::Result<(MapToken<'maker>, O), RateError<'maker, E, MapToken<'maker>>>;
+
+    pub(in super::super) type ChildResult<'maker, R, E> =
+        result::Result<(Token<'maker>, R), RateError<'maker, E, Token<'maker>>>;
 
     impl<E: std::error::Error + PartialEq + Eq> Error<E> {
-        pub fn new_with<P, R>(mark: Mark, path: P, reason: R) -> Self
+        pub fn new_with<P, R>(mark: Mark, path: P, kind: R) -> Self
         where
             P: Into<PathBuf>,
             R: Into<super::ErrorKind<E>>,
         {
-            Self::new(mark, super::Error::new(path.into(), reason.into()))
+            Self::new(mark, super::Error::new(path.into(), kind.into()))
         }
     }
 }

@@ -9,7 +9,7 @@ use super::{
         parse::{skip_blank_lines_ln, skip_indent, skip_space},
     },
 };
-use super::{Error, ErrorKind, LexResult, ListResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, ListResult, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -32,7 +32,7 @@ fn parse_list_item<'input, R: ReadFile + ?Sized>(
 ) -> impl FnOnce(make::ListToken) -> ListResult<'_, 'input> {
     move |token| match special(reader.path(), cursor, error_kind) {
         Ok((cursor, _)) => token.add(parse_node(reader, cursor, indent + 1)),
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

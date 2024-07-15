@@ -8,14 +8,14 @@ use std::{
 #[derive(PartialEq, Eq, Debug)]
 pub struct FailedDeserializeError<E: Error + PartialEq + Eq> {
     type_name: &'static str,
-    reason: Box<marked::DeserializeError<E>>,
+    kind: Box<marked::DeserializeError<E>>,
 }
 
 impl<E: Error + PartialEq + Eq> FailedDeserializeError<E> {
-    pub fn new<T>(reason: Box<marked::DeserializeError<E>>) -> Self {
+    pub fn new<T>(kind: Box<marked::DeserializeError<E>>) -> Self {
         Self {
             type_name: type_name::<T>(),
-            reason,
+            kind,
         }
     }
 
@@ -23,14 +23,14 @@ impl<E: Error + PartialEq + Eq> FailedDeserializeError<E> {
         self.type_name
     }
 
-    pub fn get_reason(&self) -> &Box<marked::DeserializeError<E>> {
-        &self.reason
+    pub fn get_kind(&self) -> &Box<marked::DeserializeError<E>> {
+        &self.kind
     }
 }
 
 impl<E: Error + PartialEq + Eq> Display for FailedDeserializeError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match *self.reason {
+        match *self.kind {
             marked::DeserializeError::Failed => {
                 write!(f, "Failed to convert view to '{}'.", self.get_type_name())
             }
@@ -38,7 +38,7 @@ impl<E: Error + PartialEq + Eq> Display for FailedDeserializeError<E> {
                 f,
                 "Failed to convert view to '{}', because:\n{}",
                 self.get_type_name(),
-                *self.reason
+                *self.kind
             ),
         }
     }

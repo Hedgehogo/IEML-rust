@@ -4,7 +4,7 @@ use super::{
     cursor::Cursor,
     utils::combinator::{cursor::char, parse::match_line},
 };
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -30,7 +30,7 @@ pub(crate) fn parse_line_string<'input>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match line_string(path, cursor) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

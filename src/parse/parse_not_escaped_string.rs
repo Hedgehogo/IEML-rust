@@ -7,7 +7,7 @@ use super::{
         parse::{match_line, skip_blank_line, skip_indent, skip_line_ending},
     },
 };
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -75,7 +75,12 @@ pub(crate) fn parse_not_escaped_string<'input>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token: make::Token| match not_escaped_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => match error.data.kind {
+            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+                Err(RateError::Recoverable((token, error)))
+            }
+            _ => Err(RateError::Unrecoverable((token.error(), error))),
+        },
     }
 }
 

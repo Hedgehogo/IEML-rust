@@ -58,6 +58,8 @@ pub mod marked {
     use crate::data::make;
     use std::result;
 
+    pub use crate::data::make::RateError;
+
     pub type Error = make::Error<super::ErrorKind>;
     pub type Result<'maker, 'input> = make::Result<'maker, Cursor<'input>, super::ErrorKind>;
     pub type ListResult<'maker, 'input> = make::ListResult<'maker, Cursor<'input>, super::ErrorKind>;

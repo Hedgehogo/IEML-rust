@@ -7,7 +7,7 @@ use super::{
     read_file::ReadFile,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
-use super::{ErrorKind, LexResult, MapResult, Result};
+use super::{ErrorKind, LexResult, MapResult, RateError, Result};
 use crate::data::{make, name::NameRef};
 
 fn key<'input>(
@@ -37,7 +37,7 @@ pub(crate) fn parse_map_item<'input, R: ReadFile + ?Sized>(
             let f = parse_node(reader, new_cursor, indent + 1);
             token.add(cursor.mark, key, f)
         }
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

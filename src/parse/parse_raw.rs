@@ -4,7 +4,7 @@ use super::{
     cursor::Cursor,
     utils::combinator::cursor::{none_of, recognize},
 };
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::make;
 use nom::multi::many1_count;
 
@@ -13,8 +13,8 @@ pub(crate) fn raw<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResu
     match recognize(match_special)(cursor) {
         Ok((input, result)) => Ok((input, result.input.into())),
         Err(_) => {
-            let reason = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, reason))
+            let kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, kind))
         }
     }
 }
@@ -25,7 +25,7 @@ pub(crate) fn parse_raw<'input>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match raw(path, cursor) {
         Ok((output, raw)) => make::raw(cursor.mark, output, raw)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

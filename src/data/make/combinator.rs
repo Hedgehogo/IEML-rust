@@ -68,10 +68,18 @@ where
                 Ok((used_token, output))
             }
 
-            Err((list_token, error)) => {
-                let (token, _) = list_token.split();
-                Err((token, error))
-            }
+            Err(error) => match error {
+                RateError::Recoverable((list_token, error)) => {
+                    let (token, result) = list_token.split();
+                    if result.is_empty() {
+                        Err(RateError::Recoverable((token, error)))
+                    } else {
+                        Err(RateError::Unrecoverable((token.error(), error)))
+                    }
+                }
+
+                RateError::Unrecoverable(error) => Err(RateError::Unrecoverable(error)),
+            },
         };
     }
 }
@@ -92,10 +100,18 @@ where
                 Ok((used_token, output))
             }
 
-            Err((map_token, error)) => {
-                let (token, _) = map_token.split();
-                Err((token, error))
-            }
+            Err(error) => match error {
+                RateError::Recoverable((map_token, error)) => {
+                    let (token, result) = map_token.split();
+                    if result.is_empty() {
+                        Err(RateError::Recoverable((token, error)))
+                    } else {
+                        Err(RateError::Unrecoverable((token.error(), error)))
+                    }
+                }
+
+                RateError::Unrecoverable(error) => Err(RateError::Unrecoverable(error)),
+            },
         };
     }
 }
@@ -137,32 +153,47 @@ where
         let ((token, file_anchors), output) = match anchors(map_token) {
             Ok((map_token, output)) => (map_token.split(), output),
 
-            Err((map_token, error)) => {
-                let (token, _) = map_token.split();
-                return Err((token, error));
-            }
+            Err(error) => match error {
+                RateError::Recoverable((map_token, error)) => {
+                    let (token, result) = map_token.split();
+                    return if result.is_empty() {
+                        Err(RateError::Recoverable((token, error)))
+                    } else {
+                        Err(RateError::Unrecoverable((token.error(), error)))
+                    };
+                }
+
+                RateError::Unrecoverable(error) => {
+                    return Err(RateError::Unrecoverable(error));
+                }
+            },
         };
 
-        let (token, result) = token.child(|token| match f(token) {
+        let result = token.child(|token| match f(token) {
             Ok((used_token, _)) => {
                 let (token, index) = used_token.split();
                 let (token, anchors) = token.anchors();
                 let file_anchors = MapNode::new(file_anchors);
                 let file = FileNode::new(path, index, anchors, file_anchors, None);
-                (token, Ok(file))
+                Ok((token, file))
             }
+            Err(error) => match error {
+                RateError::Recoverable((token, error)) => {
+                    if file_anchors.is_empty() {
+                        Err(RateError::Recoverable((token, error)))
+                    } else {
+                        Err(RateError::Unrecoverable((token.error(), error)))
+                    }
+                }
 
-            Err((token, error)) => (token, Err(error)),
+                RateError::Unrecoverable(error) => Err(RateError::Unrecoverable(error)),
+            },
         });
 
-        match result {
-            Ok(file) => {
-                let used_token = token.add_node(begin_mark, Node::File(file));
-                Ok((used_token, output))
-            }
-
-            Err(error) => Err((token, error)),
-        }
+        result.map(|(token, file)| {
+            let used_token = token.add_node(begin_mark, Node::File(file));
+            (used_token, output)
+        })
     }
 }
 
@@ -188,7 +219,7 @@ where
                     Ok((used_token, output))
                 }
 
-                Err(error) => Err(error),
+                Err(error) => Err(RateError::Recoverable(error)),
             }
         })
     }
@@ -217,8 +248,8 @@ where
 {
     let mut maker = Maker::new(PathBuf::new());
 
-    let (token, result) = Token::new(&mut maker).child(|token| match f(token) {
-        Ok((used_token, output)) => {
+    let result = Token::new(&mut maker).child(|token| {
+        f(token).map(|(used_token, output)| {
             let (token, index) = used_token.split();
             let (token, anchors) = token.anchors();
             let file = FileNode {
@@ -226,20 +257,22 @@ where
                 anchors,
                 ..Default::default()
             };
-            (token, Ok((file, output)))
-        }
-
-        Err((token, error)) => (token, Err(error)),
+            (token, (file, output))
+        })
     });
 
     match result {
-        Ok((file, output)) => {
+        Ok((token, (file, output))) => {
             let _ = token.add_node(begin_mark, Node::File(file));
             let mut data = maker.data();
             init(&mut data)?;
             Ok((data, output))
         }
-        Err(error) => Err(error),
+
+        Err(error) => match error {
+            RateError::Recoverable((_, error)) => Err(error),
+            RateError::Unrecoverable((_, error)) => Err(error),
+        },
     }
 }
 
@@ -263,7 +296,10 @@ where
             Ok((data, output))
         }
 
-        Err((_, error)) => Err(error),
+        Err(error) => match error {
+            RateError::Recoverable((_, error)) => Err(error),
+            RateError::Unrecoverable((_, error)) => Err(error),
+        },
     }
 }
 

@@ -10,7 +10,7 @@ use super::{
         parse::{match_line, skip_blank_lines_ln, skip_indent},
     },
 };
-use super::{Error, ErrorKind, LexResult, MapResult, Result};
+use super::{Error, ErrorKind, LexResult, MapResult, RateError, Result};
 use crate::data::make;
 use nom::sequence::tuple;
 
@@ -21,8 +21,8 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
             return Ok((cursor, Path::new(result)));
         }
         Err(_) => {
-            let error_reason = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, error_reason))
+            let error_kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, error_kind))
         }
     }
 }
@@ -43,8 +43,15 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
         loop {
             (token, cursor) = match skip_whitespace(cursor) {
                 Some(cursor) => {
-                    let error_reason = ErrorKind::ExpectedMapKey;
-                    parse_map_item(reader, cursor, indent, error_reason)(token)?
+                    let error_kind = ErrorKind::ExpectedMapKey;
+                    parse_map_item(reader, cursor, indent, error_kind)(token).map_err(|error| {
+                        match error {
+                            RateError::Recoverable((token, error)) => {
+                                RateError::Unrecoverable((token.error(), error))
+                            }
+                            RateError::Unrecoverable(error) => RateError::Unrecoverable(error),
+                        }
+                    })?
                 }
                 None => return Ok((token, cursor)),
             }
@@ -59,25 +66,21 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
         let f = move |token, reader: &R, inner_cursor: Cursor<'_>| {
-            /*
-            let (inner_cursor, _) = skip_blank_lines_ln(inner_cursor).unwrap_or((inner_cursor, 0));
             let (token, inner_cursor) = parse_node(reader, inner_cursor, 0)(token)?;
             let (inner_cursor, _) = skip_blank_lines_ln(inner_cursor).unwrap_or((inner_cursor, 0));
             if inner_cursor.input.len() != 0 {
-                let error_reason = Error::IncompleteDocument;
-                let error = MakeError::new_with(inner_cursor.mark, reader.path(), error_reason);
-                return Err((token, error));
+                let error_kind = ErrorKind::IncompleteDocument;
+                let error = Error::new_with(inner_cursor.mark, reader.path(), error_kind);
+                return Err(RateError::Unrecoverable((token.error(), error)));
             }
             Ok((token, cursor))
-             */
-            parse_node(reader, inner_cursor, 0)(token).map(|(token, _)| (token, cursor))
         };
         match reader.child(token, path, f) {
             Ok(i) => i,
             Err(token) => {
-                let error_reason = ErrorKind::NonexistentFile;
-                let error = Error::new_with(cursor.mark, reader.path(), error_reason);
-                Err((token, error))
+                let error_kind = ErrorKind::NonexistentFile;
+                let error = Error::new_with(cursor.mark, reader.path(), error_kind);
+                Err(RateError::Unrecoverable((token.error(), error)))
             }
         }
     }
@@ -96,7 +99,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 
             make::file(cursor.mark, path.into(), anchors, f)(token)
         }
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 
@@ -251,6 +254,22 @@ mod tests {
             assert_eq!(
                 parse(begin_mark, &reader, &files),
                 Err(Error::new_with(error_mark, path, ErrorKind::ExpectedMapKey))
+            );
+        }
+        {
+            let files = Files::from([
+                (Path::new("test"), "< subtest".into()),
+                (Path::new("subtest"), "null\nhello".into()),
+            ]);
+            let reader = Reader::new(&files, path);
+            let error_mark = Mark::new(1, 0);
+            assert_eq!(
+                parse(begin_mark, &reader, &files),
+                Err(Error::new_with(
+                    error_mark,
+                    Path::new("subtest"),
+                    ErrorKind::IncompleteDocument
+                ))
             );
         }
     }

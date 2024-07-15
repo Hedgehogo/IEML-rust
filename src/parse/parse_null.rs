@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::cursor::Cursor;
-use super::{Error, ErrorKind, LexResult, Result};
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::{make, mark::Mark};
 use nom::{
     bytes::complete::*,
@@ -18,8 +18,8 @@ pub(crate) fn null<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexRes
             Ok(((input, new_mark).into(), ()))
         }
         Err(_) => {
-            let reason = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, reason))
+            let kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, kind))
         }
     }
 }
@@ -30,7 +30,7 @@ pub(crate) fn parse_null<'input, 'path: 'input>(
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| match null(path, cursor) {
         Ok((output, _)) => make::null(cursor.mark, output)(token),
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

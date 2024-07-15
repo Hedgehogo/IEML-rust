@@ -16,7 +16,7 @@ pub(crate) fn name<'input>(
 ) -> LexResult<'input, (NameRef<'input>, bool)> {
     let (output, (result, ending)) = match_name(cursor);
 
-    let error_reason = if line_ending || ending {
+    let error_kind = if line_ending || ending {
         match NameRef::new(result.input) {
             Ok(i) => return Ok((output, (i, ending))),
             Err(e) => e.into(),
@@ -25,7 +25,7 @@ pub(crate) fn name<'input>(
         FailedDetermineType
     };
 
-    Err(Error::new_with(cursor.mark, path, error_reason))
+    Err(Error::new_with(cursor.mark, path, error_kind))
 }
 
 #[cfg(test)]

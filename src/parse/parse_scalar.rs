@@ -5,7 +5,7 @@ use super::{
     parse_line_string::parse_line_string, parse_not_escaped_string::parse_not_escaped_string,
     parse_null::parse_null, parse_raw::parse_raw,
 };
-use super::{ErrorKind, Result};
+use super::{ErrorKind, RateError, Result};
 use crate::data::make;
 
 pub(crate) fn parse_scalar<'input>(
@@ -14,24 +14,24 @@ pub(crate) fn parse_scalar<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
-        let parsers: [fn(_, _, _, _) -> _; 3] = [
+        let parsers: [fn(_, _, _, _) -> _; 4] = [
+            |path, cursor, _indent, token| parse_null(path, cursor)(token),
             |path, cursor, indent, token| parse_classic_string(path, cursor, indent)(token),
             |path, cursor, _indent, token| parse_line_string(path, cursor)(token),
             |path, cursor, indent, token| parse_not_escaped_string(path, cursor, indent)(token),
         ];
 
-        let token = match parse_null(path, cursor)(token) {
-            Ok(i) => return Ok(i),
-            Err((token, _)) => token,
-        };
-
         let mut token = token;
         for parse in parsers {
             token = match parse(path, cursor, indent, token) {
                 Ok(i) => return Ok(i),
-                Err((token, i)) => match &i.data.kind {
-                    make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => token,
-                    _ => return Err((token, i)),
+
+                Err(error) => match error {
+                    RateError::Recoverable((token, _)) => token,
+
+                    RateError::Unrecoverable(error) => {
+                        return Err(RateError::Unrecoverable(error));
+                    }
                 },
             };
         }

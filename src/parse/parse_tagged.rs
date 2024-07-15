@@ -2,15 +2,12 @@ use std::path::Path;
 
 use super::{
     cursor::Cursor,
-    error::{
-        marked::{Error, Result, LexResult},
-        ErrorKind,
-    },
     name::name,
     parse_node::parse_node,
     read_file::ReadFile,
     utils::combinator::cursor::char,
 };
+use super::{RateError, Error, ErrorKind, LexResult, Result};
 use crate::data::{make, name::NameRef};
 use nom::sequence::tuple;
 
@@ -21,8 +18,8 @@ fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, 
             return Ok((cursor, result));
         }
         Err(_) => {
-            let error_reason = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, error_reason))
+            let error_kind = ErrorKind::FailedDetermineType;
+            Err(Error::new_with(cursor.mark, path, error_kind))
         }
     }
 }
@@ -37,7 +34,7 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
             let f = parse_node(reader, new_cursor, indent);
             make::tagged(cursor.mark, tag, f)(token)
         }
-        Err(error) => Err((token, error)),
+        Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 

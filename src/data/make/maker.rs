@@ -5,10 +5,7 @@ use super::{
         name::Name,
         node::node::{MapNode, MarkedNode, Node},
     },
-    error::{
-        marked,
-        ErrorKind::{AnchorAlreadyExist, RepeatedKey},
-    },
+    error::{marked, ErrorKind, RateError},
 };
 use std::{
     collections::HashMap,
@@ -85,21 +82,35 @@ impl<'maker> Token<'maker> {
             None => Ok((self, ())),
             Some(_) => {
                 let path = PathBuf::from(self.maker.path());
-                let reason = AnchorAlreadyExist(name);
-                let error = marked::Error::new_with(mark, path, reason);
+                let kind = ErrorKind::AnchorAlreadyExist(name);
+                let error = marked::Error::new_with(mark, path, kind);
                 Err((self, error))
             }
         }
     }
 
-    pub(super) fn child<F, R>(self, f: F) -> (Token<'maker>, R)
+    pub(super) fn child<F, R, E>(self, f: F) -> marked::ChildResult<'maker, R, E>
     where
-        F: FnOnce(Token<'maker>) -> (Token<'maker>, R),
+        E: Error + PartialEq + Eq,
+        F: FnOnce(Token<'maker>) -> marked::ChildResult<'maker, R, E>,
     {
         let anchors = std::mem::take(&mut self.maker.anchors);
-        let (token, result) = f(self);
-        token.maker.anchors = anchors;
-        (token, result)
+        match f(self) {
+            Ok((token, result)) => {
+                token.maker.anchors = anchors;
+                Ok((token, result))
+            },
+            Err(error) => match error {
+                RateError::Recoverable((token, error)) => {
+                    token.maker.anchors = anchors;
+                    Err(RateError::Recoverable((token, error)))
+                }
+
+                RateError::Unrecoverable((used_token, error)) => {
+                    Err(RateError::Unrecoverable((used_token, error)))
+                }
+            },
+        }
     }
 
     pub(super) fn anchors(self) -> (Self, MapNode) {
@@ -107,9 +118,13 @@ impl<'maker> Token<'maker> {
         (self, anchors)
     }
 
+    pub fn error(self) -> ErrorToken<'maker> {
+        ErrorToken { _maker: self.maker }
+    }
+
     pub fn add<O, E, F>(self, f: F) -> marked::Result<'maker, O, E>
     where
-        E: Error + PartialEq + Eq,
+        E: std::error::Error + PartialEq + Eq,
         F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
     {
         f(self)
@@ -125,6 +140,14 @@ impl<'maker> UsedToken<'maker> {
     pub(super) fn split(self) -> (Token<'maker>, usize) {
         (Token::new(self.maker), self.index)
     }
+
+    pub fn error(self) -> ErrorToken<'maker> {
+        ErrorToken { _maker: self.maker }
+    }
+}
+
+pub struct ErrorToken<'maker> {
+    _maker: &'maker mut Maker,
 }
 
 pub struct ListToken<'maker> {
@@ -135,6 +158,10 @@ pub struct ListToken<'maker> {
 impl<'maker> ListToken<'maker> {
     pub(super) fn split(self) -> (Token<'maker>, Vec<usize>) {
         (Token::new(self.maker), self.result)
+    }
+
+    pub fn error(self) -> ErrorToken<'maker> {
+        ErrorToken { _maker: self.maker }
     }
 
     pub fn add<O, E, F>(mut self, f: F) -> marked::ListResult<'maker, O, E>
@@ -148,10 +175,17 @@ impl<'maker> ListToken<'maker> {
                 self.maker = used_token.maker;
                 Ok((self, output))
             }
-            Err((token, error)) => {
-                self.maker = token.maker;
-                Err((self, error))
-            }
+            
+            Err(error) => match error {
+                RateError::Recoverable((token, error)) => {
+                    self.maker = token.maker;
+                    Err(RateError::Recoverable((self, error)))
+                }
+
+                RateError::Unrecoverable((used_token, error)) => {
+                    Err(RateError::Unrecoverable((used_token, error)))
+                }
+            },
         }
     }
 }
@@ -166,12 +200,11 @@ impl<'maker> MapToken<'maker> {
         (Token::new(self.maker), self.result)
     }
 
-    pub fn add<O, E, F, S>(
-        mut self,
-        mark: Mark,
-        key: S,
-        f: F,
-    ) -> marked::MapResult<'maker, O, E>
+    pub fn error(self) -> ErrorToken<'maker> {
+        ErrorToken { _maker: self.maker }
+    }
+
+    pub fn add<O, E, F, S>(mut self, mark: Mark, key: S, f: F) -> marked::MapResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
         F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
@@ -182,17 +215,25 @@ impl<'maker> MapToken<'maker> {
                 self.maker = used_token.maker;
                 match self.result.insert(key.into(), used_token.index) {
                     None => Ok((self, output)),
+
                     Some(_) => {
                         let path = PathBuf::from(self.maker.path());
-                        let error = marked::Error::new_with(mark, path, RepeatedKey);
-                        Err((self, error))
+                        let error = marked::Error::new_with(mark, path, ErrorKind::RepeatedKey);
+                        Err(RateError::Recoverable((self, error)))
                     }
                 }
             }
-            Err((token, error)) => {
-                self.maker = token.maker;
-                Err((self, error))
-            }
+
+            Err(error) => match error {
+                RateError::Recoverable((token, error)) => {
+                    self.maker = token.maker;
+                    Err(RateError::Recoverable((self, error)))
+                }
+
+                RateError::Unrecoverable((used_token, error)) => {
+                    Err(RateError::Unrecoverable((used_token, error)))
+                }
+            },
         }
     }
 }
