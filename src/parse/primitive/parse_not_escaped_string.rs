@@ -1,14 +1,16 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     utils::combinator::{
         cursor::char,
         parse::{match_line, skip_blank_line, skip_indent, skip_line_ending},
     },
 };
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::make;
+use crate::{
+    data::make,
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 use nom::sequence::tuple;
 
 fn analyze<'input>(
@@ -18,7 +20,8 @@ fn analyze<'input>(
     capacity: usize,
     lines: usize,
 ) -> (Cursor<'input>, (usize, usize)) {
-    let match_whitespace = skip_line_ending(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
+    let match_whitespace =
+        skip_line_ending(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
 
     let cursor = match match_whitespace {
         Ok((cursor, _)) => cursor,
@@ -147,7 +150,11 @@ mod tests {
             let error_mark = Mark::new(0, 4);
             assert_eq!(
                 not_escaped_string(path, (input, begin_mark).into(), 2),
-                Err(Error::new_with(error_mark, path, ErrorKind::IncompleteString))
+                Err(Error::new_with(
+                    error_mark,
+                    path,
+                    ErrorKind::IncompleteString
+                ))
             );
         }
         {

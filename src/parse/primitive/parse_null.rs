@@ -1,8 +1,10 @@
 use std::path::Path;
 
-use super::cursor::Cursor;
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::{make, mark::Mark};
+use super::super::cursor::Cursor;
+use crate::{
+    data::{make, mark::Mark},
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 use nom::{
     bytes::complete::*,
     character::complete::*,

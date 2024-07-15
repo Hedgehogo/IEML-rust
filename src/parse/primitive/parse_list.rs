@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     parse_node::parse_node,
     read_file::ReadFile,
@@ -9,8 +9,10 @@ use super::{
         parse::{skip_blank_lines_ln, skip_indent, skip_space},
     },
 };
-use super::{RateError, Error, ErrorKind, LexResult, ListResult, Result};
-use crate::data::make;
+use crate::{
+    data::make,
+    parse::{RateError, Error, ErrorKind, LexResult, ListResult, Result}
+};
 use nom::sequence::tuple;
 
 fn special<'input>(

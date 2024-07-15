@@ -1,11 +1,13 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     utils::combinator::{cursor::char, parse::match_line},
 };
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::make;
+use crate::{
+    data::make,
+    parse::{RateError, Error, ErrorKind, LexResult, Result}
+};
 use nom::sequence::tuple;
 
 pub(crate) fn line_string<'input>(

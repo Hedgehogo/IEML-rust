@@ -1,14 +1,13 @@
 use std::path::Path;
 
-use super::{
-    cursor::Cursor,
-    name::name,
-    parse_node::parse_node,
-    read_file::ReadFile,
+use super::super::{
+    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
     utils::combinator::cursor::char,
 };
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::{make, name::NameRef};
+use crate::{
+    data::{make, name::NameRef},
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 use nom::sequence::tuple;
 
 fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, NameRef<'input>> {
@@ -40,12 +39,11 @@ pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::error::{
-        marked::Error,
-        ErrorKind::{self, FailedDetermineType},
+    use crate::{
+        data::mark::Mark,
+        parse::{Error, ErrorKind},
     };
-    use crate::data::mark::Mark;
-    
+
     use super::*;
 
     fn name(i: &str) -> NameRef {
@@ -88,7 +86,11 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(Error::new_with(error_mark, path, FailedDetermineType))
+                Err(Error::new_with(
+                    error_mark,
+                    path,
+                    ErrorKind::FailedDetermineType
+                ))
             );
         }
     }

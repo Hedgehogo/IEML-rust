@@ -1,14 +1,16 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     utils::combinator::{
         cursor::{anychar, char},
         parse::{skip_blank_line, skip_indent},
     },
 };
-use super::{Error, ErrorKind, LexResult, RateError, Result};
-use crate::data::make;
+use crate::{
+    data::make,
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 
 fn analyze<'input>(
     path: &'input Path,

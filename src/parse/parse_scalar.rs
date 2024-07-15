@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use super::{
-    cursor::Cursor, parse_classic_string::parse_classic_string,
-    parse_line_string::parse_line_string, parse_not_escaped_string::parse_not_escaped_string,
-    parse_null::parse_null, parse_raw::parse_raw,
+    cursor::Cursor,
+    primitive::{
+        parse_classic_string, parse_line_string, parse_not_escaped_string, parse_null, parse_raw,
+    },
 };
-use super::{ErrorKind, RateError, Result};
-use crate::data::make;
+use crate::{data::make, parse::{RateError, Result}};
 
 pub(crate) fn parse_scalar<'input>(
     path: &'input Path,
@@ -42,8 +42,10 @@ pub(crate) fn parse_scalar<'input>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::Error;
-    use crate::data::mark::Mark;
+    use crate::{
+        data::mark::Mark,
+        parse::{Error, ErrorKind},
+    };
 
     use super::*;
 

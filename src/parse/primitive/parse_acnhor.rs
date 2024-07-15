@@ -1,11 +1,13 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
     utils::combinator::cursor::char,
 };
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::{make, name::NameRef};
+use crate::{
+    data::{make, name::NameRef},
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 
 fn anchor_name<'input>(
     path: &'input Path,
@@ -37,8 +39,7 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::error::ErrorKind::{self, FailedDetermineType};
-    use crate::data::mark::Mark;
+    use crate::{data::mark::Mark, parse::ErrorKind};
 
     use super::*;
 
@@ -82,7 +83,11 @@ mod tests {
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
-                Err(Error::new_with(error_mark, path, FailedDetermineType))
+                Err(Error::new_with(
+                    error_mark,
+                    path,
+                    ErrorKind::FailedDetermineType
+                ))
             );
         }
     }

@@ -1,8 +1,7 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
-    parse_map::parse_map_item,
     parse_node::parse_node,
     read_file::ReadFile,
     utils::combinator::{
@@ -10,8 +9,11 @@ use super::{
         parse::{match_line, skip_blank_lines_ln, skip_indent},
     },
 };
-use super::{Error, ErrorKind, LexResult, MapResult, RateError, Result};
-use crate::data::make;
+use super::parse_map::parse_map_item;
+use crate::{
+    data::make,
+    parse::{Error, ErrorKind, LexResult, MapResult, RateError, Result},
+};
 use nom::sequence::tuple;
 
 fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, &'input Path> {
@@ -105,7 +107,7 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::read_file::ReadResult;
+    use super::super::super::read_file::ReadResult;
     use crate::data::{data::Data, mark::Mark, name::NameRef};
     use std::{collections::HashMap, result};
 

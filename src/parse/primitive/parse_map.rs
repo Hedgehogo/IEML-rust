@@ -1,14 +1,16 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     name::name,
     parse_node::parse_node,
     read_file::ReadFile,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
-use super::{ErrorKind, LexResult, MapResult, RateError, Result};
-use crate::data::{make, name::NameRef};
+use crate::{
+    data::{make, name::NameRef},
+    parse::{ErrorKind, LexResult, MapResult, RateError, Result}
+};
 
 fn key<'input>(
     path: &'input Path,
@@ -83,7 +85,7 @@ pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::Error;
+    use super::super::super::Error;
     use crate::data::mark::Mark;
 
     use super::*;

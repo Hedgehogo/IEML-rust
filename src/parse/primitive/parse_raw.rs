@@ -1,11 +1,13 @@
 use std::path::Path;
 
-use super::{
+use super::super::{
     cursor::Cursor,
     utils::combinator::cursor::{none_of, recognize},
 };
-use super::{RateError, Error, ErrorKind, LexResult, Result};
-use crate::data::make;
+use crate::{
+    data::make,
+    parse::{Error, ErrorKind, LexResult, RateError, Result},
+};
 use nom::multi::many1_count;
 
 pub(crate) fn raw<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, String> {
