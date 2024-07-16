@@ -17,7 +17,7 @@ pub(crate) fn line_string<'input>(
     match tuple((char('>'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);
-            Ok((cursor, result.into()))
+            Ok((cursor, result.input.into()))
         }
         Err(_) => {
             let kind = ErrorKind::FailedDetermineType;

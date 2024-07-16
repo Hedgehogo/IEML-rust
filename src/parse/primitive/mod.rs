@@ -5,8 +5,8 @@ pub mod parse_line_string;
 pub mod parse_list;
 pub mod parse_map;
 pub mod parse_not_escaped_string;
-pub mod parse_null;
-pub mod parse_raw;
+pub mod parse_raw_or_null;
+pub mod parse_short_list;
 pub mod parse_tagged;
 
 pub(crate) use parse_acnhor::parse_anchor;
@@ -16,6 +16,5 @@ pub(crate) use parse_line_string::parse_line_string;
 pub(crate) use parse_list::{parse_list, parse_list_one};
 pub(crate) use parse_map::{parse_map, parse_map_one};
 pub(crate) use parse_not_escaped_string::parse_not_escaped_string;
-pub(crate) use parse_null::parse_null;
-pub(crate) use parse_raw::parse_raw;
+pub(crate) use parse_raw_or_null::parse_raw_or_null;
 pub(crate) use parse_tagged::parse_tagged;

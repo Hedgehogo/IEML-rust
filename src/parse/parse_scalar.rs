@@ -3,7 +3,7 @@ use std::path::Path;
 use super::{
     cursor::Cursor,
     primitive::{
-        parse_classic_string, parse_line_string, parse_not_escaped_string, parse_null, parse_raw,
+        parse_classic_string, parse_line_string, parse_not_escaped_string, parse_raw_or_null,
     },
 };
 use crate::{data::make, parse::{RateError, Result}};
@@ -14,8 +14,7 @@ pub(crate) fn parse_scalar<'input>(
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
-        let parsers: [fn(_, _, _, _) -> _; 4] = [
-            |path, cursor, _indent, token| parse_null(path, cursor)(token),
+        let parsers: [fn(_, _, _, _) -> _; 3] = [
             |path, cursor, indent, token| parse_classic_string(path, cursor, indent)(token),
             |path, cursor, _indent, token| parse_line_string(path, cursor)(token),
             |path, cursor, indent, token| parse_not_escaped_string(path, cursor, indent)(token),
@@ -36,7 +35,7 @@ pub(crate) fn parse_scalar<'input>(
             };
         }
 
-        parse_raw(path, cursor)(token)
+        parse_raw_or_null(path, cursor)(token)
     }
 }
 
@@ -57,7 +56,7 @@ mod tests {
             let input = r#"null # hello"#;
             let data_f = parse_scalar(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_output = ("# hello", Mark::new(0, 5)).into();
+            let result_output = ("", Mark::new(0, 12)).into();
             let result_f = make::null::<_, ErrorKind>(begin_mark, result_output);
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);

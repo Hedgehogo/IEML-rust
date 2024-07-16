@@ -29,7 +29,7 @@ fn analyze<'input>(
     };
 
     let (cursor, line) = match_line(cursor);
-    let capacity = capacity + line.len() + 1;
+    let capacity = capacity + line.input.len() + 1;
     let lines = lines + 1;
     analyze(path, cursor, indent, capacity, lines)
 }
@@ -61,11 +61,11 @@ pub(crate) fn not_escaped_string<'input>(
         .map_err(|_| Error::new_with(cursor.mark, path, ErrorKind::ExpectedTab))?;
     let (cursor, line) = match_line(cursor);
 
-    let capacity = line.len() + 1;
+    let capacity = line.input.len() + 1;
     let (output, (capacity, lines)) = analyze(path, cursor, indent, capacity, 1);
 
     let mut result = String::with_capacity(capacity);
-    result.push_str(line);
+    result.push_str(line.input);
     parse(cursor.input, indent, lines, &mut result);
 
     Ok((output, result))

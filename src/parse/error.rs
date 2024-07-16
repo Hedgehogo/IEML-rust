@@ -11,6 +11,7 @@ pub enum ErrorKind {
     ImpermissibleSpace,
     ImpermissibleTab,
     IncompleteString,
+    IncompleteShortList,
     IncompleteDocument,
     NonexistentFile,
 }
@@ -34,6 +35,7 @@ impl Display for ErrorKind {
                 "A tab was detected. A lower level of indentation was expected."
             ),
             ErrorKind::IncompleteString => write!(f, "The string is incomplete."),
+            ErrorKind::IncompleteShortList => write!(f, "Expected `, `, or `]` as a continuation or closure of the short list."),
             ErrorKind::IncompleteDocument => {
                 write!(f, "There are extra characters at the end of the document.")
             }

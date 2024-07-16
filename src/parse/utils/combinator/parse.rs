@@ -50,10 +50,10 @@ pub fn skip_blank_lines_ln(input: Cursor) -> IResult<Cursor, usize> {
     })(input)
 }
 
-pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, &'input str) {
+pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, Cursor<'input>) {
     let (output, result) = recognize(many0_count(skip_not_line_ending))(input)
         .expect("Internal error in `match_line` function operation.");
-    (output, result.input)
+    (output, result)
 }
 
 pub fn match_name<'input>(input: Cursor<'input>) -> (Cursor<'input>, (Cursor<'input>, bool)) {

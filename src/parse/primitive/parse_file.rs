@@ -20,7 +20,7 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
     match tuple((char('<'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);
-            return Ok((cursor, Path::new(result)));
+            return Ok((cursor, Path::new(result.input)));
         }
         Err(_) => {
             let error_kind = ErrorKind::FailedDetermineType;

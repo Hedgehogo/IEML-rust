@@ -33,7 +33,12 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
             make::take_anchor(cursor.mark, name, f)(token)
         }
         Ok((output, (name, false))) => make::get_anchor(cursor.mark, output, name)(token),
-        Err(error) => Err(RateError::Recoverable((token, error))),
+        Err(error) => match error.data.kind {
+            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+                Err(RateError::Recoverable((token, error)))
+            }
+            _ => Err(RateError::Unrecoverable((token.error(), error))),
+        },
     }
 }
 
