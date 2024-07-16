@@ -18,3 +18,4 @@ pub(crate) use parse_map::{parse_map, parse_map_one};
 pub(crate) use parse_not_escaped_string::parse_not_escaped_string;
 pub(crate) use parse_raw_or_null::parse_raw_or_null;
 pub(crate) use parse_tagged::parse_tagged;
+pub(crate) use parse_short_list::parse_short_list;

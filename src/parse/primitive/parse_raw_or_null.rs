@@ -2,13 +2,16 @@ use std::path::Path;
 
 use super::super::{
     cursor::Cursor,
-    utils::combinator::{cursor::{none_of, recognize, char}, parse::skip_blank_line},
+    utils::combinator::{
+        cursor::{char, none_of, recognize},
+        parse::skip_blank_line,
+    },
 };
 use crate::{
     data::make,
     parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
-use nom::{multi::many1_count, sequence::tuple, combinator::eof};
+use nom::{combinator::eof, multi::many1_count, sequence::tuple};
 
 pub(crate) fn raw_or_null<'input>(
     path: &'input Path,
@@ -31,8 +34,8 @@ pub(crate) fn parse_raw_or_null<'input>(
     move |token| match raw_or_null(path, cursor) {
         Ok((output, result)) => {
             let null = tuple((char('n'), char('u'), char('l'), char('l')));
-            let skip_blank_line = |cursor| Ok((skip_blank_line(cursor), ()));
-            match tuple((null, skip_blank_line, eof))(result) {
+            let blank_line = |cursor| Ok((skip_blank_line(cursor), ()));
+            match tuple((null, blank_line, eof))(result) {
                 Ok(_) => make::null(cursor.mark, output)(token),
                 Err(_) => make::raw(cursor.mark, output, result.input)(token),
             }
