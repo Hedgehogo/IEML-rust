@@ -1,4 +1,4 @@
-pub mod parse_acnhor;
+pub mod parse_anchor;
 pub mod parse_classic_string;
 pub mod parse_file;
 pub mod parse_line_string;
@@ -9,7 +9,7 @@ pub mod parse_raw_or_null;
 pub mod parse_short_list;
 pub mod parse_tagged;
 
-pub(crate) use parse_acnhor::parse_anchor;
+pub(crate) use parse_anchor::parse_anchor;
 pub(crate) use parse_classic_string::parse_classic_string;
 pub(crate) use parse_file::parse_file;
 pub(crate) use parse_line_string::parse_line_string;

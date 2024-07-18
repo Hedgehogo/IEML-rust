@@ -44,26 +44,25 @@ pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{data::mark::Mark, parse::ErrorKind};
+    use crate::{
+        data::mark::Mark,
+        parse::{test_utils::name, ErrorKind},
+    };
 
     use super::*;
-
-    fn name(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
-    }
 
     #[test]
     fn test_parse_anchor() {
         let begin_mark = Mark::new(0, 0);
         let path = Path::new("test.ieml");
         {
-            let input = "@acnhor: null\nhello";
+            let input = "@anchor: null\nhello";
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(0, 13)).into();
             let result_f = make::take_anchor::<_, ErrorKind, _, _>(
                 begin_mark,
-                name("acnhor"),
+                name("anchor"),
                 make::null(Mark::new(0, 9), result_output),
             );
             let result = make::make(begin_mark, result_f).unwrap();

@@ -11,7 +11,7 @@ use super::super::{
 };
 use crate::{
     data::make,
-    parse::{RateError, Error, ErrorKind, LexResult, ListResult, Result}
+    parse::{Error, ErrorKind, LexResult, ListResult, RateError, Result},
 };
 use nom::sequence::tuple;
 
@@ -144,11 +144,11 @@ mod tests {
             let input = "- null\n\t\t- > hello";
             let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_cursor = ("", Mark::new(1, 11)).into();
+            let result_output = ("", Mark::new(1, 11)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
-                let (token, cursor) = token.add(make::null(Mark::new(0, 2), result_cursor))?;
-                let (token, cursor) = token.add(make::string(Mark::new(1, 4), cursor, "hello"))?;
-                Ok((token, cursor))
+                let (token, output) = token.add(make::null(Mark::new(0, 2), result_output))?;
+                let (token, output) = token.add(make::string(Mark::new(1, 4), output, "hello"))?;
+                Ok((token, output))
             });
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
@@ -157,12 +157,11 @@ mod tests {
             let input = "- null\n# hello\n\t\t- > hello";
             let data_f = parse_list(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
-            let result_cursor = ("", Mark::new(2, 11)).into();
+            let result_output = ("", Mark::new(2, 11)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
-                let (token, _) = token.add(make::null(Mark::new(0, 2), result_cursor))?;
-                let (token, _) =
-                    token.add(make::string(Mark::new(2, 4), result_cursor, "hello"))?;
-                Ok((token, result_cursor))
+                let (token, output) = token.add(make::null(Mark::new(0, 2), result_output))?;
+                let (token, output) = token.add(make::string(Mark::new(2, 4), output, "hello"))?;
+                Ok((token, output))
             });
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);

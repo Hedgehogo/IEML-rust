@@ -1,46 +1,34 @@
-use std::path::Path;
-
 use super::{
     cursor::Cursor,
+    parse_alternative::{parse_alternative, Parse},
     primitive::{
         parse_classic_string, parse_line_string, parse_not_escaped_string, parse_raw_or_null,
     },
+    read_file::ReadFile,
 };
-use crate::{data::make, parse::{RateError, Result}};
+use crate::{data::make, parse::Result};
 
-pub(crate) fn parse_scalar<'input>(
-    path: &'input Path,
+pub(crate) fn parse_scalar<'input, R: ReadFile + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| {
-        let parsers: [fn(_, _, _, _) -> _; 3] = [
-            |path, cursor, indent, token| parse_classic_string(path, cursor, indent)(token),
-            |path, cursor, _indent, token| parse_line_string(path, cursor)(token),
-            |path, cursor, indent, token| parse_not_escaped_string(path, cursor, indent)(token),
-        ];
+    let parsers: [Parse<'input, R>; 4] = [
+        |reader, cursor, indent, token| parse_classic_string(reader.path(), cursor, indent)(token),
+        |reader, cursor, _indent, token| parse_line_string(reader.path(), cursor)(token),
+        |reader, cursor, indent, token| {
+            parse_not_escaped_string(reader.path(), cursor, indent)(token)
+        },
+        |reader, cursor, _indent, token| parse_raw_or_null(reader.path(), cursor)(token),
+    ];
 
-        let mut token = token;
-        for parse in parsers {
-            token = match parse(path, cursor, indent, token) {
-                Ok(i) => return Ok(i),
-
-                Err(error) => match error {
-                    RateError::Recoverable((token, _)) => token,
-
-                    RateError::Unrecoverable(error) => {
-                        return Err(RateError::Unrecoverable(error));
-                    }
-                },
-            };
-        }
-
-        parse_raw_or_null(path, cursor)(token)
-    }
+    parse_alternative(reader, cursor, indent, parsers.into_iter())
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use crate::{
         data::mark::Mark,
         parse::{Error, ErrorKind},

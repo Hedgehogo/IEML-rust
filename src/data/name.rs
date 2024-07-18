@@ -1,4 +1,4 @@
-use std::{fmt::Display, borrow::Borrow};
+use std::{fmt::{Display, Debug}, borrow::Borrow};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Error {
@@ -6,7 +6,7 @@ pub enum Error {
     Tab,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone)]
+#[derive(Default, PartialEq, Eq, Hash, Clone)]
 pub struct Name {
     data: String,
 }
@@ -22,6 +22,12 @@ impl Name {
 
     pub fn as_str(&self) -> &str {
         &self.data
+    }
+}
+
+impl Debug for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.data)
     }
 }
 
@@ -50,7 +56,7 @@ impl<'data> From<NameRef<'data>> for Name {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct NameRef<'data> {
     data: &'data str,
 }
@@ -66,6 +72,12 @@ impl<'data> NameRef<'data> {
 
     pub fn as_str(&self) -> &str {
         &self.data
+    }
+}
+
+impl<'data> Debug for NameRef<'data> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.data)
     }
 }
 

@@ -106,62 +106,22 @@ pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::super::read_file::ReadResult;
-    use crate::data::{data::Data, mark::Mark, name::NameRef};
-    use std::{collections::HashMap, result};
+pub(crate) mod tests {
+    use std::{path::Path, result};
+
+    use crate::{
+        data::{data::Data, make, mark::Mark},
+        parse::test_utils::*,
+    };
 
     use super::*;
-
-    type Files<'path> = HashMap<&'path Path, String>;
-
-    #[derive(Clone)]
-    struct Reader<'files, 'path> {
-        files: &'files Files<'path>,
-        path: &'path Path,
-    }
-
-    impl<'files, 'path> Reader<'files, 'path> {
-        fn new(files: &'files Files<'path>, path: &'path Path) -> Self {
-            Self { files, path }
-        }
-    }
-
-    impl<'files, 'path> ReadFile for Reader<'files, 'path> {
-        fn child<'maker, F, R>(
-            &self,
-            token: make::Token<'maker>,
-            path: &Path,
-            f: F,
-        ) -> ReadResult<'maker, R>
-        where
-            F: for<'input> FnOnce(make::Token<'maker>, &'input Self, Cursor<'input>) -> R,
-        {
-            match self.files.get_key_value(path) {
-                Some((path, result)) => {
-                    let cursor = (result.as_str(), Default::default()).into();
-                    let reader = Reader::new(self.files, path);
-                    Ok(f(token, &reader, cursor))
-                }
-                None => Err(token),
-            }
-        }
-
-        fn path(&self) -> &Path {
-            &self.path
-        }
-    }
-
-    fn name(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
-    }
 
     fn parse<'input>(
         begin_mark: Mark,
         reader: &'input Reader,
         files: &'input Files,
     ) -> result::Result<(Data, Cursor<'input>), Error> {
-        let cursor = (files.get(reader.path).unwrap().as_str(), begin_mark).into();
+        let cursor = (files.get(reader.path()).unwrap().as_str(), begin_mark).into();
         let data_f = parse_file(reader, cursor, 2);
         make::make(begin_mark, data_f)
     }

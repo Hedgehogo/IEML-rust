@@ -9,7 +9,7 @@ use super::super::{
 };
 use crate::{
     data::{make, name::NameRef},
-    parse::{ErrorKind, LexResult, MapResult, RateError, Result}
+    parse::{ErrorKind, LexResult, MapResult, RateError, Result},
 };
 
 fn key<'input>(
@@ -86,13 +86,9 @@ pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::super::Error;
-    use crate::data::mark::Mark;
+    use crate::{data::mark::Mark, parse::test_utils::name};
 
     use super::*;
-
-    fn name(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
-    }
 
     #[test]
     fn test_parse_map_one() {

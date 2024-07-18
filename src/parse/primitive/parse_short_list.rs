@@ -145,7 +145,7 @@ fn parse_short_list_item<'input, R: ReadFile + ?Sized>(
 
         let error_kind = ErrorKind::FailedDetermineType;
         let error = Error::new_with(cursor.mark, reader.path(), error_kind);
-        Err(RateError::Recoverable((token, error)))
+        Err(RateError::Unrecoverable((token.error(), error)))
     }
 }
 
