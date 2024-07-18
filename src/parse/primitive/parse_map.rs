@@ -4,8 +4,8 @@ use super::super::{
     cursor::Cursor,
     name::name,
     parse_node::parse_node,
-    read_file::ReadFile,
-    utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
+    read_file::ReadChildFile,
+    utils::combinator::parse::{skip_blank_lines_ln, skip_blank_line, skip_indent},
 };
 use crate::{
     data::{make, name::NameRef},
@@ -28,7 +28,7 @@ fn key<'input>(
     }
 }
 
-pub(crate) fn parse_map_item<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_map_item<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -43,7 +43,7 @@ pub(crate) fn parse_map_item<'input, R: ReadFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_map_one<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_map_one<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -54,12 +54,16 @@ pub(crate) fn parse_map_one<'input, R: ReadFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_map<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
+        let parse_map_item = |cursor, error_kind| {
+            return parse_map_item(reader, cursor, indent, error_kind);
+        };
+
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
             let (cursor, _) = skip_indent(indent)(cursor).ok()?;
@@ -67,14 +71,26 @@ pub(crate) fn parse_map<'input, R: ReadFile + ?Sized>(
         };
 
         make::map(cursor.mark, |token| {
-            let f = parse_map_item(reader, cursor, indent, ErrorKind::FailedDetermineType);
+            let f = parse_map_item(cursor, ErrorKind::FailedDetermineType);
             let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_map_item(reader, cursor, indent, ErrorKind::ExpectedMapKey)(token)?
+                        match parse_map_item(cursor, ErrorKind::ExpectedMapKey)(token) {
+                            Ok(i) => i,
+
+                            Err(RateError::Recoverable((token, error))) => {
+                                if indent == 0 && skip_blank_line(cursor).input.is_empty() {
+                                    return Ok((token, cursor));
+                                } else {
+                                    return Err(RateError::Unrecoverable((token.error(), error)));
+                                }
+                            }
+
+                            Err(error) => return Err(error),
+                        }
                     }
                     None => return Ok((token, cursor)),
                 }

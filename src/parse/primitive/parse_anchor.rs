@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::super::{
-    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
+    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadChildFile,
     utils::combinator::cursor::char,
 };
 use crate::{
@@ -22,7 +22,7 @@ fn anchor_name<'input>(
     }
 }
 
-pub(crate) fn parse_anchor<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_anchor<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,

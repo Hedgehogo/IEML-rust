@@ -3,10 +3,10 @@ use std::path::Path;
 use super::super::{
     cursor::Cursor,
     parse_node::parse_node,
-    read_file::ReadFile,
+    read_file::ReadChildFile,
     utils::combinator::{
         cursor::char,
-        parse::{skip_blank_lines_ln, skip_indent, skip_space},
+        parse::{skip_blank_line, skip_blank_lines_ln, skip_indent, skip_space},
     },
 };
 use crate::{
@@ -26,7 +26,7 @@ fn special<'input>(
     }
 }
 
-fn parse_list_item<'input, R: ReadFile + ?Sized>(
+fn parse_list_item<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -38,7 +38,7 @@ fn parse_list_item<'input, R: ReadFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_list_one<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_list_one<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -49,12 +49,16 @@ pub(crate) fn parse_list_one<'input, R: ReadFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_list<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_list<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
+        let parse_list_item = |cursor, error_kind| {
+            return parse_list_item(reader, cursor, indent, error_kind);
+        };
+
         let skip_whitespace = |cursor| {
             let (cursor, _) = skip_blank_lines_ln(cursor).ok()?;
             let (cursor, _) = skip_indent(indent)(cursor).ok()?;
@@ -62,14 +66,26 @@ pub(crate) fn parse_list<'input, R: ReadFile + ?Sized>(
         };
 
         make::list(cursor.mark, |token| {
-            let f = parse_list_item(reader, cursor, indent, ErrorKind::FailedDetermineType);
+            let f = parse_list_item(cursor, ErrorKind::FailedDetermineType);
             let result = f(token)?;
 
             let (mut token, mut cursor) = result;
             loop {
                 (token, cursor) = match skip_whitespace(cursor) {
                     Some(cursor) => {
-                        parse_list_item(reader, cursor, indent, ErrorKind::ExpectedListItem)(token)?
+                        match parse_list_item(cursor, ErrorKind::ExpectedListItem)(token) {
+                            Ok(i) => i,
+
+                            Err(RateError::Recoverable((token, error))) => {
+                                if indent == 0 && skip_blank_line(cursor).input.is_empty() {
+                                    return Ok((token, cursor));
+                                } else {
+                                    return Err(RateError::Unrecoverable((token.error(), error)));
+                                }
+                            }
+
+                            Err(error) => return Err(error),
+                        }
                     }
                     None => return Ok((token, cursor)),
                 }

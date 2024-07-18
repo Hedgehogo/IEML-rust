@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::super::{
-    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadFile,
+    cursor::Cursor, name::name, parse_node::parse_node, read_file::ReadChildFile,
     utils::combinator::cursor::char,
 };
 use crate::{
@@ -23,7 +23,7 @@ fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, 
     }
 }
 
-pub(crate) fn parse_tagged<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_tagged<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,

@@ -4,11 +4,11 @@ use super::{
     primitive::{
         parse_classic_string, parse_line_string, parse_not_escaped_string, parse_raw_or_null,
     },
-    read_file::ReadFile,
+    read_file::ReadChildFile,
 };
 use crate::{data::make, parse::Result};
 
-pub(crate) fn parse_scalar<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_scalar<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,

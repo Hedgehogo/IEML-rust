@@ -3,12 +3,12 @@ use super::{
     parse_alternative::{parse_alternative, Parse},
     parse_scalar::parse_scalar,
     primitive::*,
-    read_file::ReadFile,
+    read_file::ReadChildFile,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
 use crate::{data::make, parse::Result};
 
-pub(crate) fn parse_node_on_own_line<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_node_on_own_line<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -26,7 +26,7 @@ pub(crate) fn parse_node_on_own_line<'input, R: ReadFile + ?Sized>(
     parse_alternative(reader, cursor, indent, parsers.into_iter())
 }
 
-pub(crate) fn parse_node<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_node<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,

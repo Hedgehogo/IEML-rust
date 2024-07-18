@@ -2,6 +2,7 @@ pub mod cursor;
 pub mod error;
 pub mod name;
 pub mod parse_alternative;
+pub mod parse_complete;
 pub mod parse_node;
 pub mod parse_scalar;
 pub mod primitive;
@@ -16,7 +17,7 @@ mod test_utils {
 
     use crate::data::{make, name::NameRef};
     use cursor::Cursor;
-    use read_file::{ReadFile, ReadResult};
+    use read_file::{ReadChildFile, ReadResult};
 
     use super::*;
 
@@ -34,8 +35,8 @@ mod test_utils {
         }
     }
 
-    impl<'files, 'path> ReadFile for Reader<'files, 'path> {
-        fn child<'maker, F, R>(
+    impl<'files, 'path> ReadChildFile for Reader<'files, 'path> {
+        fn read_child_file<'maker, F, R>(
             &self,
             token: make::Token<'maker>,
             path: &Path,

@@ -2,8 +2,8 @@ use std::path::Path;
 
 use super::super::{
     cursor::Cursor,
-    parse_node::parse_node,
-    read_file::ReadFile,
+    parse_complete::parse_complete,
+    read_file::ReadChildFile,
     utils::combinator::{
         cursor::char,
         parse::{match_line, skip_blank_lines_ln, skip_indent},
@@ -29,7 +29,7 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
     }
 }
 
-fn parse_anchors<'input, R: ReadFile + ?Sized>(
+fn parse_anchors<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -61,23 +61,17 @@ fn parse_anchors<'input, R: ReadFile + ?Sized>(
     }
 }
 
-fn parse_child<'input, R: ReadFile + ?Sized>(
+fn parse_child<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     path: &'input Path,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
         let f = move |token, reader: &R, inner_cursor: Cursor<'_>| {
-            let (token, inner_cursor) = parse_node(reader, inner_cursor, 0)(token)?;
-            let (inner_cursor, _) = skip_blank_lines_ln(inner_cursor).unwrap_or((inner_cursor, 0));
-            if inner_cursor.input.len() != 0 {
-                let error_kind = ErrorKind::IncompleteDocument;
-                let error = Error::new_with(inner_cursor.mark, reader.path(), error_kind);
-                return Err(RateError::Unrecoverable((token.error(), error)));
-            }
+            let (token, _) = parse_complete(reader, inner_cursor)(token)?;
             Ok((token, cursor))
         };
-        match reader.child(token, path, f) {
+        match reader.read_child_file(token, path, f) {
             Ok(i) => i,
             Err(token) => {
                 let error_kind = ErrorKind::NonexistentFile;
@@ -88,7 +82,7 @@ fn parse_child<'input, R: ReadFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_file<'input, R: ReadFile + ?Sized>(
+pub(crate) fn parse_file<'input, R: ReadChildFile + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
