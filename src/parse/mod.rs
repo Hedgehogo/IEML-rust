@@ -1,12 +1,13 @@
 pub mod cursor;
 pub mod error;
+pub mod from;
 pub mod name;
 pub mod parse_alternative;
 pub mod parse_complete;
 pub mod parse_node;
 pub mod parse_scalar;
 pub mod primitive;
-pub mod read_file;
+pub mod read_source;
 pub mod utils;
 
 pub use error::{marked::*, ErrorKind};
@@ -17,7 +18,7 @@ mod test_utils {
 
     use crate::data::{make, name::NameRef};
     use cursor::Cursor;
-    use read_file::{ReadChildFile, ReadResult};
+    use read_source::{ReadResult, ReadSource};
 
     use super::*;
 
@@ -35,8 +36,24 @@ mod test_utils {
         }
     }
 
-    impl<'files, 'path> ReadChildFile for Reader<'files, 'path> {
-        fn read_child_file<'maker, F, R>(
+    impl<'files, 'path> ReadSource for Reader<'files, 'path> {
+        type Child = Self;
+    
+        fn read_source<'maker, F, R>(
+            &self,
+            token: make::Token<'maker>,
+            f: F,
+        ) -> ReadResult<'maker, R>
+        where
+            F: for<'input> FnOnce(make::Token<'maker>, Cursor<'input>) -> R,
+        {
+            match self.files.get(self.path) {
+                Some(result) => Ok(f(token, (result.as_str(), Default::default()).into())),
+                None => Err(token),
+            }
+        }
+
+        fn read_child<'maker, F, R>(
             &self,
             token: make::Token<'maker>,
             path: &Path,

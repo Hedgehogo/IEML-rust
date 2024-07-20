@@ -2,7 +2,7 @@ use std::path::Path;
 
 use super::super::{
     cursor::Cursor,
-    read_file::ReadChildFile,
+    read_source::ReadSource,
     utils::combinator::cursor::{anychar, char, none_of, one_of, recognize},
 };
 use super::parse_classic_string;
@@ -114,7 +114,7 @@ fn parse_get_anchor<'input>(
     }
 }
 
-fn parse_short_list_item<'input, R: ReadChildFile + ?Sized>(
+fn parse_short_list_item<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::ListToken) -> ListResult<'_, 'input> {
@@ -149,7 +149,7 @@ fn parse_short_list_item<'input, R: ReadChildFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_short_list<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {

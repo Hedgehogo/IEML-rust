@@ -3,7 +3,7 @@ use std::str::{CharIndices, Chars};
 use crate::data::mark::Mark;
 use nom::{InputIter, InputLength};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub struct Cursor<'input> {
     pub input: &'input str,
     pub mark: Mark,

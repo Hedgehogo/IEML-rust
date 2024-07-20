@@ -1,10 +1,10 @@
 use super::{
-    cursor::Cursor, parse_node::parse_node_on_own_line, read_file::ReadChildFile,
+    cursor::Cursor, parse_node::parse_node_on_own_line, read_source::ReadSource,
     utils::combinator::parse::{skip_blank_lines_ln, skip_blank_line},
 };
 use crate::{data::make, parse::{Result, Error, ErrorKind, RateError}};
 
-pub(crate) fn parse_complete<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_complete<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {

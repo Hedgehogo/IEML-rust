@@ -4,8 +4,8 @@ use super::super::{
     cursor::Cursor,
     name::name,
     parse_node::parse_node,
-    read_file::ReadChildFile,
-    utils::combinator::parse::{skip_blank_lines_ln, skip_blank_line, skip_indent},
+    read_source::ReadSource,
+    utils::combinator::parse::{skip_blank_line, skip_blank_lines_ln, skip_indent},
 };
 use crate::{
     data::{make, name::NameRef},
@@ -28,7 +28,7 @@ fn key<'input>(
     }
 }
 
-pub(crate) fn parse_map_item<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_map_item<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -43,7 +43,7 @@ pub(crate) fn parse_map_item<'input, R: ReadChildFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_map_one<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_map_one<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -54,7 +54,7 @@ pub(crate) fn parse_map_one<'input, R: ReadChildFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_map<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_map<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -82,7 +82,7 @@ pub(crate) fn parse_map<'input, R: ReadChildFile + ?Sized>(
                             Ok(i) => i,
 
                             Err(RateError::Recoverable((token, error))) => {
-                                if indent == 0 && skip_blank_line(cursor).input.is_empty() {
+                                if skip_blank_line(cursor).input.is_empty() {
                                     return Ok((token, cursor));
                                 } else {
                                     return Err(RateError::Unrecoverable((token.error(), error)));

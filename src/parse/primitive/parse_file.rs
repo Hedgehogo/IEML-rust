@@ -3,7 +3,7 @@ use std::path::Path;
 use super::super::{
     cursor::Cursor,
     parse_complete::parse_complete,
-    read_file::ReadChildFile,
+    read_source::ReadSource,
     utils::combinator::{
         cursor::char,
         parse::{match_line, skip_blank_lines_ln, skip_indent},
@@ -29,7 +29,7 @@ fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input,
     }
 }
 
-fn parse_anchors<'input, R: ReadChildFile + ?Sized>(
+fn parse_anchors<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -61,17 +61,17 @@ fn parse_anchors<'input, R: ReadChildFile + ?Sized>(
     }
 }
 
-fn parse_child<'input, R: ReadChildFile + ?Sized>(
+fn parse_child<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     path: &'input Path,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
-        let f = move |token, reader: &R, inner_cursor: Cursor<'_>| {
+        let f = move |token, reader: &R::Child, inner_cursor: Cursor<'_>| {
             let (token, _) = parse_complete(reader, inner_cursor)(token)?;
             Ok((token, cursor))
         };
-        match reader.read_child_file(token, path, f) {
+        match reader.read_child(token, path, f) {
             Ok(i) => i,
             Err(token) => {
                 let error_kind = ErrorKind::NonexistentFile;
@@ -82,7 +82,7 @@ fn parse_child<'input, R: ReadChildFile + ?Sized>(
     }
 }
 
-pub(crate) fn parse_file<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_file<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,

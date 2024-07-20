@@ -1,6 +1,7 @@
-use super::node::node::MarkedNode;
-use super::view::analyse_anchors::AnalyseAnchors;
-use super::view::view::View;
+use super::{
+    node::node::MarkedNode,
+    view::{analyse_anchors::AnalyseAnchors, view::View},
+};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq, Default)]
@@ -34,17 +35,20 @@ impl Data {
                 .last()
                 .expect("Incorrect document structure, node does not exist."),
             self,
-            ()
+            (),
         )
     }
 
-    pub fn view_with_analyse<'data, A: AnalyseAnchors<'data>>(&'data self, anchor_analyser: A) -> View<'data, A> {
+    pub fn view_with_analyse<'data, A: AnalyseAnchors<'data>>(
+        &'data self,
+        anchor_analyser: A,
+    ) -> View<'data, A> {
         View::new(
             self.data
                 .last()
                 .expect("Incorrect document structure, node does not exist."),
             self,
-            anchor_analyser
+            anchor_analyser,
         )
     }
 }

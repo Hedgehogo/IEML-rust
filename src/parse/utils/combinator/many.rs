@@ -5,7 +5,7 @@ use nom::{Err, IResult, Parser};
 /// Repeats the embedded parser `m..=n` times
 ///
 /// This stops before `n` when the parser returns [`Err::Error`] and returns a count of the results. To instead chain an error up, see
-/// [`cut`][crate::combinator::cut].
+/// [`cut`][nom::combinator::cut].
 ///
 /// # Arguments
 /// * `m` The minimum number of iterations.
@@ -80,7 +80,7 @@ where
 ///
 /// Returns a count of the results of `f` and the result of `g`.
 ///
-/// `f` keeps going so long as `g` produces [`Err::Error`]. To instead chain an error up, see [`cut`][crate::combinator::cut].
+/// `f` keeps going so long as `g` produces [`Err::Error`]. To instead chain an error up, see [`cut`][nom::combinator::cut].
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind}, Needed, IResult};

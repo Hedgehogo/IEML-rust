@@ -1,4 +1,4 @@
-use super::{cursor::Cursor, read_file::ReadChildFile};
+use super::{cursor::Cursor, read_source::ReadSource};
 use crate::{
     data::make,
     parse::{Error, ErrorKind, RateError, Result},
@@ -7,7 +7,7 @@ use crate::{
 pub(crate) type Parse<'input, R> =
     for<'maker> fn(&'input R, Cursor<'input>, usize, make::Token<'maker>) -> Result<'maker, 'input>;
 
-pub(crate) fn parse_alternative<'input, R: ReadChildFile + ?Sized>(
+pub(crate) fn parse_alternative<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
