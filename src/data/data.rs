@@ -1,3 +1,5 @@
+//! This module is designed to describe [`Data`]
+
 use super::{
     node::node::MarkedNode,
     view::{analyse_anchors::AnalyseAnchors, view::View},

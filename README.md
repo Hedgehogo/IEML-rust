@@ -2,7 +2,7 @@
 
 A Rust library for using the [Serde](https://crates.io/crates/serde) serialization framework with data in IEML file format. This crate is still in development.
 
-# Progress
+## Progress
 - [x] Data structures and APIs for working with them
 - [x] Parsing from raw input to an intermediate data structure
 - [ ] Implementation of Serde traits for deserialization

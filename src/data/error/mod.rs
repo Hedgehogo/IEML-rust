@@ -1,3 +1,5 @@
+//! This module is designed to describe the types of errors that can occur during deserialization
+
 pub mod another_type;
 pub mod failed_deserialize;
 pub mod invalid_index;

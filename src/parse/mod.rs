@@ -1,12 +1,12 @@
 pub mod cursor;
 pub mod error;
 pub mod from;
-pub mod name;
-pub mod parse_alternative;
-pub mod parse_complete;
-pub mod parse_node;
-pub mod parse_scalar;
-pub mod primitive;
+pub(crate) mod name;
+pub(crate) mod parse_alternative;
+pub(crate) mod parse_complete;
+pub(crate) mod parse_node;
+pub(crate) mod parse_scalar;
+pub(crate) mod primitive;
 pub mod read_source;
 pub mod utils;
 
@@ -38,7 +38,7 @@ mod test_utils {
 
     impl<'files, 'path> ReadSource for Reader<'files, 'path> {
         type Child = Self;
-    
+
         fn read_source<'maker, F, R>(
             &self,
             token: make::Token<'maker>,

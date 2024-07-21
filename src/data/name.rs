@@ -1,3 +1,4 @@
+//! This module is designed to describe structures that guarantee that their contents are names conforming to the IEML standard.
 use std::{fmt::{Display, Debug}, borrow::Borrow};
 
 /// Error received when trying to create [`Name`] from a non-conforming string.
