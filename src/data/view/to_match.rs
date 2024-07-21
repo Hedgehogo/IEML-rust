@@ -7,6 +7,7 @@ pub use super::type_view::{
     take_anchor_view::TakeAnchorView,
 };
 
+/// A structure designed for pattern-matching, which the regular [`View`][`super::view::View`] does not allow.
 #[derive(Clone, Eq)]
 pub enum ToMatchView<'data, A: AnalyseAnchors<'data>> {
     Null(NullView),

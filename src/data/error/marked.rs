@@ -10,49 +10,20 @@ pub type FailedDeserializeError<E> = WithMarkError<super::FailedDeserializeError
 pub type InvalidIndexError = WithMarkError<super::InvalidIndexError>;
 pub type InvalidKeyError = WithMarkError<super::InvalidKeyError>;
 
-#[derive(PartialEq, Eq, Debug)]
-pub enum ListError {
-    ViewAnotherType(AnotherTypeError),
-    InvalidIndex(InvalidIndexError),
-}
-
-impl From<AnotherTypeError> for ListError {
-    fn from(value: AnotherTypeError) -> Self {
-        ListError::ViewAnotherType(value)
-    }
-}
-
-impl From<InvalidIndexError> for ListError {
-    fn from(value: InvalidIndexError) -> Self {
-        ListError::InvalidIndex(value)
-    }
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum MapError {
-    ViewAnotherType(AnotherTypeError),
-    InvalidKey(InvalidKeyError),
-}
-
-impl From<AnotherTypeError> for MapError {
-    fn from(value: AnotherTypeError) -> Self {
-        MapError::ViewAnotherType(value)
-    }
-}
-
-impl From<InvalidKeyError> for MapError {
-    fn from(value: InvalidKeyError) -> Self {
-        MapError::InvalidKey(value)
-    }
-}
-
+/// General type of deserialisation error
 #[derive(PartialEq, Eq, Debug)]
 pub enum DeserializeError<E: Error + PartialEq + Eq> {
+    /// Node access error due to mismatch between requested type and available type
     ViewAnotherType(AnotherTypeError),
+    /// Node access error due to insufficient number of items in the list
     InvalidIndex(InvalidIndexError),
+    /// Node access error due to missing key in the map
     InvalidKey(InvalidKeyError),
-    FailedDecode(FailedDeserializeError<E>),
+    /// Deserialisation error resulting from another error
+    FailedDeserialize(FailedDeserializeError<E>),
+    /// Additional error type for the possibility of extending this type
     Other(E),
+    /// Error without specifying any reason
     Failed,
 }
 
@@ -62,7 +33,7 @@ impl<E: Error + PartialEq + Eq> Display for DeserializeError<E> {
             DeserializeError::ViewAnotherType(e) => write!(f, "{}", e),
             DeserializeError::InvalidIndex(e) => write!(f, "{}", e),
             DeserializeError::InvalidKey(e) => write!(f, "{}", e),
-            DeserializeError::FailedDecode(e) => write!(f, "{}", e),
+            DeserializeError::FailedDeserialize(e) => write!(f, "{}", e),
             DeserializeError::Other(e) => write!(f, "{}", e),
             DeserializeError::Failed => write!(f, ""),
         }
@@ -89,24 +60,6 @@ impl<E: Error + PartialEq + Eq> From<InvalidKeyError> for DeserializeError<E> {
 
 impl<E: Error + PartialEq + Eq> From<FailedDeserializeError<E>> for DeserializeError<E> {
     fn from(value: FailedDeserializeError<E>) -> Self {
-        DeserializeError::FailedDecode(value)
-    }
-}
-
-impl<E: Error + PartialEq + Eq> From<ListError> for DeserializeError<E> {
-    fn from(value: ListError) -> Self {
-        match value {
-            ListError::ViewAnotherType(i) => DeserializeError::ViewAnotherType(i),
-            ListError::InvalidIndex(i) => DeserializeError::InvalidIndex(i),
-        }
-    }
-}
-
-impl<E: Error + PartialEq + Eq> From<MapError> for DeserializeError<E> {
-    fn from(value: MapError) -> Self {
-        match value {
-            MapError::ViewAnotherType(i) => DeserializeError::ViewAnotherType(i),
-            MapError::InvalidKey(i) => DeserializeError::InvalidKey(i),
-        }
+        DeserializeError::FailedDeserialize(value)
     }
 }

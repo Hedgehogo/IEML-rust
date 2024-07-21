@@ -1,6 +1,7 @@
 use super::super::node_type::NodeType;
 use std::fmt::{Debug, Display, Formatter};
 
+/// Error type responsible for the discrepancy between the requested node type and the available one.
 #[derive(PartialEq, Eq, Debug)]
 pub struct AnotherTypeError {
     requested_type: NodeType,

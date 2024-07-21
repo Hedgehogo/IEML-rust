@@ -1,7 +1,7 @@
 use super::super::{data::Data, node::node::Node, view::anchors::Anchors};
 use super::error::*;
 
-pub(crate) fn init_step<E: std::error::Error + PartialEq + Eq>(
+fn init_step<E: std::error::Error + PartialEq + Eq>(
     data: &mut Data,
     file_index: usize,
     index: usize,
@@ -54,7 +54,7 @@ pub(crate) fn init_step<E: std::error::Error + PartialEq + Eq>(
     Ok(())
 }
 
-pub(crate) fn init<E: std::error::Error + PartialEq + Eq>(
+pub(super) fn init<E: std::error::Error + PartialEq + Eq>(
     data: &mut Data,
 ) -> Result<(), marked::Error<E>> {
     match &data.get(data.data.len() - 1).node {

@@ -5,6 +5,7 @@ use super::super::{
 };
 use std::fmt::{self, Debug, Formatter};
 
+/// Structure for reading TakeAnchor node data.
 #[derive(Clone, Eq)]
 pub struct TakeAnchorView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
@@ -28,14 +29,17 @@ impl<'data, A: AnalyseAnchors<'data>> TakeAnchorView<'data, A> {
         }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the name.
     pub fn name(&self) -> NameRef<'data> {
         (&self.node.name).into()
     }
 
+    /// Gets the view on the child node.
     pub fn view(&self) -> View<'data, A> {
         let node = self.data.get(self.node.node_index);
         View::new(node, self.data, self.anchor_analyser.clone())

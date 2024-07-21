@@ -4,6 +4,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
+/// Error type containing Mark, which is necessary for most error types to be output to the user.
 #[derive(PartialEq, Eq, Debug)]
 pub struct WithMarkError<T: Error + PartialEq + Eq> {
     pub mark: Mark,

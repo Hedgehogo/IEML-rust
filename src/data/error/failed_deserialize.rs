@@ -5,6 +5,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
+/// Deserialisation error type containing a child error - the cause.
 #[derive(PartialEq, Eq, Debug)]
 pub struct FailedDeserializeError<E: Error + PartialEq + Eq> {
     type_name: &'static str,

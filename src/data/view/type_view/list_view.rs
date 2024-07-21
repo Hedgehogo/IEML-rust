@@ -47,6 +47,7 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
     }
 }
 
+/// Structure for reading List node data.
 #[derive(Clone, Eq)]
 pub struct ListView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
@@ -70,14 +71,20 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the number of elements.
     pub fn len(&self) -> usize {
         self.node.data.len()
     }
 
+    /// Gets the view on the element by the passed index.
+    ///
+    /// # Arguments
+    /// * `index` Index of the requested item.
     pub fn get(&self, index: usize) -> Result<View<'data, A>, marked::InvalidIndexError> {
         match self.node.data.get(index) {
             Some(i) => Ok({
@@ -91,6 +98,7 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         }
     }
 
+    /// Iterator by view per element.
     pub fn iter(&self) -> ListIter<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         ListIter::new(self.node.data.iter(), self.data, anchor_analyser)

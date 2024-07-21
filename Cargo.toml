@@ -1,6 +1,6 @@
 [package]
 name = "serde_ieml"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Implementing the IEML config parser for Rust. IEML (Interface Engine Markup Language) - A simple but powerful config with support for file uploads, inter-file anchors and tags."
 license = "MIT"

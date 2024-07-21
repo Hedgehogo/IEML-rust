@@ -9,6 +9,7 @@ use std::{
     path::Path,
 };
 
+/// Structure for reading File node data.
 #[derive(Clone, Eq)]
 pub struct FileView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
@@ -32,19 +33,23 @@ impl<'data, A: AnalyseAnchors<'data>> FileView<'data, A> {
         }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the path.
     pub fn path(&self) -> &'data Path {
         self.node.path.as_path()
     }
 
+    /// Gets the view on the child node.
     pub fn view(&self) -> View<'data, A> {
         let node = self.data.get(self.node.node_index);
         View::new(node, self.data, self.anchor_analyser.clone())
     }
 
+    /// Gets the structure for accessing anchors.
     pub fn anchors(&self) -> Anchors<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         Anchors::new(self.mark, self.node, self.data, anchor_analyser)

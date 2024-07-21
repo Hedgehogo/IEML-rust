@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 
+/// Error of key access to a map item.
 #[derive(PartialEq, Eq, Debug)]
 pub struct InvalidKeyError {
     requested_key: String,

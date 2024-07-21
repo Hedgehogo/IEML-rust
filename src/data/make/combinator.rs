@@ -15,6 +15,25 @@ use std::{error::Error, path::PathBuf};
 
 pub use super::maker::{ListToken, MapToken, Token};
 
+/// Adds a Null node.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `output` Returned by the function unchanged, added for signature consistency, which
+///            makes it easy to substitute this function for other ones.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::null(mark, ())).unwrap();
+/// assert!(data.view().is_null())
+/// ```
 pub fn null<O, E>(begin_mark: Mark, output: O) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
@@ -22,6 +41,26 @@ where
     move |token| Ok((token.add_node(begin_mark, Node::Null), output))
 }
 
+/// Adds a Raw node.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `output` Returned by the function unchanged, added for signature consistency, which
+///            makes it easy to substitute this function for other ones.
+/// * `raw` Contents.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::raw(mark, (), "abc")).unwrap();
+/// assert_eq!(data.view().raw().unwrap().raw(), "abc")
+/// ```
 pub fn raw<O, E, S>(
     begin_mark: Mark,
     output: O,
@@ -37,6 +76,26 @@ where
     }
 }
 
+/// Adds a String node.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `output` Returned by the function unchanged, added for signature consistency, which
+///            makes it easy to substitute this function for other ones.
+/// * `string` Contents.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::string(mark, (), "abc")).unwrap();
+/// assert_eq!(data.view().string().unwrap().string(), "abc")
+/// ```
 pub fn string<O, E, S>(
     begin_mark: Mark,
     output: O,
@@ -52,6 +111,31 @@ where
     }
 }
 
+/// Adds a List node and all its child ones.
+///
+/// Returns the same output returned by `f`.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `f` Closure that adds child nodes.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::list(mark, |token| {
+///     token.add(make::null(mark, ()))
+/// })).unwrap();
+///
+/// let list_view = data.view().list().unwrap();
+/// assert_eq!(list_view.len(), 1);
+/// assert!(list_view.get(0).unwrap().is_null());
+/// ```
 pub fn list<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
@@ -84,6 +168,32 @@ where
     }
 }
 
+/// Adds a Map node and all its child ones.
+///
+/// Returns the same output returned by `f`. Returns an unrecoverable error if `f` added at least one node and then returned an error
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `f` Closure that adds child nodes.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use serde_ieml::data::name::NameRef;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::map(mark, |token| {
+///     token.add(mark, NameRef::new("key").unwrap(), make::null(mark, ()))
+/// })).unwrap();
+///
+/// let map_view = data.view().map().unwrap();
+/// assert_eq!(map_view.len(), 1);
+/// assert!(map_view.get("key").unwrap().is_null());
+/// ```
 pub fn map<O, E, F>(begin_mark: Mark, f: F) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
@@ -116,6 +226,33 @@ where
     }
 }
 
+/// Adds a Tagged node and exactly one child node.
+///
+/// Returns the same output returned by `f`.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `tag` The tag that will be assigned to the child node.
+/// * `f` Closure that adds a child node.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use serde_ieml::data::name::NameRef;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, |token| {
+///     make::tagged(mark, NameRef::new("tag").unwrap(), make::null(mark, ()))(token)
+/// }).unwrap();
+///
+/// let tagged_view = data.view().tagged().unwrap();
+/// assert_eq!(tagged_view.tag().as_str(), "tag");
+/// assert!(tagged_view.view().is_null());
+/// ```
 pub fn tagged<O, E, F, S>(
     begin_mark: Mark,
     tag: S,
@@ -136,6 +273,40 @@ where
     }
 }
 
+/// Adds a File node, its one child node, and any number of named nodes (anchors).
+///
+/// Returns the same output returned by `anchors`. It is assumed that the child node is in a separate document and does not affect the output.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `path` File path or document path in the file system analogy.
+/// * `anchors` Closure that adds named nodes (anchors).
+/// * `f` Closure that adds a child node.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use serde_ieml::data::name::NameRef;
+/// use std::{convert::Infallible, path::Path};
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::file(
+///     mark, 
+///     Path::new("test.ieml").to_path_buf(),
+///     |token| token.add(mark, NameRef::new("anchor").unwrap(), make::null(mark, ())),
+///     make::null(mark, ()),
+/// )).unwrap();
+///
+/// let file_view = data.view().clear_step_file().unwrap().file().unwrap();
+/// assert_eq!(file_view.path(), Path::new("test.ieml"));
+/// 
+/// let anchors = file_view.anchors().file_anchors();
+/// assert_eq!(anchors.len(), 1);
+/// assert!(anchors.get("anchor").unwrap().is_null());
+/// ```
 pub fn file<O, E, F, A>(
     begin_mark: Mark,
     path: PathBuf,
@@ -197,6 +368,33 @@ where
     }
 }
 
+/// Adds a TakeAnchor node and its single child node.
+///
+/// Returns the same output returned by `f`.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `name` Name of the anchor to be created.
+/// * `f` Closure that adds a child node.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use serde_ieml::data::name::NameRef;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, |token| {
+///     make::take_anchor(mark, NameRef::new("anchor").unwrap(), make::null(mark, ()))(token)
+/// }).unwrap();
+///
+/// let take_anchor_view = data.view().take_anchor().unwrap();
+/// assert_eq!(take_anchor_view.name().as_str(), "anchor");
+/// assert!(take_anchor_view.view().is_null());
+/// ```
 pub fn take_anchor<O, E, F, S>(
     begin_mark: Mark,
     name: S,
@@ -225,6 +423,17 @@ where
     }
 }
 
+/// Adds a TakeAnchor node.
+///
+/// Returns the same output returned by `f`.
+///
+/// *Note*: The tokens are described in more detail in [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `output` Returned by the function unchanged, added for signature consistency, which
+///            makes it easy to substitute this function for other ones.
+/// * `name` Name of the anchor that is being requested.
 pub fn get_anchor<O, E, S>(
     begin_mark: Mark,
     output: O,
@@ -241,6 +450,28 @@ where
     }
 }
 
+/// Creates [`Data`] by combining the functions of this [module][`crate::data::make::combinator`].
+/// 
+/// Checks the existence of all requested anchors and the uniqueness of all created anchors.
+///
+/// Returns the same output returned by `f`.
+///
+/// *Note*: This is a simplified version of the [`make_file`].
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `f` Closure that creates a top node.
+/// 
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use std::convert::Infallible;
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::null(mark, ())).unwrap();
+/// assert!(data.view().is_null())
+/// ```
 pub fn make<O, E, F>(begin_mark: Mark, f: F) -> Result<(Data, O), marked::Error<E>>
 where
     E: Error + PartialEq + Eq,
@@ -276,6 +507,53 @@ where
     }
 }
 
+/// Creates [`Data`] by combining the functions of this [module][`self`].
+/// 
+/// Checks the existence of all requested anchors and the uniqueness of all created anchors.
+/// 
+/// The top node is always File, this is necessary for anchors to work correctly. 
+/// `f` creates a child node of the file, which is commonly referred to as the top node.
+/// 
+/// Gives `f` one token, which not only gives but obliges to create exactly one node. 
+/// This is guaranteed by the fact that when [`Token`] is used, it is consumed and if successful, [`UsedToken`][`super::maker::UsedToken`] is returned. 
+/// And the closure signature obliges to return [`UsedToken`][`super::maker::UsedToken`] in case of success.
+/// 
+/// The token can be used by calling one of the functions of this [module][`self`] indirectly or directly. 
+/// Some functions of this module issue additional tokens for creating child nodes.
+/// 
+/// In case of an unrecoverable error, an [`ErrorToken`][`super::maker::ErrorToken`] is formed and functions start deploying as fast as possible, 
+/// when creating an [`ErrorToken`][`super::maker::ErrorToken`] the only thing you are allowed to do is return it from the function expanding the stack.
+///
+/// Returns the same output returned by `f`.
+///
+/// # Arguments
+/// * `begin_mark` Node start mark.
+/// * `path` File path or document path in the file system analogy.
+/// * `anchors` Closure that adds external named nodes (anchors).
+/// * `f` Closure that adds a top node.
+///
+/// # Example
+///
+/// ```rust
+/// use serde_ieml::data::make;
+/// use serde_ieml::data::name::NameRef;
+/// use std::{convert::Infallible, path::Path};
+///
+/// let mark = Default::default();
+/// let (data, _) = make::make_file::<_, Infallible, _, _>(
+///     mark, 
+///     Path::new("test.ieml").to_path_buf(),
+///     |token| token.add(mark, NameRef::new("anchor").unwrap(), make::null(mark, ())),
+///     make::null(mark, ()),
+/// ).unwrap();
+///
+/// let file_view = data.view().file().unwrap();
+/// assert_eq!(file_view.path(), Path::new("test.ieml"));
+/// 
+/// let anchors = file_view.anchors().file_anchors();
+/// assert_eq!(anchors.len(), 1);
+/// assert!(anchors.get("anchor").unwrap().is_null());
+/// ```
 pub fn make_file<O, E, F, A>(
     begin_mark: Mark,
     path: PathBuf,

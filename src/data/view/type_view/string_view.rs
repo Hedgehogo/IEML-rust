@@ -4,6 +4,7 @@ use super::super::super::{
 };
 use std::fmt::Debug;
 
+/// Structure for reading Null node data.
 #[derive(Debug, Clone, Eq)]
 pub struct StringView<'data> {
     mark: Mark,
@@ -15,10 +16,12 @@ impl<'data> StringView<'data> {
         Self { mark, string }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the string.
     pub fn string(&self) -> &'data str {
         self.string.as_str()
     }

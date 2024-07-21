@@ -1,6 +1,7 @@
 use super::super::super::mark::Mark;
 use std::fmt::Debug;
 
+/// Structure for reading Null node data.
 #[derive(Debug, Clone, Eq)]
 pub struct NullView {
     mark: Mark,
@@ -11,6 +12,7 @@ impl NullView {
         Self { mark }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }

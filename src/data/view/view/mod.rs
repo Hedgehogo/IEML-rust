@@ -14,6 +14,7 @@ use std::{error::Error, fmt::Debug};
 
 pub use super::to_match::*;
 
+/// Structure for reading node data.
 #[derive(Clone, Eq)]
 pub struct View<'data, A: AnalyseAnchors<'data> = ()> {
     node: &'data MarkedNode,
@@ -208,25 +209,25 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         clear::<T, A>(self.clone())
     }
 
-    /// Gets the view under the Tag if the node type is with the Tagged, otherwise the current view.
+    /// Recursively retrieves the nearest child view that is a Tag, if unsuccessful, returns the nearest view not containing a single child.
     pub fn clear_tag(&self) -> Self {
         use super::clear::*;
         clear::<(File, TakeAnchor, GetAnchor), A>(self.clone())
     }
 
-    /// Gets the view contained in the File, if the node type is a File, otherwise the current view.
+    /// Recursively retrieves the nearest child view that is a File, if unsuccessful, returns the nearest view not containing a single child.
     pub fn clear_file(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, TakeAnchor, GetAnchor), A>(self.clone())
     }
 
-    /// Gets the view contained in the Anchor if the node type is TakeAnchor, otherwise the current view
+    /// Recursively retrieves the nearest child view that is a TakeAnchor, if unsuccessful, returns the nearest view not containing a single child.
     pub fn clear_take_anchor(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, File, GetAnchor), A>(self.clone())
     }
 
-    /// Gets the view contained in the Anchor if the node type is GetAnchor, otherwise the current view
+    /// Recursively retrieves the nearest child view that is a GetAnchor, if unsuccessful, returns the nearest view not containing a single child.
     pub fn clear_get_anchor(&self) -> Self {
         use super::clear::*;
         clear::<(Tagged, File, TakeAnchor), A>(self.clone())

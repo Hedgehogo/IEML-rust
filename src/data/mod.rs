@@ -1,3 +1,5 @@
+/// This module is designed to define the data structures used in IEML operations.
+
 pub mod node;
 pub mod error;
 pub mod make;

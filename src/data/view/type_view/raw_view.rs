@@ -4,6 +4,7 @@ use super::super::super::{
 };
 use std::fmt::Debug;
 
+/// Structure for reading Raw node data.
 #[derive(Debug, Clone, Eq)]
 pub struct RawView<'data> {
     mark: Mark,
@@ -15,10 +16,12 @@ impl<'data> RawView<'data> {
         Self { mark, raw }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the raw data as a string.
     pub fn raw(&self) -> &'data str {
         self.raw.as_str()
     }

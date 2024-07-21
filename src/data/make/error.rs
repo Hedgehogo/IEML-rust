@@ -3,11 +3,16 @@ use std::path::PathBuf;
 
 use super::super::name::Name;
 
+/// Type of error kind returned by the combinator system to create Data.
 #[derive(PartialEq, Eq, Debug)]
 pub enum ErrorKind<E: std::error::Error + PartialEq + Eq> {
+    /// In the created Data, an anchor with the same name is created twice at the same depth.
     AnchorAlreadyExist(Name),
+    /// In the created Data, an anchor request is encountered that has not been created.
     AnchorDoesntExist(Name),
+    /// There is a repeating key in the map.
     RepeatedKey,
+    /// Error kind added in order to expand the possible error kinds.
     Parse(E),
 }
 
@@ -30,9 +35,12 @@ impl<E: std::error::Error + PartialEq + Eq> From<E> for ErrorKind<E> {
     }
 }
 
+/// Error type returned by the combinator system to create Data.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Error<E: std::error::Error + PartialEq + Eq> {
+    /// Path to the file in which the error occurred.
     pub path: PathBuf,
+    /// Error kind.
     pub kind: ErrorKind<E>,
 }
 
@@ -65,6 +73,7 @@ impl<E: std::error::Error + PartialEq + Eq> std::error::Error for Error<E> {}
     }
 }*/
 
+/// A type that allows you to distinguish between recoverable and unrecoverable errors
 #[derive(PartialEq, Eq, Debug)]
 pub enum RateError<E1, E2> {
     Recoverable(E1),

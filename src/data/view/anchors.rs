@@ -10,6 +10,7 @@ use super::{
 };
 use std::fmt::{self, Debug, Formatter};
 
+/// Structure for reading file-level anchor data
 #[derive(Clone, Copy, Eq)]
 pub struct Anchors<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
@@ -44,6 +45,7 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
         })
     }
 
+    /// Gets the same structure for the parent file, if it exists
     pub fn parent(&self) -> Option<Anchors<'data, A>> {
         self.node
             .parent
@@ -57,18 +59,24 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
             })
     }
 
+    /// Gets a map of anchors created directly inside the file
     pub fn anchors(&self) -> MapView<'data, A> {
         let map_node = &self.node.anchors;
         let anchor_analyser = self.anchor_analyser.clone();
         MapView::new(self.mark, map_node, self.data, anchor_analyser)
     }
 
+    /// Gets the map of anchors created as external anchors passed to the file at the time of its loading.
     pub fn file_anchors(&self) -> MapView<'data, A> {
         let map_node = &self.node.file_anchors;
         let anchor_analyser = self.anchor_analyser.clone();
         MapView::new(self.mark, map_node, self.data, anchor_analyser)
     }
 
+    /// Gets the view to the child anchor node for the given file using the same algorithm defined by the IEML standard.
+    ///
+    /// # Arguments
+    /// * `key` Key of the requested anchor.
     pub fn get(&self, key: &str) -> Option<View<'data, A>> {
         self.get_index(key).map(|i| {
             let node = self.data.get(i);

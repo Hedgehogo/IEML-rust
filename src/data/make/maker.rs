@@ -32,11 +32,12 @@ impl Maker {
         self.data
     }
 
-    pub fn path(&self) -> &Path {
+    pub(super) fn path(&self) -> &Path {
         self.path.as_path()
     }
 }
 
+/// Token that allows adding exactly one direct child node.
 pub struct Token<'maker> {
     maker: &'maker mut Maker,
 }
@@ -99,7 +100,7 @@ impl<'maker> Token<'maker> {
             Ok((token, result)) => {
                 token.maker.anchors = anchors;
                 Ok((token, result))
-            },
+            }
             Err(error) => match error {
                 RateError::Recoverable((token, error)) => {
                     token.maker.anchors = anchors;
@@ -118,10 +119,31 @@ impl<'maker> Token<'maker> {
         (self, anchors)
     }
 
+    /// Gets [`ErrorToken`].
+    ///
+    /// *Note*: Such a conversion is irreversible, the only thing you can do is throw the error above.
     pub fn error(self) -> ErrorToken<'maker> {
         ErrorToken { _maker: self.maker }
     }
 
+    /// Adds one child node.
+    ///
+    /// *Note*: Function added for symmetry with [`ListToken`] and [`MapToken`].
+    ///
+    /// # Arguments
+    /// * `f` Closure that adds a node.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use serde_ieml::data::make;
+    /// use std::convert::Infallible;
+    ///
+    /// let mark = Default::default();
+    /// let left = make::make::<_, Infallible, _>(mark, |token| make::null(mark, ())(token));
+    /// let right = make::make::<_, Infallible, _>(mark, |token| token.add(make::null(mark, ())));
+    /// assert_eq!(left, right)
+    /// ```
     pub fn add<O, E, F>(self, f: F) -> marked::Result<'maker, O, E>
     where
         E: std::error::Error + PartialEq + Eq,
@@ -131,6 +153,7 @@ impl<'maker> Token<'maker> {
     }
 }
 
+/// Token indicating that the node has been added.
 pub struct UsedToken<'maker> {
     index: usize,
     maker: &'maker mut Maker,
@@ -141,15 +164,20 @@ impl<'maker> UsedToken<'maker> {
         (Token::new(self.maker), self.index)
     }
 
+    /// Gets [`ErrorToken`].
+    ///
+    /// *Note*: Allows you to get an error if you have already added extra nodes. But only an unrecoverable one.
     pub fn error(self) -> ErrorToken<'maker> {
         ErrorToken { _maker: self.maker }
     }
 }
 
+/// Token indicating that an unrecoverable error has occurred.
 pub struct ErrorToken<'maker> {
     _maker: &'maker mut Maker,
 }
 
+/// Token allowing to add any number of nodes to the list.
 pub struct ListToken<'maker> {
     result: Vec<usize>,
     maker: &'maker mut Maker,
@@ -160,10 +188,17 @@ impl<'maker> ListToken<'maker> {
         (Token::new(self.maker), self.result)
     }
 
+    /// Gets [`ErrorToken`].
+    ///
+    /// *Note*: Such a conversion is irreversible, the only thing you can do is throw the error above.
     pub fn error(self) -> ErrorToken<'maker> {
         ErrorToken { _maker: self.maker }
     }
 
+    /// Adds one child node, and returns the token back, allowing it to be reused.
+    ///
+    /// # Arguments
+    /// * `f` Closure that adds a node.
     pub fn add<O, E, F>(mut self, f: F) -> marked::ListResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,
@@ -175,7 +210,7 @@ impl<'maker> ListToken<'maker> {
                 self.maker = used_token.maker;
                 Ok((self, output))
             }
-            
+
             Err(error) => match error {
                 RateError::Recoverable((token, error)) => {
                     self.maker = token.maker;
@@ -190,6 +225,7 @@ impl<'maker> ListToken<'maker> {
     }
 }
 
+/// Token allowing to add any number of nodes to the map.
 pub struct MapToken<'maker> {
     result: HashMap<Name, usize>,
     maker: &'maker mut Maker,
@@ -200,10 +236,19 @@ impl<'maker> MapToken<'maker> {
         (Token::new(self.maker), self.result)
     }
 
+    /// Gets [`ErrorToken`].
+    ///
+    /// *Note*: Such a conversion is irreversible, the only thing you can do is throw the error above.
     pub fn error(self) -> ErrorToken<'maker> {
         ErrorToken { _maker: self.maker }
     }
 
+    /// Adds one child node, and returns the token back, allowing it to be reused.
+    ///
+    /// # Arguments
+    /// * `mark` Mark of the beginning of the key.
+    /// * `key` Key by which the added node will be accessed.
+    /// * `f` Closure that adds a node.
     pub fn add<O, E, F, S>(mut self, mark: Mark, key: S, f: F) -> marked::MapResult<'maker, O, E>
     where
         E: Error + PartialEq + Eq,

@@ -53,6 +53,7 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
     }
 }
 
+/// Structure for reading Map node data.
 #[derive(Clone, Eq)]
 pub struct MapView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
@@ -76,18 +77,25 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
         }
     }
 
+    /// Gets the mark.
     pub fn mark(&self) -> Mark {
         self.mark
     }
 
+    /// Gets the number of elements.
     pub fn len(&self) -> usize {
         self.node.data.len()
     }
 
+    /// Asks if a certain key is contained in the map.
     pub fn contains_key(&self, key: &String) -> bool {
         self.node.data.contains_key(key)
     }
 
+    /// Gets the view on the element by the passed key.
+    ///
+    /// # Arguments
+    /// * `key` Key of the requested item.
     pub fn get(&self, key: &str) -> Result<View<'data, A>, marked::InvalidKeyError> {
         match self.node.data.get(key) {
             Some(i) => Ok({
@@ -101,6 +109,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
         }
     }
 
+    /// Iterate over tuples of keys and view to the corresponding element.
     pub fn iter(&self) -> MapIter<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         MapIter::new(self.node.data.iter(), self.data, anchor_analyser)

@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
+/// Error of index access to a list item.
 #[derive(PartialEq, Eq, Debug)]
 pub struct InvalidIndexError {
     requested_index: usize,
