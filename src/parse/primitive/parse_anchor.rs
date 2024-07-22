@@ -9,7 +9,7 @@ use crate::{
     parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 
-fn anchor_name<'input>(
+fn lex_anchor_name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, (NameRef<'input>, bool)> {
@@ -27,7 +27,7 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match anchor_name(reader.path(), cursor) {
+    move |token| match lex_anchor_name(reader.path(), cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(reader, output, indent);
             make::take_anchor(cursor.mark, name, f)(token)
@@ -52,7 +52,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_anchor() {
+    fn test_lex_parse_anchor() {
         let begin_mark = Mark::new(0, 0);
         let path = Path::new("test.ieml");
         {

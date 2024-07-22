@@ -46,7 +46,7 @@ fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut S
     }
 }
 
-pub(crate) fn not_escaped_string<'input>(
+pub(crate) fn lex_not_escaped_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
@@ -76,7 +76,7 @@ pub(crate) fn parse_not_escaped_string<'input>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token: make::Token| match not_escaped_string(path, cursor, indent) {
+    move |token: make::Token| match lex_not_escaped_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => match error.data.kind {
             make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
@@ -94,14 +94,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_not_escaped_string() {
+    fn test_lex_not_escaped_string() {
         let begin_mark = Mark::new(0, 0);
         let path = Path::new("test.ieml");
         {
             let input = r#">>
 		hello"#;
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
@@ -109,7 +109,7 @@ mod tests {
             let input = r#">>
 			hello"#;
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 8)).into(), "\thello".into()))
             );
         }
@@ -118,7 +118,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
@@ -128,7 +128,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
@@ -138,7 +138,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
@@ -149,7 +149,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(0, 4);
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(
                     error_mark,
                     path,
@@ -162,7 +162,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(1, 0);
             assert_eq!(
-                not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(error_mark, path, ErrorKind::ExpectedTab))
             );
         }

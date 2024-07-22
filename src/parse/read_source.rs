@@ -10,7 +10,8 @@ use super::cursor::Cursor;
 fn read_file(parent: &Path, child: &Path) -> Option<(PathBuf, String)> {
     let read = |path| fs::read_to_string(&path).map(|i| (path, i));
 
-    let canonical_path = child.canonicalize().ok()?;
+    let mut canonical_path = child.canonicalize().ok()?;
+    canonical_path.as_mut_os_string().push(".ieml");
     let relative_path: PathBuf = [parent.parent()?, canonical_path.as_path()]
         .iter()
         .collect();

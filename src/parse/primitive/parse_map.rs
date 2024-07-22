@@ -12,7 +12,7 @@ use crate::{
     parse::{ErrorKind, LexResult, MapResult, RateError, Result},
 };
 
-fn key<'input>(
+fn lex_key<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error_kind: ErrorKind,
@@ -34,7 +34,7 @@ pub(crate) fn parse_map_item<'input, R: ReadSource + ?Sized>(
     indent: usize,
     error: ErrorKind,
 ) -> impl FnOnce(make::MapToken) -> MapResult<'_, 'input> {
-    move |token| match key(reader.path(), cursor, error) {
+    move |token| match lex_key(reader.path(), cursor, error) {
         Ok((new_cursor, key)) => {
             let f = parse_node(reader, new_cursor, indent + 1);
             token.add(cursor.mark, key, f)

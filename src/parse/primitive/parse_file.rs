@@ -16,7 +16,7 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, &'input Path> {
+fn lex_path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, &'input Path> {
     match tuple((char('<'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);
@@ -87,7 +87,7 @@ pub(crate) fn parse_file<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match path(reader.path(), cursor) {
+    move |token| match lex_path(reader.path(), cursor) {
         Ok((new_cursor, path)) => {
             let anchors = parse_anchors(reader, new_cursor, indent);
 

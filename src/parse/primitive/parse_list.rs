@@ -15,7 +15,7 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn special<'input>(
+fn lex_special<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error_kind: ErrorKind,
@@ -32,7 +32,7 @@ fn parse_list_item<'input, R: ReadSource + ?Sized>(
     indent: usize,
     error_kind: ErrorKind,
 ) -> impl FnOnce(make::ListToken) -> ListResult<'_, 'input> {
-    move |token| match special(reader.path(), cursor, error_kind) {
+    move |token| match lex_special(reader.path(), cursor, error_kind) {
         Ok((cursor, _)) => token.add(parse_node(reader, cursor, indent + 1)),
         Err(error) => Err(RateError::Recoverable((token, error))),
     }

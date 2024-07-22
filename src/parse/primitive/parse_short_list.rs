@@ -21,7 +21,7 @@ use nom::{
     IResult, Parser,
 };
 
-fn beginning<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, ()> {
+fn lex_beginning<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, ()> {
     match char('[')(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
 
@@ -32,7 +32,7 @@ fn beginning<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'i
     }
 }
 
-fn special<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, bool> {
+fn lex_special<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, bool> {
     let ending = char(']');
     let separator = tuple((char(','), char(' ')));
 
@@ -53,7 +53,7 @@ fn not_any_ending<'input>(cursor: Cursor<'input>) -> IResult<Cursor<'input>, ()>
     not(alt((ending, separator, comment)))(cursor)
 }
 
-fn raw_or_null<'input>(
+fn lex_raw_or_null<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, &'input str> {
@@ -73,14 +73,14 @@ fn parse_raw_or_null<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match raw_or_null(path, cursor) {
+    move |token| match lex_raw_or_null(path, cursor) {
         Ok((output, "null")) => make::null(cursor.mark, output)(token),
         Ok((output, result)) => make::raw(cursor.mark, output, result)(token),
         Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 
-fn get_anchor<'input>(
+fn lex_get_anchor<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, NameRef<'input>> {
@@ -101,7 +101,7 @@ fn parse_get_anchor<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match get_anchor(path, cursor) {
+    move |token| match lex_get_anchor(path, cursor) {
         Ok((output, name)) => make::get_anchor(cursor.mark, output, name)(token),
 
         Err(error) => match error.data.kind {
@@ -154,13 +154,13 @@ pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
-        let item_cursor = match beginning(reader.path(), cursor) {
+        let item_cursor = match lex_beginning(reader.path(), cursor) {
             Ok((item_cursor, _)) => item_cursor,
             Err(error) => return Err(RateError::Recoverable((token, error))),
         };
 
         make::list(cursor.mark, |token| {
-            if let Ok((output, false)) = special(reader.path(), item_cursor) {
+            if let Ok((output, false)) = lex_special(reader.path(), item_cursor) {
                 return Ok((token, output));
             }
 
@@ -170,7 +170,7 @@ pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
             let (token, cursor) = loop {
                 (token, cursor) = {
                     let (token, cursor) = parse_short_list_item(reader, cursor)(token)?;
-                    match special(reader.path(), cursor) {
+                    match lex_special(reader.path(), cursor) {
                         Ok((cursor, true)) => (token, cursor),
                         Ok((cursor, false)) => break (token, cursor),
                         Err(error) => return Err(RateError::Unrecoverable((token.error(), error))),

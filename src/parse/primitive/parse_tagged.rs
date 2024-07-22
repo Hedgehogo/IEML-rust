@@ -10,7 +10,10 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn tag<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, NameRef<'input>> {
+fn lex_tag<'input>(
+    path: &'input Path,
+    cursor: Cursor<'input>,
+) -> LexResult<'input, NameRef<'input>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;
@@ -28,7 +31,7 @@ pub(crate) fn parse_tagged<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match tag(reader.path(), cursor) {
+    move |token| match lex_tag(reader.path(), cursor) {
         Ok((new_cursor, tag)) => {
             let f = parse_node(reader, new_cursor, indent);
             make::tagged(cursor.mark, tag, f)(token)
@@ -41,14 +44,10 @@ pub(crate) fn parse_tagged<'input, R: ReadSource + ?Sized>(
 mod tests {
     use crate::{
         data::mark::Mark,
-        parse::{Error, ErrorKind},
+        parse::{test_utils::name, Error, ErrorKind},
     };
 
     use super::*;
-
-    fn name(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
-    }
 
     #[test]
     fn test_parse_tagged() {

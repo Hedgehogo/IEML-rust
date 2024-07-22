@@ -97,7 +97,7 @@ fn parse(input: &str, indent: usize, capacity: usize) -> String {
     result
 }
 
-pub(crate) fn classic_string<'input>(
+pub(crate) fn lex_classic_string<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     indent: usize,
@@ -121,7 +121,7 @@ pub(crate) fn parse_classic_string<'input>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match classic_string(path, cursor, indent) {
+    move |token| match lex_classic_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => match error.data.kind {
             make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
@@ -139,20 +139,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_classic_string() {
+    fn test_lex_classic_string() {
         let begin_mark = Mark::new(0, 0);
         let path = Path::new("test.ieml");
         {
             let input = r#""hello""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(0, 7)).into(), "hello".into()))
             );
         }
         {
             let input = r#""hello"hello"#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("hello", Mark::new(0, 7)).into(), "hello".into()))
             );
         }
@@ -160,7 +160,7 @@ mod tests {
             let input = r#" "hello""#;
             let error_mark = Mark::new(0, 0);
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(
                     error_mark,
                     path,
@@ -172,7 +172,7 @@ mod tests {
             let input = r#""hello
 		world""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 8)).into(), "hello\nworld".into()))
             );
         }
@@ -180,7 +180,7 @@ mod tests {
             let input = r#""hello
 			world""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 9)).into(), "hello\n\tworld".into()))
             );
         }
@@ -189,7 +189,7 @@ mod tests {
 	world""#;
             let error_mark = Mark::new(1, 0);
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(error_mark, path, ErrorKind::ExpectedTab))
             );
         }
@@ -197,28 +197,28 @@ mod tests {
             let input = r#""hello \
 		world""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 8)).into(), "hello world".into()))
             );
         }
         {
             let input = r#""hello \"world\"""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(0, 17)).into(), "hello \"world\"".into()))
             );
         }
         {
             let input = r#""hello \world""#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(0, 14)).into(), "hello \\world".into()))
             );
         }
         {
             let input = r#""hello \world" # hello"#;
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(0, 22)).into(), "hello \\world".into()))
             );
         }
@@ -226,7 +226,7 @@ mod tests {
             let input = r#""hello"#;
             let error_mark = Mark::new(0, 6);
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(
                     error_mark,
                     path,
@@ -238,7 +238,7 @@ mod tests {
             let input = r#""hello\"#;
             let error_mark = Mark::new(0, 7);
             assert_eq!(
-                classic_string(path, (input, begin_mark).into(), 2),
+                lex_classic_string(path, (input, begin_mark).into(), 2),
                 Err(Error::new_with(
                     error_mark,
                     path,
