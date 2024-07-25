@@ -716,7 +716,7 @@ mod tests {
 
         let anchors = clear_view.file().unwrap().anchors().file_anchors();
         assert_eq!(anchors.len(), 1);
-        assert!(anchors.contains_key(&"file-anchor".into()));
+        assert!(anchors.contains_key("file-anchor"));
 
         assert!(clear_view.is_raw());
         assert_eq!(clear_view.raw().unwrap().raw(), "hello");

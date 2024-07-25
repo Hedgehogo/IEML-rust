@@ -47,12 +47,6 @@ impl Display for Name {
     }
 }
 
-impl Borrow<String> for Name {
-    fn borrow(&self) -> &String {
-        &self.data
-    }
-}
-
 impl Borrow<str> for Name {
     fn borrow(&self) -> &str {
         &self.data

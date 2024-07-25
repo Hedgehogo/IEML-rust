@@ -88,7 +88,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
     }
 
     /// Asks if a certain key is contained in the map.
-    pub fn contains_key(&self, key: &String) -> bool {
+    pub fn contains_key(&self, key: &str) -> bool {
         self.node.data.contains_key(key)
     }
 
