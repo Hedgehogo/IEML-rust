@@ -2,7 +2,7 @@ use super::{
     super::{
         data::Data,
         mark::Mark,
-        node::node::{FileNode, MarkedNode, Node},
+        node::node::{DocumentNode, MarkedNode, Node},
     },
     analyse_anchors::AnalyseAnchors,
     type_view::map_view::MapView,
@@ -10,11 +10,11 @@ use super::{
 };
 use std::fmt::{self, Debug, Formatter};
 
-/// Structure for reading file-level anchor data
+/// Structure for reading document-level anchor data
 #[derive(Clone, Copy, Eq)]
 pub struct Anchors<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
-    node: &'data FileNode,
+    node: &'data DocumentNode,
     data: &'data Data,
     anchor_analyser: A,
 }
@@ -22,7 +22,7 @@ pub struct Anchors<'data, A: AnalyseAnchors<'data>> {
 impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
     pub(crate) fn new(
         mark: Mark,
-        node: &'data FileNode,
+        node: &'data DocumentNode,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -37,7 +37,7 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
     pub(crate) fn get_index(&self, key: &str) -> Option<usize> {
         self.node.anchors.data.get(key).copied().or_else(|| {
             self.node
-                .file_anchors
+                .document_anchors
                 .data
                 .get(key)
                 .copied()
@@ -45,7 +45,7 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
         })
     }
 
-    /// Gets the same structure for the parent file, if it exists
+    /// Gets the same structure for the parent document, if it exists
     pub fn parent(&self) -> Option<Anchors<'data, A>> {
         self.node
             .parent
@@ -53,27 +53,27 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
             .map(|(i, parent)| match &self.data.get(i) {
                 MarkedNode {
                     mark,
-                    node: Node::File(node),
+                    node: Node::Document(node),
                 } => Self::new(*mark, node, self.data, parent),
-                _ => panic!("Incorrect document structure, the parent view is not a File."),
+                _ => panic!("Incorrect document structure, the parent view is not a Document."),
             })
     }
 
-    /// Gets a map of anchors created directly inside the file
+    /// Gets a map of anchors created directly inside the document
     pub fn anchors(&self) -> MapView<'data, A> {
         let map_node = &self.node.anchors;
         let anchor_analyser = self.anchor_analyser.clone();
         MapView::new(self.mark, map_node, self.data, anchor_analyser)
     }
 
-    /// Gets the map of anchors created as external anchors passed to the file at the time of its loading.
-    pub fn file_anchors(&self) -> MapView<'data, A> {
-        let map_node = &self.node.file_anchors;
+    /// Gets the map of anchors created as external anchors passed to the document at the time of its loading.
+    pub fn document_anchors(&self) -> MapView<'data, A> {
+        let map_node = &self.node.document_anchors;
         let anchor_analyser = self.anchor_analyser.clone();
         MapView::new(self.mark, map_node, self.data, anchor_analyser)
     }
 
-    /// Gets the view to the child anchor node for the given file using the same algorithm defined by the IEML standard.
+    /// Gets the view to the child anchor node for the given document using the same algorithm defined by the IEML standard.
     ///
     /// # Arguments
     /// * `key` Key of the requested anchor.
@@ -88,12 +88,12 @@ impl<'data, A: AnalyseAnchors<'data>> Anchors<'data, A> {
 
 impl<'data, A: AnalyseAnchors<'data>> PartialEq for Anchors<'data, A> {
     fn eq(&self, other: &Self) -> bool {
-        return self.anchors() == other.anchors() && self.file_anchors() == other.file_anchors();
+        return self.anchors() == other.anchors() && self.document_anchors() == other.document_anchors();
     }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> Debug for Anchors<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Anchors {{ file_anchors: {:?} }}", self.file_anchors())
+        write!(f, "Anchors {{ document_anchors: {:?} }}", self.document_anchors())
     }
 }

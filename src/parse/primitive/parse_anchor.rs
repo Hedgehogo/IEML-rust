@@ -30,9 +30,9 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
     move |token| match lex_anchor_name(reader.path(), cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(reader, output, indent);
-            make::take_anchor(cursor.mark, name, f)(token)
+            make::anchor_creation(cursor.mark, name, f)(token)
         }
-        Ok((output, (name, false))) => make::get_anchor(cursor.mark, output, name)(token),
+        Ok((output, (name, false))) => make::anchor_request(cursor.mark, output, name)(token),
         Err(error) => match error.data.kind {
             make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
                 Err(RateError::Recoverable((token, error)))
@@ -60,7 +60,7 @@ mod tests {
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(0, 13)).into();
-            let result_f = make::take_anchor::<_, ErrorKind, _, _>(
+            let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
                 begin_mark,
                 name("anchor"),
                 make::null(Mark::new(0, 9), result_output),
@@ -73,7 +73,7 @@ mod tests {
             let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\thello", Mark::new(0, 7)).into();
-            let result_f = make::take_anchor::<_, ErrorKind, _, _>(
+            let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
                 begin_mark,
                 name(""),
                 make::null(Mark::new(0, 3), result_output),

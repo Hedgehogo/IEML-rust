@@ -10,7 +10,7 @@ pub enum NodeType {
     List,
     Map,
     Tagged,
-    File,
-    TakeAnchor,
-    GetAnchor,
+    Document,
+    AnchorCreation,
+    AnchorRequest,
 }

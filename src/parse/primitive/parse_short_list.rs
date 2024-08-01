@@ -80,7 +80,7 @@ fn parse_raw_or_null<'input>(
     }
 }
 
-fn lex_get_anchor<'input>(
+fn lex_anchor_request<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, Name<&'input str>> {
@@ -97,12 +97,12 @@ fn lex_get_anchor<'input>(
     Err(Error::new_with(cursor.mark, path, error_kind))
 }
 
-fn parse_get_anchor<'input>(
+fn parse_anchor_request<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_get_anchor(path, cursor) {
-        Ok((output, name)) => make::get_anchor(cursor.mark, output, name)(token),
+    move |token| match lex_anchor_request(path, cursor) {
+        Ok((output, name)) => make::anchor_request(cursor.mark, output, name)(token),
 
         Err(error) => match error.data.kind {
             make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
@@ -122,7 +122,7 @@ fn parse_short_list_item<'input, R: ReadSource + ?Sized>(
         type Closure<'input, 'maker, R> =
             fn(&'input R, Cursor<'input>, make::ListToken<'maker>) -> ListResult<'maker, 'input>;
         let parsers: [Closure<'_, '_, R>; 4] = [
-            |reader, cursor, token| token.add(parse_get_anchor(reader.path(), cursor)),
+            |reader, cursor, token| token.add(parse_anchor_request(reader.path(), cursor)),
             |reader, cursor, token| token.add(parse_short_list(reader, cursor)),
             |reader, cursor, token| token.add(parse_classic_string(reader.path(), cursor, 0)),
             |reader, cursor, token| token.add(parse_raw_or_null(reader.path(), cursor)),

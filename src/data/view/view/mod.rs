@@ -45,9 +45,9 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             Node::List(_) => NodeType::List,
             Node::Map(_) => NodeType::Map,
             Node::Tagged(_) => NodeType::Tagged,
-            Node::File(_) => NodeType::File,
-            Node::TakeAnchor(_) => NodeType::TakeAnchor,
-            Node::GetAnchor(_) => NodeType::GetAnchor,
+            Node::Document(_) => NodeType::Document,
+            Node::AnchorCreation(_) => NodeType::AnchorCreation,
+            Node::AnchorRequest(_) => NodeType::AnchorRequest,
         }
     }
 
@@ -69,22 +69,22 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                 let anchor_analyser = self.anchor_analyser.clone();
                 TaggedView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
-            Node::File(i) => ToMatchView::File({
+            Node::Document(i) => ToMatchView::Document({
                 let anchor_analyser = self.anchor_analyser.child(i.path.as_path());
-                FileView::new(self.node.mark, i, self.data, anchor_analyser)
+                DocumentView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
-            Node::TakeAnchor(i) => ToMatchView::TakeAnchor({
+            Node::AnchorCreation(i) => ToMatchView::AnchorCreation({
                 let anchor_analyser = self.anchor_analyser.clone();
-                TakeAnchorView::new(self.node.mark, i, self.data, anchor_analyser)
+                AnchorCreationView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
-            Node::GetAnchor(i) => ToMatchView::GetAnchor({
+            Node::AnchorRequest(i) => ToMatchView::AnchorRequest({
                 let anchor_analyser = self.anchor_analyser.clone();
-                GetAnchorView::new(self.node.mark, i, self.data, anchor_analyser)
+                AnchorRequestView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
         }
     }
 
-    /// Returns whether the node is TakeAnchor.
+    /// Returns whether the node is AnchorCreation.
     pub fn is_null(&self) -> bool {
         matches!(self.clear().node.node, Node::Null)
     }
@@ -112,29 +112,29 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     /// Returns whether the node is Tagged.
     pub fn is_tagged(&self) -> bool {
         use super::clear::*;
-        let clear = self.clear_advanced::<(File, TakeAnchor, GetAnchor)>();
+        let clear = self.clear_advanced::<(Document, AnchorCreation, AnchorRequest)>();
         matches!(clear.node.node, Node::Tagged(_))
     }
 
-    /// Returns whether the node is File.
-    pub fn is_file(&self) -> bool {
+    /// Returns whether the node is Document.
+    pub fn is_document(&self) -> bool {
         use super::clear::*;
-        let clear = self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>();
-        matches!(clear.node.node, Node::File(_))
+        let clear = self.clear_advanced::<(Tagged, AnchorCreation, AnchorRequest)>();
+        matches!(clear.node.node, Node::Document(_))
     }
 
-    /// Returns whether the node is TakeAnchor.
-    pub fn is_take_anchor(&self) -> bool {
+    /// Returns whether the node is AnchorCreation.
+    pub fn is_anchor_creation(&self) -> bool {
         use super::clear::*;
-        let clear = self.clear_advanced::<(Tagged, File, GetAnchor)>();
-        matches!(clear.node.node, Node::TakeAnchor(_))
+        let clear = self.clear_advanced::<(Tagged, Document, AnchorRequest)>();
+        matches!(clear.node.node, Node::AnchorCreation(_))
     }
 
-    /// Returns whether the node is GetAnchor.
-    pub fn is_get_anchor(&self) -> bool {
+    /// Returns whether the node is AnchorRequest.
+    pub fn is_anchor_request(&self) -> bool {
         use super::clear::*;
-        let clear = self.clear_advanced::<(Tagged, File, TakeAnchor)>();
-        matches!(clear.node.node, Node::GetAnchor(_))
+        let clear = self.clear_advanced::<(Tagged, Document, AnchorCreation)>();
+        matches!(clear.node.node, Node::AnchorRequest(_))
     }
 
     /// Gets a child view if the node type is Tagged.
@@ -149,10 +149,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         }
     }
 
-    /// Gets a child view if the node type is File.
-    pub fn clear_step_file(&self) -> Option<Self> {
+    /// Gets a child view if the node type is Document.
+    pub fn clear_step_document(&self) -> Option<Self> {
         match &self.node.node {
-            Node::File(i) => Some(Self::new(
+            Node::Document(i) => Some(Self::new(
                 self.data.get(i.node_index),
                 self.data,
                 self.anchor_analyser.child(i.path.as_path()),
@@ -161,10 +161,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         }
     }
 
-    /// Gets a child view if the node type is TakeAnchor.
-    pub fn clear_step_take_anchor(&self) -> Option<Self> {
+    /// Gets a child view if the node type is AnchorCreation.
+    pub fn clear_step_anchor_creation(&self) -> Option<Self> {
         match &self.node.node {
-            Node::TakeAnchor(i) => Some(Self::new(
+            Node::AnchorCreation(i) => Some(Self::new(
                 self.data.get(i.node_index),
                 self.data,
                 self.anchor_analyser.clone(),
@@ -173,10 +173,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         }
     }
 
-    /// Gets a child view if the node type is GetAnchor.
-    pub fn clear_step_get_anchor(&self) -> Option<Self> {
+    /// Gets a child view if the node type is AnchorRequest.
+    pub fn clear_step_anchor_request(&self) -> Option<Self> {
         match &self.node.node {
-            Node::GetAnchor(i) => Some(Self::new(
+            Node::AnchorRequest(i) => Some(Self::new(
                 self.data.get(i.node_index),
                 self.data,
                 self.anchor_analyser.clone(),
@@ -185,10 +185,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         }
     }
 
-    /// Gets a child view if the node type is Tagged, File, TakeAnchor or GetAnchor.
+    /// Gets a child view if the node type is Tagged, Document, AnchorCreation or AnchorRequest.
     pub fn clear_step(&self) -> Option<Self> {
         use super::clear::*;
-        clear_step::<(Tagged, File, TakeAnchor, GetAnchor), A>(self.clone())
+        clear_step::<(Tagged, Document, AnchorCreation, AnchorRequest), A>(self.clone())
     }
 
     /// Gets a child view if the node type is T.
@@ -197,10 +197,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         clear_step::<T, A>(self.clone())
     }
 
-    /// Recursively gets a child view, excluding Tagged, File, TakeAnchor and GetAnchor data.
+    /// Recursively gets a child view, excluding Tagged, Document, AnchorCreation and AnchorRequest data.
     pub fn clear(&self) -> Self {
         use super::clear::*;
-        clear::<(Tagged, File, TakeAnchor, GetAnchor), A>(self.clone())
+        clear::<(Tagged, Document, AnchorCreation, AnchorRequest), A>(self.clone())
     }
 
     /// Recursively gets a child view, excluding T.
@@ -212,25 +212,25 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     /// Recursively retrieves the nearest child view that is a Tag, if unsuccessful, returns the nearest view not containing a single child.
     pub fn clear_tag(&self) -> Self {
         use super::clear::*;
-        clear::<(File, TakeAnchor, GetAnchor), A>(self.clone())
+        clear::<(Document, AnchorCreation, AnchorRequest), A>(self.clone())
     }
 
-    /// Recursively retrieves the nearest child view that is a File, if unsuccessful, returns the nearest view not containing a single child.
-    pub fn clear_file(&self) -> Self {
+    /// Recursively retrieves the nearest child view that is a Document, if unsuccessful, returns the nearest view not containing a single child.
+    pub fn clear_document(&self) -> Self {
         use super::clear::*;
-        clear::<(Tagged, TakeAnchor, GetAnchor), A>(self.clone())
+        clear::<(Tagged, AnchorCreation, AnchorRequest), A>(self.clone())
     }
 
-    /// Recursively retrieves the nearest child view that is a TakeAnchor, if unsuccessful, returns the nearest view not containing a single child.
-    pub fn clear_take_anchor(&self) -> Self {
+    /// Recursively retrieves the nearest child view that is a AnchorCreation, if unsuccessful, returns the nearest view not containing a single child.
+    pub fn clear_anchor_creation(&self) -> Self {
         use super::clear::*;
-        clear::<(Tagged, File, GetAnchor), A>(self.clone())
+        clear::<(Tagged, Document, AnchorRequest), A>(self.clone())
     }
 
-    /// Recursively retrieves the nearest child view that is a GetAnchor, if unsuccessful, returns the nearest view not containing a single child.
-    pub fn clear_get_anchor(&self) -> Self {
+    /// Recursively retrieves the nearest child view that is a AnchorRequest, if unsuccessful, returns the nearest view not containing a single child.
+    pub fn clear_anchor_request(&self) -> Self {
         use super::clear::*;
-        clear::<(Tagged, File, TakeAnchor), A>(self.clone())
+        clear::<(Tagged, Document, AnchorCreation), A>(self.clone())
     }
 
     fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
@@ -295,7 +295,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     /// Gets the tagged view.
     pub fn tagged(&self) -> Result<TaggedView<'data, A>, marked::AnotherTypeError> {
         use super::clear::*;
-        let clear = self.clear_advanced::<(File, TakeAnchor, GetAnchor)>();
+        let clear = self.clear_advanced::<(Document, AnchorCreation, AnchorRequest)>();
         match &clear.node.node {
             Node::Tagged(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.clone();
@@ -305,53 +305,53 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         }
     }
 
-    /// Gets the file view.
-    pub fn file(&self) -> Result<FileView<'data, A>, marked::AnotherTypeError> {
+    /// Gets the document view.
+    pub fn document(&self) -> Result<DocumentView<'data, A>, marked::AnotherTypeError> {
         use super::clear::*;
-        let clear = self.clear_advanced::<(Tagged, TakeAnchor, GetAnchor)>();
+        let clear = self.clear_advanced::<(Tagged, AnchorCreation, AnchorRequest)>();
         match &clear.node.node {
-            Node::File(i) => Ok({
+            Node::Document(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.child(i.path.as_path());
-                FileView::new(clear.node.mark, i, clear.data, anchor_analyser)
+                DocumentView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::File)),
+            _ => Err(self.make_another_type_error(NodeType::Document)),
         }
     }
 
     /// Gets the take anchor view.
-    pub fn take_anchor(&self) -> Result<TakeAnchorView<'data, A>, marked::AnotherTypeError> {
+    pub fn anchor_creation(&self) -> Result<AnchorCreationView<'data, A>, marked::AnotherTypeError> {
         use super::clear::*;
-        let clear = self.clear_advanced::<(File, Tagged, GetAnchor)>();
+        let clear = self.clear_advanced::<(Document, Tagged, AnchorRequest)>();
         match &clear.node.node {
-            Node::TakeAnchor(i) => Ok({
+            Node::AnchorCreation(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.clone();
-                TakeAnchorView::new(clear.node.mark, i, clear.data, anchor_analyser)
+                AnchorCreationView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
+            _ => Err(self.make_another_type_error(NodeType::AnchorCreation)),
         }
     }
 
     /// Gets the get anchor view.
-    pub fn get_anchor(&self) -> Result<GetAnchorView<'data, A>, marked::AnotherTypeError> {
+    pub fn anchor_request(&self) -> Result<AnchorRequestView<'data, A>, marked::AnotherTypeError> {
         use super::clear::*;
-        let clear = self.clear_advanced::<(File, Tagged, TakeAnchor)>();
+        let clear = self.clear_advanced::<(Document, Tagged, AnchorCreation)>();
         match &clear.node.node {
-            Node::GetAnchor(i) => Ok({
+            Node::AnchorRequest(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.clone();
-                GetAnchorView::new(clear.node.mark, i, clear.data, anchor_analyser)
+                AnchorRequestView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::GetAnchor)),
+            _ => Err(self.make_another_type_error(NodeType::AnchorRequest)),
         }
     }
 
     /// Gets the anchor name.
     pub fn anchor_name(&self) -> Result<Name<&'data str>, marked::AnotherTypeError> {
         use super::clear::*;
-        let clear = self.clear_advanced::<(File, Tagged)>();
+        let clear = self.clear_advanced::<(Document, Tagged)>();
         match &clear.node.node {
-            Node::TakeAnchor(i) => Ok((&i.name).into()),
-            Node::GetAnchor(i) => Ok((&i.name).into()),
-            _ => Err(self.make_another_type_error(NodeType::TakeAnchor)),
+            Node::AnchorCreation(i) => Ok((&i.name).into()),
+            Node::AnchorRequest(i) => Ok((&i.name).into()),
+            _ => Err(self.make_another_type_error(NodeType::AnchorCreation)),
         }
     }
 

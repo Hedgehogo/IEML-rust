@@ -74,7 +74,7 @@ fn parse_child<'input, R: ReadSource + ?Sized>(
         match reader.read_child(token, path, f) {
             Ok(i) => i,
             Err(token) => {
-                let error_kind = ErrorKind::NonexistentFile;
+                let error_kind = ErrorKind::NonexistentDocument;
                 let error = Error::new_with(cursor.mark, reader.path(), error_kind);
                 Err(RateError::Unrecoverable((token.error(), error)))
             }
@@ -82,7 +82,7 @@ fn parse_child<'input, R: ReadSource + ?Sized>(
     }
 }
 
-pub(crate) fn parse_file<'input, R: ReadSource + ?Sized>(
+pub(crate) fn parse_document<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
@@ -93,7 +93,7 @@ pub(crate) fn parse_file<'input, R: ReadSource + ?Sized>(
 
             let f = parse_child(reader, cursor, path);
 
-            make::file(cursor.mark, path.into(), anchors, f)(token)
+            make::document(cursor.mark, path.into(), anchors, f)(token)
         }
         Err(error) => Err(RateError::Recoverable((token, error))),
     }
@@ -113,26 +113,26 @@ pub(crate) mod tests {
     fn parse<'input>(
         begin_mark: Mark,
         reader: &'input Reader,
-        files: &'input Files,
+        documents: &'input Documents,
     ) -> result::Result<(Data, Cursor<'input>), Error> {
-        let cursor = (files.get(reader.path()).unwrap().as_str(), begin_mark).into();
-        let data_f = parse_file(reader, cursor, 2);
+        let cursor = (documents.get(reader.path()).unwrap().as_str(), begin_mark).into();
+        let data_f = parse_document(reader, cursor, 2);
         make::make(begin_mark, data_f)
     }
 
     #[test]
-    fn test_parse_file() {
+    fn test_parse_document() {
         let begin_mark = Mark::new(0, 0);
         let path = Path::new("test");
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (Path::new("test"), "< subtest".into()),
                 (Path::new("subtest"), "null".into()),
             ]);
-            let reader = Reader::new(&files, path);
-            let data = parse(begin_mark, &reader, &files).unwrap();
+            let reader = Reader::new(&documents, path);
+            let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
-            let result_f = make::file::<_, ErrorKind, _, _>(
+            let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| Ok((token, result_output)),
@@ -142,14 +142,14 @@ pub(crate) mod tests {
             assert_eq!(data, result);
         }
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (Path::new("test"), "< subtest\n\t\tanchor: null".into()),
                 (Path::new("subtest"), "null".into()),
             ]);
-            let reader = Reader::new(&files, path);
-            let data = parse(begin_mark, &reader, &files).unwrap();
+            let reader = Reader::new(&documents, path);
+            let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
-            let result_f = make::file::<_, ErrorKind, _, _>(
+            let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| {
@@ -162,17 +162,17 @@ pub(crate) mod tests {
             assert_eq!(data, result);
         }
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (
                     Path::new("test"),
                     "< subtest\n# hello\n\t\tanchor: null".into(),
                 ),
                 (Path::new("subtest"), "null".into()),
             ]);
-            let reader = Reader::new(&files, path);
-            let data = parse(begin_mark, &reader, &files).unwrap();
+            let reader = Reader::new(&documents, path);
+            let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(2, 14)).into();
-            let result_f = make::file::<_, ErrorKind, _, _>(
+            let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
                 Path::new("subtest").into(),
                 |token| {
@@ -185,42 +185,42 @@ pub(crate) mod tests {
             assert_eq!(data, result);
         }
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (Path::new("test"), "< nonexistent".into()),
                 (Path::new("subtest"), "null".into()),
             ]);
-            let reader = Reader::new(&files, path);
+            let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
-                parse(begin_mark, &reader, &files),
+                parse(begin_mark, &reader, &documents),
                 Err(Error::new_with(
                     error_mark,
                     path,
-                    ErrorKind::NonexistentFile
+                    ErrorKind::NonexistentDocument
                 ))
             );
         }
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (Path::new("test"), "< subtest\n\t\tanchor".into()),
                 (Path::new("subtest"), "null".into()),
             ]);
-            let reader = Reader::new(&files, path);
+            let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(1, 2);
             assert_eq!(
-                parse(begin_mark, &reader, &files),
+                parse(begin_mark, &reader, &documents),
                 Err(Error::new_with(error_mark, path, ErrorKind::ExpectedMapKey))
             );
         }
         {
-            let files = Files::from([
+            let documents = Documents::from([
                 (Path::new("test"), "< subtest".into()),
                 (Path::new("subtest"), "null\nhello".into()),
             ]);
-            let reader = Reader::new(&files, path);
+            let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(1, 0);
             assert_eq!(
-                parse(begin_mark, &reader, &files),
+                parse(begin_mark, &reader, &documents),
                 Err(Error::new_with(
                     error_mark,
                     Path::new("subtest"),

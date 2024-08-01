@@ -6,7 +6,7 @@ use std::path::Path;
 /// 
 /// For example, this allows you to deserialize anchor data only once, and then only take a reference to already created structures.
 pub trait AnalyseAnchors<'data>: Clone {
-    /// Saying that a view to the child file has been received, this is important for anchors as each file creates its own scope for them.
+    /// Saying that a view to the child document has been received, this is important for anchors as each document creates its own scope for them.
     fn child(&self, path: &'data Path) -> Self;
 
     /// Gets the parent analyzer if it exists.

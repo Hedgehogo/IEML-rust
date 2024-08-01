@@ -7,7 +7,7 @@ use crate::data::make::maker::Token;
 
 use super::cursor::Cursor;
 
-fn read_file(parent: &Path, child: &Path) -> Option<(PathBuf, String)> {
+fn read_document(parent: &Path, child: &Path) -> Option<(PathBuf, String)> {
     let read = |path| fs::read_to_string(&path).map(|i| (path, i));
 
     let mut canonical_path = child.canonicalize().ok()?;
@@ -62,7 +62,7 @@ impl ReadSource for Path {
     where
         F: for<'input> FnOnce(Token<'maker>, &Self::Child, Cursor<'input>) -> T,
     {
-        match read_file(self, path) {
+        match read_document(self, path) {
             Some((path, content)) => {
                 let cursor = (content.as_str(), Default::default()).into();
                 Ok(f(token, path.as_path(), cursor))

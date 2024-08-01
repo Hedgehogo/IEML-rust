@@ -22,21 +22,21 @@ mod test_utils {
 
     use super::*;
 
-    pub(super) type Files<'path> = HashMap<&'path Path, String>;
+    pub(super) type Documents<'path> = HashMap<&'path Path, String>;
 
     #[derive(Clone)]
-    pub(super) struct Reader<'files, 'path> {
-        files: &'files Files<'path>,
+    pub(super) struct Reader<'documents, 'path> {
+        documents: &'documents Documents<'path>,
         path: &'path Path,
     }
 
-    impl<'files, 'path> Reader<'files, 'path> {
-        pub(super) fn new(files: &'files Files<'path>, path: &'path Path) -> Self {
-            Self { files, path }
+    impl<'documents, 'path> Reader<'documents, 'path> {
+        pub(super) fn new(documents: &'documents Documents<'path>, path: &'path Path) -> Self {
+            Self { documents, path }
         }
     }
 
-    impl<'files, 'path> ReadSource for Reader<'files, 'path> {
+    impl<'documents, 'path> ReadSource for Reader<'documents, 'path> {
         type Child = Self;
 
         fn read_source<'maker, F, R>(
@@ -47,7 +47,7 @@ mod test_utils {
         where
             F: for<'input> FnOnce(make::Token<'maker>, Cursor<'input>) -> R,
         {
-            match self.files.get(self.path) {
+            match self.documents.get(self.path) {
                 Some(result) => Ok(f(token, (result.as_str(), Default::default()).into())),
                 None => Err(token),
             }
@@ -62,10 +62,10 @@ mod test_utils {
         where
             F: for<'input> FnOnce(make::Token<'maker>, &'input Self, Cursor<'input>) -> R,
         {
-            match self.files.get_key_value(path) {
+            match self.documents.get_key_value(path) {
                 Some((path, result)) => {
                     let cursor = (result.as_str(), Default::default()).into();
-                    let reader = Reader::new(self.files, path);
+                    let reader = Reader::new(self.documents, path);
                     Ok(f(token, &reader, cursor))
                 }
                 None => Err(token),

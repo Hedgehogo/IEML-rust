@@ -1,5 +1,5 @@
 use super::super::{
-    super::{data::Data, mark::Mark, node::file_node::FileNode},
+    super::{data::Data, mark::Mark, node::document_node::DocumentNode},
     analyse_anchors::AnalyseAnchors,
     anchors::Anchors,
     view::View,
@@ -9,19 +9,19 @@ use std::{
     path::Path,
 };
 
-/// Structure for reading File node data.
+/// Structure for reading Document node data.
 #[derive(Clone, Eq)]
-pub struct FileView<'data, A: AnalyseAnchors<'data>> {
+pub struct DocumentView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
-    node: &'data FileNode,
+    node: &'data DocumentNode,
     data: &'data Data,
     anchor_analyser: A,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> FileView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> DocumentView<'data, A> {
     pub(in super::super) fn new(
         mark: Mark,
-        node: &'data FileNode,
+        node: &'data DocumentNode,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -56,18 +56,18 @@ impl<'data, A: AnalyseAnchors<'data>> FileView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> PartialEq for FileView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> PartialEq for DocumentView<'data, A> {
     fn eq(&self, other: &Self) -> bool {
-        self.anchors().file_anchors() == other.anchors().file_anchors()
+        self.anchors().document_anchors() == other.anchors().document_anchors()
             && self.view() == other.view()
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Debug for FileView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for DocumentView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "FileView {{ mark: {:?}, path: {:?}, anchors: {:?}, view: {:?} }}",
+            "DocumentView {{ mark: {:?}, path: {:?}, anchors: {:?}, view: {:?} }}",
             self.mark,
             self.path(),
             self.anchors(),

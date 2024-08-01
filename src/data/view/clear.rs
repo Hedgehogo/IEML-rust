@@ -3,11 +3,11 @@ use super::analyse_anchors::AnalyseAnchors;
 
 pub struct Tagged {}
 
-pub struct File {}
+pub struct Document {}
 
-pub struct TakeAnchor {}
+pub struct AnchorCreation {}
 
-pub struct GetAnchor {}
+pub struct AnchorRequest {}
 
 pub trait Clear<'data, A: AnalyseAnchors<'data>> {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>>;
@@ -19,21 +19,21 @@ impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for Tagged {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for File {
+impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for Document {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>> {
-        view.clear_step_file()
+        view.clear_step_document()
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for TakeAnchor {
+impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for AnchorCreation {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>> {
-        view.clear_step_take_anchor()
+        view.clear_step_anchor_creation()
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for GetAnchor {
+impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for AnchorRequest {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>> {
-        view.clear_step_get_anchor()
+        view.clear_step_anchor_request()
     }
 }
 

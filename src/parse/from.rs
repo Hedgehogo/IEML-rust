@@ -15,7 +15,7 @@ pub type AnchorsResult<'maker> =
 /// * `reader` The source reader.
 /// * `anchors` The closure that generates external anchors.
 ///
-/// *Note*: The source reader can access the file system.
+/// *Note*: The source reader can access the document system.
 ///
 /// # Example
 ///
@@ -33,9 +33,9 @@ pub type AnchorsResult<'maker> =
 ///     Ok(token)
 /// }).unwrap();
 /// 
-/// let get_anchor = data.view().get_anchor().unwrap();
-/// assert_eq!(get_anchor.name().as_str(), "anchor");
-/// assert!(get_anchor.view().is_null());
+/// let anchor_request = data.view().anchor_request().unwrap();
+/// assert_eq!(anchor_request.name().as_str(), "anchor");
+/// assert!(anchor_request.view().is_null());
 /// ```
 pub fn from_source_with_anchors<R: ReadSource + ?Sized, A>(
     reader: &R,
@@ -44,7 +44,7 @@ pub fn from_source_with_anchors<R: ReadSource + ?Sized, A>(
 where
     A: FnOnce(make::MapToken) -> AnchorsResult,
 {
-    make::make_file(
+    make::make_document(
         Default::default(),
         reader.path().to_path_buf(),
         |token| Ok((anchors(token)?, Cursor::default())),
@@ -57,7 +57,7 @@ where
             match result {
                 Ok(i) => i,
                 Err(token) => {
-                    let error_kind = ErrorKind::NonexistentFile;
+                    let error_kind = ErrorKind::NonexistentDocument;
                     let error = Error::new_with(Default::default(), Path::new(""), error_kind);
                     Err(RateError::Unrecoverable((token.error(), error)))
                 }
@@ -72,7 +72,7 @@ where
 /// # Arguments
 /// * `reader` The source reader.
 ///
-/// *Note*: The source reader can access the file system. A more generic version of this function is [`from_source_with_anchors`].
+/// *Note*: The source reader can access the document system. A more generic version of this function is [`from_source_with_anchors`].
 ///
 /// # Example
 ///

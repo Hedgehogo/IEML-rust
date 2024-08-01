@@ -16,7 +16,7 @@ pub enum ErrorKind {
     IncompleteString,
     IncompleteShortList,
     IncompleteDocument,
-    NonexistentFile,
+    NonexistentDocument,
 }
 
 pub type MakeError = error::Error<ErrorKind>;
@@ -54,7 +54,7 @@ impl Display for ErrorKind {
             ErrorKind::IncompleteDocument => {
                 write!(f, "There are extra characters at the end of the document.")
             }
-            ErrorKind::NonexistentFile => write!(f, "The requested file does not exist."),
+            ErrorKind::NonexistentDocument => write!(f, "The requested document does not exist."),
         }
     }
 }

@@ -1,23 +1,23 @@
 use super::super::{
-    super::{name::Name, data::Data, mark::Mark, node::take_anchor_node::TakeAnchorNode},
+    super::{data::Data, mark::Mark, name::Name, node::anchor_request_node::AnchorRequestNode},
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
 use std::fmt::{self, Debug, Formatter};
 
-/// Structure for reading TakeAnchor node data.
+/// Structure for reading AnchorRequest node data.
 #[derive(Clone, Eq)]
-pub struct TakeAnchorView<'data, A: AnalyseAnchors<'data>> {
+pub struct AnchorRequestView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
-    node: &'data TakeAnchorNode,
+    node: &'data AnchorRequestNode,
     data: &'data Data,
     anchor_analyser: A,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> TakeAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> AnchorRequestView<'data, A> {
     pub(in super::super) fn new(
         mark: Mark,
-        node: &'data TakeAnchorNode,
+        node: &'data AnchorRequestNode,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -34,7 +34,7 @@ impl<'data, A: AnalyseAnchors<'data>> TakeAnchorView<'data, A> {
         self.mark
     }
 
-    /// Gets the name.
+    /// Gets the path.
     pub fn name(&self) -> Name<&'data str> {
         (&self.node.name).into()
     }
@@ -46,20 +46,19 @@ impl<'data, A: AnalyseAnchors<'data>> TakeAnchorView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> PartialEq for TakeAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> PartialEq for AnchorRequestView<'data, A> {
     fn eq(&self, other: &Self) -> bool {
-        self.name() == other.name() && self.view() == other.view()
+        self.name() == other.name()
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Debug for TakeAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for AnchorRequestView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "TakeAnchorView {{ mark: {:?}, name: {:?}, view: {:?} }}",
+            "AnchorRequestView {{ mark: {:?}, name: {:?} }}",
             self.mark,
-            self.name(),
-            self.view()
+            self.name()
         )
     }
 }

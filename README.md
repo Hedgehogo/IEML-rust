@@ -1,6 +1,6 @@
 # Serde IEML
 
-A Rust library for using the [Serde](https://crates.io/crates/serde) serialization framework with data in IEML file format. This crate is still in development.
+A Rust library for using the [Serde](https://crates.io/crates/serde) serialization framework with data in IEML document format. This crate is still in development.
 
 ## Progress
 - [x] Data structures and APIs for working with them

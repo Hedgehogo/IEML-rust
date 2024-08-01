@@ -38,7 +38,7 @@ impl<E: std::error::Error + PartialEq + Eq> From<E> for ErrorKind<E> {
 /// Error type returned by the combinator system to create Data.
 #[derive(PartialEq, Eq, Debug)]
 pub struct Error<E: std::error::Error + PartialEq + Eq> {
-    /// Path to the file in which the error occurred.
+    /// Path to the document in which the error occurred.
     pub path: PathBuf,
     /// Error kind.
     pub kind: ErrorKind<E>,
@@ -55,7 +55,7 @@ impl<E: std::error::Error + PartialEq + Eq> Display for Error<E> {
         if !self.path.as_os_str().is_empty() {
             write!(
                 f,
-                "Failed to parse the data in the file {:?}. {}",
+                "Failed to parse the data in the document {:?}. {}",
                 self.path, self.kind
             )
         } else {

@@ -1,7 +1,7 @@
 use super::super::mark::Mark;
 pub(crate) use super::{
-    file_node::FileNode, get_anchor_node::GetAnchorNode, list_node::ListNode, map_node::MapNode,
-    tag_node::TaggedNode, take_anchor_node::TakeAnchorNode,
+    document_node::DocumentNode, anchor_request_node::AnchorRequestNode, list_node::ListNode, map_node::MapNode,
+    tag_node::TaggedNode, anchor_creation_node::AnchorCreationNode,
 };
 
 pub(crate) type RawNode = String;
@@ -16,9 +16,9 @@ pub(crate) enum Node {
     List(ListNode),
     Map(MapNode),
     Tagged(TaggedNode),
-    File(FileNode),
-    TakeAnchor(TakeAnchorNode),
-    GetAnchor(GetAnchorNode),
+    Document(DocumentNode),
+    AnchorCreation(AnchorCreationNode),
+    AnchorRequest(AnchorRequestNode),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

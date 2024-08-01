@@ -2,9 +2,9 @@ use super::analyse_anchors::AnalyseAnchors;
 use std::fmt::Debug;
 
 pub use super::type_view::{
-    file_view::FileView, get_anchor_view::GetAnchorView, list_view::ListView, map_view::MapView,
-    null_view::NullView, raw_view::RawView, string_view::StringView, tagged_view::TaggedView,
-    take_anchor_view::TakeAnchorView,
+    anchor_creation_view::AnchorCreationView, anchor_request_view::AnchorRequestView,
+    document_view::DocumentView, list_view::ListView, map_view::MapView, null_view::NullView,
+    raw_view::RawView, string_view::StringView, tagged_view::TaggedView,
 };
 
 /// A structure designed for pattern-matching, which the regular [`View`][`super::view::View`] does not allow.
@@ -16,9 +16,9 @@ pub enum ToMatchView<'data, A: AnalyseAnchors<'data>> {
     List(ListView<'data, A>),
     Map(MapView<'data, A>),
     Tagged(TaggedView<'data, A>),
-    File(FileView<'data, A>),
-    TakeAnchor(TakeAnchorView<'data, A>),
-    GetAnchor(GetAnchorView<'data, A>),
+    Document(DocumentView<'data, A>),
+    AnchorCreation(AnchorCreationView<'data, A>),
+    AnchorRequest(AnchorRequestView<'data, A>),
 }
 
 impl<'data, A: AnalyseAnchors<'data>> Debug for ToMatchView<'data, A> {
@@ -30,9 +30,9 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for ToMatchView<'data, A> {
             ToMatchView::List(i) => write!(f, "List({:?})", i),
             ToMatchView::Map(i) => write!(f, "Map({:?})", i),
             ToMatchView::Tagged(i) => write!(f, "Tagged({:?})", i),
-            ToMatchView::File(i) => write!(f, "File({:?})", i),
-            ToMatchView::TakeAnchor(i) => write!(f, "TakeAnchor({:?})", i),
-            ToMatchView::GetAnchor(i) => write!(f, "GetAnchor({:?})", i),
+            ToMatchView::Document(i) => write!(f, "Document({:?})", i),
+            ToMatchView::AnchorCreation(i) => write!(f, "AnchorCreation({:?})", i),
+            ToMatchView::AnchorRequest(i) => write!(f, "AnchorRequest({:?})", i),
         }
     }
 }
@@ -46,9 +46,9 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for ToMatchView<'data, A> {
             (ToMatchView::List(i), ToMatchView::List(j)) => i == j,
             (ToMatchView::Map(i), ToMatchView::Map(j)) => i == j,
             (ToMatchView::Tagged(i), ToMatchView::Tagged(j)) => i == j,
-            (ToMatchView::File(i), ToMatchView::File(j)) => i == j,
-            (ToMatchView::TakeAnchor(i), ToMatchView::TakeAnchor(j)) => i == j,
-            (ToMatchView::GetAnchor(i), ToMatchView::GetAnchor(j)) => i == j,
+            (ToMatchView::Document(i), ToMatchView::Document(j)) => i == j,
+            (ToMatchView::AnchorCreation(i), ToMatchView::AnchorCreation(j)) => i == j,
+            (ToMatchView::AnchorRequest(i), ToMatchView::AnchorRequest(j)) => i == j,
             _ => false,
         }
     }

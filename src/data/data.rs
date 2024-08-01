@@ -32,7 +32,7 @@ impl Data {
             .expect("Incorrect document structure, node does not exist.")
     }
 
-    /// Gets the view on the top file node.
+    /// Gets the view on the top document node.
     pub fn view(&self) -> View {
         View::new(
             self.data
@@ -43,7 +43,7 @@ impl Data {
         )
     }
 
-    /// Gets the view on the top file node, passing the anchor analyzer to it.
+    /// Gets the view on the top document node, passing the anchor analyzer to it.
     pub fn view_with_analyse<'data, A: AnalyseAnchors<'data>>(
         &'data self,
         anchor_analyser: A,

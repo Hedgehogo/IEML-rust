@@ -1,23 +1,23 @@
 use super::super::{
-    super::{data::Data, mark::Mark, name::Name, node::get_anchor_node::GetAnchorNode},
+    super::{name::Name, data::Data, mark::Mark, node::anchor_creation_node::AnchorCreationNode},
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
 use std::fmt::{self, Debug, Formatter};
 
-/// Structure for reading GetAnchor node data.
+/// Structure for reading AnchorCreation node data.
 #[derive(Clone, Eq)]
-pub struct GetAnchorView<'data, A: AnalyseAnchors<'data>> {
+pub struct AnchorCreationView<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
-    node: &'data GetAnchorNode,
+    node: &'data AnchorCreationNode,
     data: &'data Data,
     anchor_analyser: A,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> GetAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> AnchorCreationView<'data, A> {
     pub(in super::super) fn new(
         mark: Mark,
-        node: &'data GetAnchorNode,
+        node: &'data AnchorCreationNode,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -34,7 +34,7 @@ impl<'data, A: AnalyseAnchors<'data>> GetAnchorView<'data, A> {
         self.mark
     }
 
-    /// Gets the path.
+    /// Gets the name.
     pub fn name(&self) -> Name<&'data str> {
         (&self.node.name).into()
     }
@@ -46,19 +46,20 @@ impl<'data, A: AnalyseAnchors<'data>> GetAnchorView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> PartialEq for GetAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> PartialEq for AnchorCreationView<'data, A> {
     fn eq(&self, other: &Self) -> bool {
-        self.name() == other.name()
+        self.name() == other.name() && self.view() == other.view()
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Debug for GetAnchorView<'data, A> {
+impl<'data, A: AnalyseAnchors<'data>> Debug for AnchorCreationView<'data, A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "GetAnchorView {{ mark: {:?}, name: {:?} }}",
+            "AnchorCreationView {{ mark: {:?}, name: {:?}, view: {:?} }}",
             self.mark,
-            self.name()
+            self.name(),
+            self.view()
         )
     }
 }

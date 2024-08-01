@@ -4,7 +4,7 @@ use super::{
         mark::Mark,
         name::Name,
         node::node::{
-            FileNode, GetAnchorNode, ListNode, MapNode, Node, TaggedNode, TakeAnchorNode,
+            DocumentNode, AnchorRequestNode, ListNode, MapNode, Node, TaggedNode, AnchorCreationNode,
         },
     },
     error::*,
@@ -17,7 +17,7 @@ pub use super::maker::{ListToken, MapToken, Token};
 
 /// Adds a Null node.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -43,7 +43,7 @@ where
 
 /// Adds a Raw node.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -78,7 +78,7 @@ where
 
 /// Adds a String node.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -115,7 +115,7 @@ where
 ///
 /// Returns the same output returned by `f`.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -172,7 +172,7 @@ where
 ///
 /// Returns the same output returned by `f`. Returns an unrecoverable error if `f` added at least one node and then returned an error
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -230,7 +230,7 @@ where
 ///
 /// Returns the same output returned by `f`.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -273,15 +273,15 @@ where
     }
 }
 
-/// Adds a File node, its one child node, and any number of named nodes (anchors).
+/// Adds a Document node, its one child node, and any number of named nodes (anchors).
 ///
 /// Returns the same output returned by `anchors`. It is assumed that the child node is in a separate document and does not affect the output.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
-/// * `path` File path or document path in the file system analogy.
+/// * `path` Document path or document path in the document system analogy.
 /// * `anchors` Closure that adds named nodes (anchors).
 /// * `f` Closure that adds a child node.
 ///
@@ -293,21 +293,21 @@ where
 /// use std::{convert::Infallible, path::Path};
 ///
 /// let mark = Default::default();
-/// let (data, _) = make::make::<_, Infallible, _>(mark, make::file(
+/// let (data, _) = make::make::<_, Infallible, _>(mark, make::document(
 ///     mark, 
 ///     Path::new("test.ieml").to_path_buf(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// )).unwrap();
 ///
-/// let file_view = data.view().clear_step_file().unwrap().file().unwrap();
-/// assert_eq!(file_view.path(), Path::new("test.ieml"));
+/// let document_view = data.view().clear_step_document().unwrap().document().unwrap();
+/// assert_eq!(document_view.path(), Path::new("test.ieml"));
 /// 
-/// let anchors = file_view.anchors().file_anchors();
+/// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
 /// assert!(anchors.get("anchor").unwrap().is_null());
 /// ```
-pub fn file<O, E, F, A>(
+pub fn document<O, E, F, A>(
     begin_mark: Mark,
     path: PathBuf,
     anchors: A,
@@ -321,7 +321,7 @@ where
     move |token| {
         let map_token = token.add_map();
 
-        let ((token, file_anchors), output) = match anchors(map_token) {
+        let ((token, document_anchors), output) = match anchors(map_token) {
             Ok((map_token, output)) => (map_token.split(), output),
 
             Err(error) => match error {
@@ -344,13 +344,13 @@ where
             Ok((used_token, _)) => {
                 let (token, index) = used_token.split();
                 let (token, anchors) = token.anchors();
-                let file_anchors = MapNode::new(file_anchors);
-                let file = FileNode::new(path, index, anchors, file_anchors, None);
-                Ok((token, file))
+                let document_anchors = MapNode::new(document_anchors);
+                let document = DocumentNode::new(path, index, anchors, document_anchors, None);
+                Ok((token, document))
             }
             Err(error) => match error {
                 RateError::Recoverable((token, error)) => {
-                    if file_anchors.is_empty() {
+                    if document_anchors.is_empty() {
                         Err(RateError::Recoverable((token, error)))
                     } else {
                         Err(RateError::Unrecoverable((token.error(), error)))
@@ -361,18 +361,18 @@ where
             },
         });
 
-        result.map(|(token, file)| {
-            let used_token = token.add_node(begin_mark, Node::File(file));
+        result.map(|(token, document)| {
+            let used_token = token.add_node(begin_mark, Node::Document(document));
             (used_token, output)
         })
     }
 }
 
-/// Adds a TakeAnchor node and its single child node.
+/// Adds a AnchorCreation node and its single child node.
 ///
 /// Returns the same output returned by `f`.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -388,14 +388,14 @@ where
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, |token| {
-///     make::take_anchor(mark, Name::new("anchor").unwrap(), make::null(mark, ()))(token)
+///     make::anchor_creation(mark, Name::new("anchor").unwrap(), make::null(mark, ()))(token)
 /// }).unwrap();
 ///
-/// let take_anchor_view = data.view().take_anchor().unwrap();
-/// assert_eq!(take_anchor_view.name().as_str(), "anchor");
-/// assert!(take_anchor_view.view().is_null());
+/// let anchor_creation_view = data.view().anchor_creation().unwrap();
+/// assert_eq!(anchor_creation_view.name().as_str(), "anchor");
+/// assert!(anchor_creation_view.view().is_null());
 /// ```
-pub fn take_anchor<O, E, F, S>(
+pub fn anchor_creation<O, E, F, S>(
     begin_mark: Mark,
     name: S,
     f: F,
@@ -409,11 +409,11 @@ where
         f(token).and_then(|(used_token, output)| {
             let name = name.into();
             let (token, index) = used_token.split();
-            let result = TakeAnchorNode::new(name.clone(), index);
+            let result = AnchorCreationNode::new(name.clone(), index);
 
             match token.add_anchor(begin_mark, name, index) {
                 Ok((token, _)) => {
-                    let used_token = token.add_node(begin_mark, Node::TakeAnchor(result));
+                    let used_token = token.add_node(begin_mark, Node::AnchorCreation(result));
                     Ok((used_token, output))
                 }
 
@@ -423,18 +423,18 @@ where
     }
 }
 
-/// Adds a TakeAnchor node.
+/// Adds a AnchorRequest node.
 ///
 /// Returns the same output returned by `f`.
 ///
-/// *Note*: The tokens are described in more detail in [`make_file`].
+/// *Note*: The tokens are described in more detail in [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
 /// * `output` Returned by the function unchanged, added for signature consistency, which
 ///            makes it easy to substitute this function for other ones.
 /// * `name` Name of the anchor that is being requested.
-pub fn get_anchor<O, E, S>(
+pub fn anchor_request<O, E, S>(
     begin_mark: Mark,
     output: O,
     name: S,
@@ -444,8 +444,8 @@ where
     S: Into<Name<Box<str>>>,
 {
     move |token| {
-        let result = GetAnchorNode::new(name.into(), 0);
-        let used_token = token.add_node(begin_mark, Node::GetAnchor(result));
+        let result = AnchorRequestNode::new(name.into(), 0);
+        let used_token = token.add_node(begin_mark, Node::AnchorRequest(result));
         Ok((used_token, output))
     }
 }
@@ -456,7 +456,7 @@ where
 ///
 /// Returns the same output returned by `f`.
 ///
-/// *Note*: This is a simplified version of the [`make_file`].
+/// *Note*: This is a simplified version of the [`make_document`].
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
@@ -483,18 +483,18 @@ where
         f(token).map(|(used_token, output)| {
             let (token, index) = used_token.split();
             let (token, anchors) = token.anchors();
-            let file = FileNode {
+            let document = DocumentNode {
                 node_index: index,
                 anchors,
                 ..Default::default()
             };
-            (token, (file, output))
+            (token, (document, output))
         })
     });
 
     match result {
-        Ok((token, (file, output))) => {
-            let _ = token.add_node(begin_mark, Node::File(file));
+        Ok((token, (document, output))) => {
+            let _ = token.add_node(begin_mark, Node::Document(document));
             let mut data = maker.data();
             init(&mut data)?;
             Ok((data, output))
@@ -511,8 +511,8 @@ where
 /// 
 /// Checks the existence of all requested anchors and the uniqueness of all created anchors.
 /// 
-/// The top node is always File, this is necessary for anchors to work correctly. 
-/// `f` creates a child node of the file, which is commonly referred to as the top node.
+/// The top node is always Document, this is necessary for anchors to work correctly. 
+/// `f` creates a child node of the document, which is commonly referred to as the top node.
 /// 
 /// Gives `f` one token, which not only gives but obliges to create exactly one node. 
 /// This is guaranteed by the fact that when [`Token`] is used, it is consumed and if successful, [`UsedToken`][`super::maker::UsedToken`] is returned. 
@@ -528,7 +528,7 @@ where
 ///
 /// # Arguments
 /// * `begin_mark` Node start mark.
-/// * `path` File path or document path in the file system analogy.
+/// * `path` Document path or document path in the document system analogy.
 /// * `anchors` Closure that adds external named nodes (anchors).
 /// * `f` Closure that adds a top node.
 ///
@@ -540,21 +540,21 @@ where
 /// use std::{convert::Infallible, path::Path};
 ///
 /// let mark = Default::default();
-/// let (data, _) = make::make_file::<_, Infallible, _, _>(
+/// let (data, _) = make::make_document::<_, Infallible, _, _>(
 ///     mark, 
 ///     Path::new("test.ieml").to_path_buf(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// ).unwrap();
 ///
-/// let file_view = data.view().file().unwrap();
-/// assert_eq!(file_view.path(), Path::new("test.ieml"));
+/// let document_view = data.view().document().unwrap();
+/// assert_eq!(document_view.path(), Path::new("test.ieml"));
 /// 
-/// let anchors = file_view.anchors().file_anchors();
+/// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
 /// assert!(anchors.get("anchor").unwrap().is_null());
 /// ```
-pub fn make_file<O, E, F, A>(
+pub fn make_document<O, E, F, A>(
     begin_mark: Mark,
     path: PathBuf,
     anchors: A,
@@ -567,7 +567,7 @@ where
 {
     let mut maker = Maker::new(path.clone());
 
-    match file(begin_mark, path, anchors, f)(Token::new(&mut maker)) {
+    match document(begin_mark, path, anchors, f)(Token::new(&mut maker)) {
         Ok((_, output)) => {
             let mut data = maker.data();
             init(&mut data)?;
@@ -596,7 +596,7 @@ mod tests {
         let begin_mark = Mark::default();
         let (data, _) = make::<_, Infallible, _>(begin_mark, null(begin_mark, ())).unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::Null);
     }
@@ -606,7 +606,7 @@ mod tests {
         let begin_mark = Mark::default();
         let (data, _) = make::<_, Infallible, _>(begin_mark, raw(begin_mark, (), "hello")).unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::Raw);
         assert_eq!(clear_view.raw().unwrap().raw(), "hello");
@@ -618,7 +618,7 @@ mod tests {
         let (data, _) =
             make::<_, Infallible, _>(begin_mark, string(begin_mark, (), "hello")).unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::String);
         assert_eq!(clear_view.string().unwrap().string(), "hello");
@@ -637,7 +637,7 @@ mod tests {
         )
         .unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::List);
 
@@ -662,7 +662,7 @@ mod tests {
         )
         .unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::Map);
 
@@ -681,7 +681,7 @@ mod tests {
         )
         .unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
         assert_eq!(clear_view.node_type(), NodeType::Tagged);
         assert_eq!(view.tagged().unwrap().tag(), name("tag"));
@@ -690,15 +690,15 @@ mod tests {
     }
 
     #[test]
-    fn test_file() {
+    fn test_document() {
         let begin_mark = Mark::default();
         let (data, _) = make::<_, Infallible, _>(begin_mark, {
-            file(
+            document(
                 begin_mark,
                 "dir/name.ieml".into(),
                 |map_token| {
                     let (map_token, _) =
-                        map_token.add(begin_mark, name("file-anchor"), null(begin_mark, ()))?;
+                        map_token.add(begin_mark, name("document-anchor"), null(begin_mark, ()))?;
                     Ok((map_token, ()))
                 },
                 raw(begin_mark, (), "hello"),
@@ -706,17 +706,17 @@ mod tests {
         })
         .unwrap();
         let view = data.view();
-        let clear_view = view.clear_step_file().unwrap();
+        let clear_view = view.clear_step_document().unwrap();
 
-        assert_eq!(clear_view.node_type(), NodeType::File);
+        assert_eq!(clear_view.node_type(), NodeType::Document);
         assert_eq!(
-            clear_view.file().unwrap().path(),
+            clear_view.document().unwrap().path(),
             PathBuf::from("dir/name.ieml").as_path()
         );
 
-        let anchors = clear_view.file().unwrap().anchors().file_anchors();
+        let anchors = clear_view.document().unwrap().anchors().document_anchors();
         assert_eq!(anchors.len(), 1);
-        assert!(anchors.contains_key("file-anchor"));
+        assert!(anchors.contains_key("document-anchor"));
 
         assert!(clear_view.is_raw());
         assert_eq!(clear_view.raw().unwrap().raw(), "hello");
