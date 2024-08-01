@@ -1,8 +1,6 @@
 use super::super::super::{
     name::Name,
-    node::node::{
-        DocumentNode, AnchorRequestNode, ListNode, MapNode, MarkedNode, Node, TaggedNode, AnchorCreationNode,
-    },
+    node::node::{AnchorNode, DocumentNode, ListNode, MapNode, MarkedNode, Node, TaggedNode},
 };
 use super::*;
 use std::{collections::HashMap, path::PathBuf};
@@ -37,11 +35,11 @@ fn test_data() -> Data {
             Default::default(),
         ),
         MarkedNode::new(
-            Node::AnchorCreation(AnchorCreationNode::new(name("anchor"), 4)),
+            Node::Anchor(AnchorNode::new(name("anchor"), 4, true)),
             Default::default(),
         ),
         MarkedNode::new(
-            Node::AnchorRequest(AnchorRequestNode::new(name("anchor"), 4)),
+            Node::Anchor(AnchorNode::new(name("anchor"), 4, false)),
             Default::default(),
         ),
     ])
@@ -71,8 +69,7 @@ fn test_null() {
     assert!(!view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(!view.is_anchor());
 
     assert_eq!(
         view.raw(),
@@ -115,26 +112,10 @@ fn test_null() {
         ))
     );
     assert_eq!(
-        view.anchor_creation(),
+        view.anchor(),
         Err(make_another_type_error(
             NodeType::Null,
-            NodeType::AnchorCreation,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::Null,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_name(),
-        Err(make_another_type_error(
-            NodeType::Null,
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             mark
         ))
     );
@@ -156,8 +137,7 @@ fn test_raw() {
     assert!(!view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(!view.is_anchor());
 
     assert_eq!(view.raw().unwrap().raw(), "hello");
     assert_eq!(
@@ -186,29 +166,17 @@ fn test_raw() {
     );
     assert_eq!(
         view.document(),
-        Err(make_another_type_error(NodeType::Raw, NodeType::Document, mark))
-    );
-    assert_eq!(
-        view.anchor_creation(),
         Err(make_another_type_error(
             NodeType::Raw,
-            NodeType::AnchorCreation,
+            NodeType::Document,
             mark
         ))
     );
     assert_eq!(
-        view.anchor_request(),
+        view.anchor(),
         Err(make_another_type_error(
             NodeType::Raw,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_name(),
-        Err(make_another_type_error(
-            NodeType::Raw,
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             mark
         ))
     );
@@ -230,8 +198,7 @@ fn test_string() {
     assert!(!view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(!view.is_anchor());
 
     assert_eq!(
         view.raw(),
@@ -275,26 +242,10 @@ fn test_string() {
         ))
     );
     assert_eq!(
-        view.anchor_creation(),
+        view.anchor(),
         Err(make_another_type_error(
             NodeType::String,
-            NodeType::AnchorCreation,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::String,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_name(),
-        Err(make_another_type_error(
-            NodeType::String,
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             mark
         ))
     );
@@ -316,8 +267,7 @@ fn test_list() {
     assert!(!view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(!view.is_anchor());
 
     assert_eq!(
         view.raw(),
@@ -360,26 +310,10 @@ fn test_list() {
         ))
     );
     assert_eq!(
-        view.anchor_creation(),
+        view.anchor(),
         Err(make_another_type_error(
             NodeType::List,
-            NodeType::AnchorCreation,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::List,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_name(),
-        Err(make_another_type_error(
-            NodeType::List,
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             mark
         ))
     );
@@ -401,8 +335,7 @@ fn test_map() {
     assert!(view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(!view.is_anchor());
 
     assert_eq!(
         view.raw(),
@@ -438,29 +371,17 @@ fn test_map() {
     );
     assert_eq!(
         view.document(),
-        Err(make_another_type_error(NodeType::Map, NodeType::Document, mark))
-    );
-    assert_eq!(
-        view.anchor_creation(),
         Err(make_another_type_error(
             NodeType::Map,
-            NodeType::AnchorCreation,
+            NodeType::Document,
             mark
         ))
     );
     assert_eq!(
-        view.anchor_request(),
+        view.anchor(),
         Err(make_another_type_error(
             NodeType::Map,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(
-        view.anchor_name(),
-        Err(make_another_type_error(
-            NodeType::Map,
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             mark
         ))
     );
@@ -482,8 +403,7 @@ fn test_tagged() {
     assert!(view.is_map());
     assert!(view.is_tagged());
     assert!(!view.is_document());
-    assert!(view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(view.is_anchor());
 
     assert_eq!(
         view.raw(),
@@ -533,23 +453,14 @@ fn test_tagged() {
             mark
         ))
     );
-    if let Node::AnchorCreation(node) = &data.get(7).node {
+    if let Node::Anchor(node) = &data.get(7).node {
         assert_eq!(
-            view.anchor_creation(),
-            Ok(AnchorCreationView::new(Default::default(), node, &data, ()))
+            view.anchor(),
+            Ok(AnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
     }
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::Tagged,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -568,12 +479,15 @@ fn test_document() {
     assert!(view.is_map());
     assert!(view.is_tagged());
     assert!(view.is_document());
-    assert!(view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(view.is_anchor());
 
     assert_eq!(
         view.raw(),
-        Err(make_another_type_error(NodeType::Document, NodeType::Raw, mark))
+        Err(make_another_type_error(
+            NodeType::Document,
+            NodeType::Raw,
+            mark
+        ))
     );
     assert_eq!(
         view.string(),
@@ -615,23 +529,14 @@ fn test_document() {
     } else {
         panic!("The node is not a take anchor");
     }
-    if let Node::AnchorCreation(node) = &data.get(7).node {
+    if let Node::Anchor(node) = &data.get(7).node {
         assert_eq!(
-            view.anchor_creation(),
-            Ok(AnchorCreationView::new(Default::default(), node, &data, ()))
+            view.anchor(),
+            Ok(AnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
     }
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::Document,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -641,7 +546,7 @@ fn test_anchor_creation() {
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
-    assert_eq!(view.node_type(), NodeType::AnchorCreation);
+    assert_eq!(view.node_type(), NodeType::Anchor);
 
     assert!(!view.is_null());
     assert!(!view.is_raw());
@@ -650,13 +555,12 @@ fn test_anchor_creation() {
     assert!(view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(view.is_anchor_creation());
-    assert!(!view.is_anchor_request());
+    assert!(view.is_anchor());
 
     assert_eq!(
         view.raw(),
         Err(make_another_type_error(
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             NodeType::Raw,
             mark
         ))
@@ -664,7 +568,7 @@ fn test_anchor_creation() {
     assert_eq!(
         view.string(),
         Err(make_another_type_error(
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             NodeType::String,
             mark
         ))
@@ -672,7 +576,7 @@ fn test_anchor_creation() {
     assert_eq!(
         view.list(),
         Err(make_another_type_error(
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             NodeType::List,
             mark
         ))
@@ -688,7 +592,7 @@ fn test_anchor_creation() {
     assert_eq!(
         view.tagged(),
         Err(make_another_type_error(
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             NodeType::Tagged,
             mark
         ))
@@ -696,28 +600,19 @@ fn test_anchor_creation() {
     assert_eq!(
         view.document(),
         Err(make_another_type_error(
-            NodeType::AnchorCreation,
+            NodeType::Anchor,
             NodeType::Document,
             mark
         ))
     );
-    if let Node::AnchorCreation(node) = &data.get(7).node {
+    if let Node::Anchor(node) = &data.get(7).node {
         assert_eq!(
-            view.anchor_creation(),
-            Ok(AnchorCreationView::new(Default::default(), node, &data, ()))
+            view.anchor(),
+            Ok(AnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a take anchor");
     }
-    assert_eq!(
-        view.anchor_request(),
-        Err(make_another_type_error(
-            NodeType::AnchorCreation,
-            NodeType::AnchorRequest,
-            mark
-        ))
-    );
-    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }
 
 #[test]
@@ -727,7 +622,7 @@ fn test_anchor_request() {
     let mark = Mark::default();
 
     assert_eq!(view.mark(), mark);
-    assert_eq!(view.node_type(), NodeType::AnchorRequest);
+    assert_eq!(view.node_type(), NodeType::Anchor);
 
     assert!(!view.is_null());
     assert!(!view.is_raw());
@@ -736,13 +631,12 @@ fn test_anchor_request() {
     assert!(view.is_map());
     assert!(!view.is_tagged());
     assert!(!view.is_document());
-    assert!(!view.is_anchor_creation());
-    assert!(view.is_anchor_request());
+    assert!(view.is_anchor());
 
     assert_eq!(
         view.raw(),
         Err(make_another_type_error(
-            NodeType::AnchorRequest,
+            NodeType::Anchor,
             NodeType::Raw,
             mark
         ))
@@ -750,7 +644,7 @@ fn test_anchor_request() {
     assert_eq!(
         view.string(),
         Err(make_another_type_error(
-            NodeType::AnchorRequest,
+            NodeType::Anchor,
             NodeType::String,
             mark
         ))
@@ -758,7 +652,7 @@ fn test_anchor_request() {
     assert_eq!(
         view.list(),
         Err(make_another_type_error(
-            NodeType::AnchorRequest,
+            NodeType::Anchor,
             NodeType::List,
             mark
         ))
@@ -774,7 +668,7 @@ fn test_anchor_request() {
     assert_eq!(
         view.tagged(),
         Err(make_another_type_error(
-            NodeType::AnchorRequest,
+            NodeType::Anchor,
             NodeType::Tagged,
             mark
         ))
@@ -782,26 +676,17 @@ fn test_anchor_request() {
     assert_eq!(
         view.document(),
         Err(make_another_type_error(
-            NodeType::AnchorRequest,
+            NodeType::Anchor,
             NodeType::Document,
             mark
         ))
     );
-    assert_eq!(
-        view.anchor_creation(),
-        Err(make_another_type_error(
-            NodeType::AnchorRequest,
-            NodeType::AnchorCreation,
-            mark
-        ))
-    );
-    if let Node::AnchorRequest(node) = &data.get(8).node {
+    if let Node::Anchor(node) = &data.get(8).node {
         assert_eq!(
-            view.anchor_request(),
-            Ok(AnchorRequestView::new(Default::default(), node, &data, ()))
+            view.anchor(),
+            Ok(AnchorView::new(Default::default(), node, &data, ()))
         );
     } else {
         panic!("The node is not a get anchor");
     }
-    assert_eq!(view.anchor_name().unwrap().as_str(), "anchor");
 }

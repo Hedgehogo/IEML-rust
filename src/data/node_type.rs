@@ -11,6 +11,5 @@ pub enum NodeType {
     Map,
     Tagged,
     Document,
-    AnchorCreation,
-    AnchorRequest,
+    Anchor,
 }

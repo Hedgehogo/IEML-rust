@@ -1,5 +1,4 @@
-pub mod anchor_creation_view;
-pub mod anchor_request_view;
+pub mod anchor_view;
 pub mod document_view;
 pub mod list_view;
 pub mod map_view;

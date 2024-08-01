@@ -5,9 +5,7 @@ pub struct Tagged {}
 
 pub struct Document {}
 
-pub struct AnchorCreation {}
-
-pub struct AnchorRequest {}
+pub struct Anchor {}
 
 pub trait Clear<'data, A: AnalyseAnchors<'data>> {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>>;
@@ -25,15 +23,9 @@ impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for Document {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for AnchorCreation {
+impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for Anchor {
     fn clear(view: View<'data, A>) -> Option<View<'data, A>> {
-        view.clear_step_anchor_creation()
-    }
-}
-
-impl<'data, A: AnalyseAnchors<'data>> Clear<'data, A> for AnchorRequest {
-    fn clear(view: View<'data, A>) -> Option<View<'data, A>> {
-        view.clear_step_anchor_request()
+        view.clear_step_anchor()
     }
 }
 

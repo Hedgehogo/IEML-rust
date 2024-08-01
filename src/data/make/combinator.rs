@@ -3,9 +3,7 @@ use super::{
         data::Data,
         mark::Mark,
         name::Name,
-        node::node::{
-            DocumentNode, AnchorRequestNode, ListNode, MapNode, Node, TaggedNode, AnchorCreationNode,
-        },
+        node::node::{AnchorNode, DocumentNode, ListNode, MapNode, Node, TaggedNode},
     },
     error::*,
     init::init,
@@ -294,7 +292,7 @@ where
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, make::document(
-///     mark, 
+///     mark,
 ///     Path::new("test.ieml").to_path_buf(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
@@ -302,7 +300,7 @@ where
 ///
 /// let document_view = data.view().clear_step_document().unwrap().document().unwrap();
 /// assert_eq!(document_view.path(), Path::new("test.ieml"));
-/// 
+///
 /// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
 /// assert!(anchors.get("anchor").unwrap().is_null());
@@ -368,7 +366,7 @@ where
     }
 }
 
-/// Adds a AnchorCreation node and its single child node.
+/// Adds a Anchor node and its single child node.
 ///
 /// Returns the same output returned by `f`.
 ///
@@ -391,9 +389,9 @@ where
 ///     make::anchor_creation(mark, Name::new("anchor").unwrap(), make::null(mark, ()))(token)
 /// }).unwrap();
 ///
-/// let anchor_creation_view = data.view().anchor_creation().unwrap();
-/// assert_eq!(anchor_creation_view.name().as_str(), "anchor");
-/// assert!(anchor_creation_view.view().is_null());
+/// let anchor_view = data.view().anchor().unwrap();
+/// assert_eq!(anchor_view.name().as_str(), "anchor");
+/// assert!(anchor_view.view().is_null());
 /// ```
 pub fn anchor_creation<O, E, F, S>(
     begin_mark: Mark,
@@ -409,11 +407,11 @@ where
         f(token).and_then(|(used_token, output)| {
             let name = name.into();
             let (token, index) = used_token.split();
-            let result = AnchorCreationNode::new(name.clone(), index);
+            let result = AnchorNode::new(name.clone(), index, true);
 
             match token.add_anchor(begin_mark, name, index) {
                 Ok((token, _)) => {
-                    let used_token = token.add_node(begin_mark, Node::AnchorCreation(result));
+                    let used_token = token.add_node(begin_mark, Node::Anchor(result));
                     Ok((used_token, output))
                 }
 
@@ -423,7 +421,7 @@ where
     }
 }
 
-/// Adds a AnchorRequest node.
+/// Adds a Anchor node.
 ///
 /// Returns the same output returned by `f`.
 ///
@@ -444,14 +442,14 @@ where
     S: Into<Name<Box<str>>>,
 {
     move |token| {
-        let result = AnchorRequestNode::new(name.into(), 0);
-        let used_token = token.add_node(begin_mark, Node::AnchorRequest(result));
+        let result = AnchorNode::new(name.into(), 0, false);
+        let used_token = token.add_node(begin_mark, Node::Anchor(result));
         Ok((used_token, output))
     }
 }
 
 /// Creates [`Data`] by combining the functions of this [module][`crate::data::make::combinator`].
-/// 
+///
 /// Checks the existence of all requested anchors and the uniqueness of all created anchors.
 ///
 /// Returns the same output returned by `f`.
@@ -461,7 +459,7 @@ where
 /// # Arguments
 /// * `begin_mark` Node start mark.
 /// * `f` Closure that creates a top node.
-/// 
+///
 /// # Example
 ///
 /// ```rust
@@ -508,20 +506,20 @@ where
 }
 
 /// Creates [`Data`] by combining the functions of this [module][`self`].
-/// 
+///
 /// Checks the existence of all requested anchors and the uniqueness of all created anchors.
-/// 
-/// The top node is always Document, this is necessary for anchors to work correctly. 
+///
+/// The top node is always Document, this is necessary for anchors to work correctly.
 /// `f` creates a child node of the document, which is commonly referred to as the top node.
-/// 
-/// Gives `f` one token, which not only gives but obliges to create exactly one node. 
-/// This is guaranteed by the fact that when [`Token`] is used, it is consumed and if successful, [`UsedToken`][`super::maker::UsedToken`] is returned. 
+///
+/// Gives `f` one token, which not only gives but obliges to create exactly one node.
+/// This is guaranteed by the fact that when [`Token`] is used, it is consumed and if successful, [`UsedToken`][`super::maker::UsedToken`] is returned.
 /// And the closure signature obliges to return [`UsedToken`][`super::maker::UsedToken`] in case of success.
-/// 
-/// The token can be used by calling one of the functions of this [module][`self`] indirectly or directly. 
+///
+/// The token can be used by calling one of the functions of this [module][`self`] indirectly or directly.
 /// Some functions of this module issue additional tokens for creating child nodes.
-/// 
-/// In case of an unrecoverable error, an [`ErrorToken`][`super::maker::ErrorToken`] is formed and functions start deploying as fast as possible, 
+///
+/// In case of an unrecoverable error, an [`ErrorToken`][`super::maker::ErrorToken`] is formed and functions start deploying as fast as possible,
 /// when creating an [`ErrorToken`][`super::maker::ErrorToken`] the only thing you are allowed to do is return it from the function expanding the stack.
 ///
 /// Returns the same output returned by `f`.
@@ -541,7 +539,7 @@ where
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make_document::<_, Infallible, _, _>(
-///     mark, 
+///     mark,
 ///     Path::new("test.ieml").to_path_buf(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
@@ -549,7 +547,7 @@ where
 ///
 /// let document_view = data.view().document().unwrap();
 /// assert_eq!(document_view.path(), Path::new("test.ieml"));
-/// 
+///
 /// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
 /// assert!(anchors.get("anchor").unwrap().is_null());

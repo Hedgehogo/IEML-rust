@@ -33,9 +33,9 @@ pub type AnchorsResult<'maker> =
 ///     Ok(token)
 /// }).unwrap();
 /// 
-/// let anchor_request = data.view().anchor_request().unwrap();
-/// assert_eq!(anchor_request.name().as_str(), "anchor");
-/// assert!(anchor_request.view().is_null());
+/// let anchor_view = data.view().anchor().unwrap();
+/// assert_eq!(anchor_view.name().as_str(), "anchor");
+/// assert!(anchor_view.view().is_null());
 /// ```
 pub fn from_source_with_anchors<R: ReadSource + ?Sized, A>(
     reader: &R,
