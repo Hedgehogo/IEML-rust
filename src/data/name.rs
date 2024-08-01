@@ -7,10 +7,16 @@ use std::{
 /// Error received when trying to create [`Name`] from a non-conforming string.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Error {
-    /// The beginning of the line contains a space
+    /// The beginning of the string contains a space
     Space,
-    /// The beginning of the line contains a tab
+    /// The beginning of the string contains a tab
     Tab,
+    /// The beginning of the string contains a special sequence for anchors
+    AnchorSpecial,
+    /// The beginning of the string contains a special sequence for anchors
+    TaggedSpecial,
+    /// The ending of the string contains a colon
+    Colon,
 }
 
 /// A structure that guarantees that the name contained in it complies with the IEML standard.
@@ -25,16 +31,34 @@ impl<T: AsRef<str>> Name<T> {
     /// # Arguments
     /// * `data` String to be stored in the structure.
     pub fn new(data: T) -> Result<Self, Error> {
-        match data.as_ref().chars().next() {
+        let mut iter = data.as_ref().chars();
+        let data = match iter.next() {
             Some(' ') => Err(Error::Space),
             Some('\t') => Err(Error::Tab),
-            _ => Ok(Self { data }),
-        }
+            Some('@') => Err(Error::AnchorSpecial),
+            Some('=') => match iter.next() {
+                Some(' ') => Err(Error::TaggedSpecial),
+                _ => Ok(data)
+            },
+            Some(_) => match data.as_ref().ends_with(':') {
+                true => Err(Error::Colon),
+                _ => Ok(data)
+            },
+            _ => Ok(data),
+        }?;
+        Ok(Self { data })
     }
 
-    /// Receives internal data
+    /// Extracts a string slice containing the entire [`Name`].
     pub fn as_str(&self) -> &str {
         self.data.as_ref()
+    }
+}
+
+impl<T> Name<T> {
+    /// Consumes the [`Name`], returning the wrapped value.
+    pub fn into_inner(self) -> T {
+        self.data
     }
 }
 

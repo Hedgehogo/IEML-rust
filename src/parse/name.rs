@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::{
-    cursor::Cursor, error::ErrorKind::FailedDetermineType, utils::combinator::parse::match_name,
+    cursor::Cursor, error::ErrorKind, utils::combinator::parse::match_name,
 };
 
 pub(crate) fn name<'input>(
@@ -22,7 +22,7 @@ pub(crate) fn name<'input>(
             Err(e) => e.into(),
         }
     } else {
-        FailedDetermineType
+        ErrorKind::FailedDetermineType
     };
 
     Err(Error::new_with(cursor.mark, path, error_kind))
@@ -31,8 +31,6 @@ pub(crate) fn name<'input>(
 #[cfg(test)]
 mod tests {
     use crate::data::mark::Mark;
-
-    use super::super::error::ErrorKind::{ImpermissibleSpace, ImpermissibleTab};
 
     use super::*;
 
@@ -72,15 +70,27 @@ mod tests {
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), true),
-            Err(Error::new_with(begin_mark, path, ImpermissibleSpace))
+            Err(Error::new_with(begin_mark, path, ErrorKind::ImpermissibleSpace))
         );
         assert_eq!(
             name(path, ("\tname", begin_mark).into(), true),
-            Err(Error::new_with(begin_mark, path, ImpermissibleTab))
+            Err(Error::new_with(begin_mark, path, ErrorKind::ImpermissibleTab))
+        );
+        assert_eq!(
+            name(path, ("@name", begin_mark).into(), true),
+            Err(Error::new_with(begin_mark, path, ErrorKind::ImpermissibleAnchor))
+        );
+        assert_eq!(
+            name(path, ("= name", begin_mark).into(), true),
+            Err(Error::new_with(begin_mark, path, ErrorKind::ImpermissibleTagged))
+        );
+        assert_eq!(
+            name(path, ("name:", begin_mark).into(), true),
+            Err(Error::new_with(begin_mark, path, ErrorKind::ImpermissibleColon))
         );
         assert_eq!(
             name(path, (" name", begin_mark).into(), false),
-            Err(Error::new_with(begin_mark, path, FailedDetermineType))
+            Err(Error::new_with(begin_mark, path, ErrorKind::FailedDetermineType))
         );
     }
 }

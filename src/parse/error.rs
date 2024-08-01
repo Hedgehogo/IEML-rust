@@ -10,6 +10,9 @@ pub enum ErrorKind {
     ExpectedBlankLine,
     ImpermissibleSpace,
     ImpermissibleTab,
+    ImpermissibleAnchor,
+    ImpermissibleTagged,
+    ImpermissibleColon,
     IncompleteString,
     IncompleteShortList,
     IncompleteDocument,
@@ -28,11 +31,23 @@ impl Display for ErrorKind {
             ErrorKind::ExpectedBlankLine => write!(f, "Expected a blank line."),
             ErrorKind::ImpermissibleSpace => write!(
                 f,
-                "A space was detected. Perhaps you meant to write a tab as an indentation."
+                "There is a space at the beginning of the name. Note: You may have meant to indent, you should use tabs for that."
             ),
             ErrorKind::ImpermissibleTab => write!(
                 f,
-                "A tab was detected. A lower level of indentation was expected."
+                "There is a tab at the beginning of the name. Note: A lower indentation level was expected."
+            ),
+            ErrorKind::ImpermissibleAnchor => write!(
+                f,
+                "There is a special sequence for anchors (`@`) at the beginning of the name."
+            ),
+            ErrorKind::ImpermissibleTagged => write!(
+                f,
+                "There is a special sequence for tags (`= `) at the beginning of the name. "
+            ),
+            ErrorKind::ImpermissibleColon => write!(
+                f,
+                "There is a colon at the ending of the name. "
             ),
             ErrorKind::IncompleteString => write!(f, "The string is incomplete."),
             ErrorKind::IncompleteShortList => write!(f, "Expected `, `, or `]` as a continuation or closure of the short list."),
@@ -49,6 +64,9 @@ impl From<name::Error> for ErrorKind {
         match value {
             name::Error::Space => ErrorKind::ImpermissibleSpace,
             name::Error::Tab => ErrorKind::ImpermissibleTab,
+            name::Error::AnchorSpecial => ErrorKind::ImpermissibleAnchor,
+            name::Error::TaggedSpecial => ErrorKind::ImpermissibleTagged,
+            name::Error::Colon => ErrorKind::ImpermissibleColon,
         }
     }
 }
@@ -64,8 +82,9 @@ pub mod marked {
 
     pub type Error = make::Error<super::ErrorKind>;
     pub type Result<'maker, 'input> = make::Result<'maker, Cursor<'input>, super::ErrorKind>;
-    pub type ListResult<'maker, 'input> = make::ListResult<'maker, Cursor<'input>, super::ErrorKind>;
+    pub type ListResult<'maker, 'input> =
+        make::ListResult<'maker, Cursor<'input>, super::ErrorKind>;
     pub type MapResult<'maker, 'input> = make::MapResult<'maker, Cursor<'input>, super::ErrorKind>;
-    
+
     pub type LexResult<'input, T> = result::Result<(Cursor<'input>, T), Error>;
 }
