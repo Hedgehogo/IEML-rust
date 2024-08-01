@@ -2,7 +2,7 @@
 
 use super::{
     node::node::MarkedNode,
-    view::{analyse_anchors::AnalyseAnchors, view::View},
+    view::{analyse_anchors::AnalyseAnchors, DocumentView, View},
 };
 use std::fmt;
 
@@ -23,13 +23,13 @@ impl Data {
     pub(crate) fn get(&self, index: usize) -> &MarkedNode {
         self.data
             .get(index)
-            .expect("Incorrect document structure, node does not exist.")
+            .expect("Incorrect structure, the node does not exist.")
     }
 
     pub(crate) fn get_mut(&mut self, index: usize) -> &mut MarkedNode {
         self.data
             .get_mut(index)
-            .expect("Incorrect document structure, node does not exist.")
+            .expect("Incorrect structure, the node does not exist.")
     }
 
     /// Gets the view on the top document node.
@@ -37,7 +37,7 @@ impl Data {
         View::new(
             self.data
                 .last()
-                .expect("Incorrect document structure, node does not exist."),
+                .expect("Incorrect structure, the node does not exist."),
             self,
             (),
         )
@@ -51,10 +51,27 @@ impl Data {
         View::new(
             self.data
                 .last()
-                .expect("Incorrect document structure, node does not exist."),
+                .expect("Incorrect structure, the node does not exist."),
             self,
             anchor_analyser,
         )
+    }
+
+    /// Gets the document view on the top document node.
+    pub fn document_view(&self) -> DocumentView<'_, ()> {
+        self.view()
+            .document()
+            .expect("Incorrect structure, the top node is not a document.")
+    }
+
+    /// Gets the document view on the top document node, passing the anchor analyzer to it.
+    pub fn document_view_with_analyse<'data, A: AnalyseAnchors<'data>>(
+        &'data self,
+        anchor_analyser: A,
+    ) -> DocumentView<'data, A> {
+        self.view_with_analyse(anchor_analyser)
+            .document()
+            .expect("Incorrect structure, the top node is not a document.")
     }
 }
 
