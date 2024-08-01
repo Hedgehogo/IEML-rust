@@ -8,7 +8,7 @@ use super::super::{
     utils::combinator::parse::{skip_blank_line, skip_blank_lines_ln, skip_indent},
 };
 use crate::{
-    data::{make, name::NameRef},
+    data::{make, name::Name},
     parse::{ErrorKind, LexResult, MapResult, RateError, Result},
 };
 
@@ -16,7 +16,7 @@ fn lex_key<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     error_kind: ErrorKind,
-) -> LexResult<'input, NameRef<'input>> {
+) -> LexResult<'input, Name<&'input str>> {
     match name(path, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {

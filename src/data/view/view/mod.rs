@@ -5,7 +5,7 @@ use super::{
         mark::Mark,
         node::node::{MarkedNode, Node},
         node_type::NodeType,
-        name::NameRef
+        name::Name
     },
     analyse_anchors::AnalyseAnchors,
     deserialize::Deserialize,
@@ -345,7 +345,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     }
 
     /// Gets the anchor name.
-    pub fn anchor_name(&self) -> Result<NameRef, marked::AnotherTypeError> {
+    pub fn anchor_name(&self) -> Result<Name<&'data str>, marked::AnotherTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(File, Tagged)>();
         match &clear.node.node {

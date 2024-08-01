@@ -182,12 +182,12 @@ where
 ///
 /// ```rust
 /// use serde_ieml::data::make;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use std::convert::Infallible;
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, make::map(mark, |token| {
-///     token.add(mark, NameRef::new("key").unwrap(), make::null(mark, ()))
+///     token.add(mark, Name::new("key").unwrap(), make::null(mark, ()))
 /// })).unwrap();
 ///
 /// let map_view = data.view().map().unwrap();
@@ -241,12 +241,12 @@ where
 ///
 /// ```rust
 /// use serde_ieml::data::make;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use std::convert::Infallible;
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, |token| {
-///     make::tagged(mark, NameRef::new("tag").unwrap(), make::null(mark, ()))(token)
+///     make::tagged(mark, Name::new("tag").unwrap(), make::null(mark, ()))(token)
 /// }).unwrap();
 ///
 /// let tagged_view = data.view().tagged().unwrap();
@@ -261,7 +261,7 @@ pub fn tagged<O, E, F, S>(
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token) -> marked::Result<O, E>,
-    S: Into<Name>,
+    S: Into<Name<Box<str>>>,
 {
     move |token| {
         f(token).map(|(used_token, output)| {
@@ -289,14 +289,14 @@ where
 ///
 /// ```rust
 /// use serde_ieml::data::make;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use std::{convert::Infallible, path::Path};
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, make::file(
 ///     mark, 
 ///     Path::new("test.ieml").to_path_buf(),
-///     |token| token.add(mark, NameRef::new("anchor").unwrap(), make::null(mark, ())),
+///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// )).unwrap();
 ///
@@ -383,12 +383,12 @@ where
 ///
 /// ```rust
 /// use serde_ieml::data::make;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use std::convert::Infallible;
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, |token| {
-///     make::take_anchor(mark, NameRef::new("anchor").unwrap(), make::null(mark, ()))(token)
+///     make::take_anchor(mark, Name::new("anchor").unwrap(), make::null(mark, ()))(token)
 /// }).unwrap();
 ///
 /// let take_anchor_view = data.view().take_anchor().unwrap();
@@ -403,7 +403,7 @@ pub fn take_anchor<O, E, F, S>(
 where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token) -> marked::Result<O, E>,
-    S: Into<Name>,
+    S: Into<Name<Box<str>>>,
 {
     move |token| {
         f(token).and_then(|(used_token, output)| {
@@ -441,7 +441,7 @@ pub fn get_anchor<O, E, S>(
 ) -> impl FnOnce(Token) -> marked::Result<O, E>
 where
     E: Error + PartialEq + Eq,
-    S: Into<Name>,
+    S: Into<Name<Box<str>>>,
 {
     move |token| {
         let result = GetAnchorNode::new(name.into(), 0);
@@ -536,14 +536,14 @@ where
 ///
 /// ```rust
 /// use serde_ieml::data::make;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use std::{convert::Infallible, path::Path};
 ///
 /// let mark = Default::default();
 /// let (data, _) = make::make_file::<_, Infallible, _, _>(
 ///     mark, 
 ///     Path::new("test.ieml").to_path_buf(),
-///     |token| token.add(mark, NameRef::new("anchor").unwrap(), make::null(mark, ())),
+///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// ).unwrap();
 ///
@@ -583,12 +583,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::{name::NameRef, node_type::NodeType};
+    use super::super::super::{name::Name, node_type::NodeType};
     use super::*;
     use std::convert::Infallible;
 
-    fn name(i: &str) -> NameRef {
-        NameRef::new(i).unwrap()
+    fn name(i: &str) -> Name<&str> {
+        Name::new(i).unwrap()
     }
 
     #[test]

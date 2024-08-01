@@ -7,9 +7,9 @@ use super::super::name::Name;
 #[derive(PartialEq, Eq, Debug)]
 pub enum ErrorKind<E: std::error::Error + PartialEq + Eq> {
     /// In the created Data, an anchor with the same name is created twice at the same depth.
-    AnchorAlreadyExist(Name),
+    AnchorAlreadyExist(Name<Box<str>>),
     /// In the created Data, an anchor request is encountered that has not been created.
-    AnchorDoesntExist(Name),
+    AnchorDoesntExist(Name<Box<str>>),
     /// There is a repeating key in the map.
     RepeatedKey,
     /// Error kind added in order to expand the possible error kinds.

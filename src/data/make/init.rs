@@ -9,13 +9,13 @@ fn init_step<E: std::error::Error + PartialEq + Eq>(
     let mut node = std::mem::take(data.get_mut(index));
     match &mut node.node {
         Node::List(i) => {
-            for i in i.data.iter() {
-                init_step(data, file_index, *i)?;
+            for &i in i.data.iter() {
+                init_step(data, file_index, i)?;
             }
         }
         Node::Map(i) => {
-            for (_, i) in i.data.iter() {
-                init_step(data, file_index, *i)?;
+            for (_, &i) in i.data.iter() {
+                init_step(data, file_index, i)?;
             }
         }
         Node::Tagged(i) => init_step(data, file_index, i.node_index)?,

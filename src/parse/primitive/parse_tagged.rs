@@ -5,7 +5,7 @@ use super::super::{
     utils::combinator::cursor::char,
 };
 use crate::{
-    data::{make, name::NameRef},
+    data::{make, name::Name},
     parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 use nom::sequence::tuple;
@@ -13,7 +13,7 @@ use nom::sequence::tuple;
 fn lex_tag<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> LexResult<'input, NameRef<'input>> {
+) -> LexResult<'input, Name<&'input str>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;

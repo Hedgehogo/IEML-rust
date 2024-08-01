@@ -3,11 +3,11 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct MapNode {
-    pub(crate) data: HashMap<Name, usize>,
+    pub(crate) data: HashMap<Name<Box<str>>, usize>,
 }
 
 impl MapNode {
-    pub(crate) fn new(data: HashMap<Name, usize>) -> Self {
+    pub(crate) fn new(data: HashMap<Name<Box<str>>, usize>) -> Self {
         Self { data }
     }
 }

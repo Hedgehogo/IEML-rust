@@ -1,5 +1,8 @@
-//! This module is designed to describe structures that guarantee that their contents are names conforming to the IEML standard.
-use std::{fmt::{Display, Debug}, borrow::Borrow};
+//! This module is designed to describe structure that guarantee that their contents are names conforming to the IEML standard.
+use std::{
+    borrow::Borrow,
+    fmt::{Debug, Display},
+};
 
 /// Error received when trying to create [`Name`] from a non-conforming string.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -11,18 +14,18 @@ pub enum Error {
 }
 
 /// A structure that guarantees that the name contained in it complies with the IEML standard.
-#[derive(Default, PartialEq, Eq, Hash, Clone)]
-pub struct Name {
-    data: String,
+#[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct Name<T> {
+    data: T,
 }
 
-impl Name {
+impl<T: AsRef<str>> Name<T> {
     /// Creates [`Name`] by checking if the string conforms to the standard.
     ///
     /// # Arguments
     /// * `data` String to be stored in the structure.
-    pub fn new(data: String) -> Result<Self, Error> {
-        match data.chars().next() {
+    pub fn new(data: T) -> Result<Self, Error> {
+        match data.as_ref().chars().next() {
             Some(' ') => Err(Error::Space),
             Some('\t') => Err(Error::Tab),
             _ => Ok(Self { data }),
@@ -31,80 +34,37 @@ impl Name {
 
     /// Receives internal data
     pub fn as_str(&self) -> &str {
-        &self.data
+        self.data.as_ref()
     }
 }
 
-impl Debug for Name {
+impl<T: Debug> Debug for Name<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.data)
     }
 }
 
-impl Display for Name {
+impl<T: Display> Display for Name<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.data)
     }
 }
 
-impl Borrow<str> for Name {
+impl<T: Borrow<str>> Borrow<str> for Name<T> {
     fn borrow(&self) -> &str {
-        &self.data
+        self.data.borrow()
     }
 }
 
-impl<'data> From<NameRef<'data>> for Name {
-    fn from(value: NameRef<'data>) -> Self {
+impl<'data> From<Name<&'data str>> for Name<Box<str>> {
+    fn from(value: Name<&'data str>) -> Self {
         let data = value.data.into();
         Self { data }
     }
 }
 
-/// A referenced version of [`Name`], analogous to [`&str`] if we assume that [`Name`] is analogous to [`String`]
-#[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct NameRef<'data> {
-    data: &'data str,
-}
-
-impl<'data> NameRef<'data> {
-    /// Creates [`NameRef`] by checking if the string conforms to the standard.
-    ///
-    /// # Arguments
-    /// * `data` String to be stored in the structure.
-    pub fn new(data: &'data str) -> Result<Self, Error> {
-        match data.chars().next() {
-            Some(' ') => Err(Error::Space),
-            Some('\t') => Err(Error::Tab),
-            _ => Ok(Self { data }),
-        }
-    }
-
-    /// Receives internal data
-    pub fn as_str(&self) -> &str {
-        &self.data
-    }
-}
-
-impl<'data> Debug for NameRef<'data> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.data)
-    }
-}
-
-impl<'data> Display for NameRef<'data> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.data)
-    }
-}
-
-impl<'data> Borrow<str> for NameRef<'data> {
-    fn borrow(&self) -> &str {
-        &self.data
-    }
-}
-
-impl<'data> From<&'data Name> for NameRef<'data> {
-    fn from(value: &'data Name) -> Self {
+impl<'data> From<&'data Name<Box<str>>> for Name<&'data str> {
+    fn from(value: &'data Name<Box<str>>) -> Self {
         let data = &value.data;
         Self { data }
     }

@@ -1,5 +1,5 @@
 use super::super::name::Name;
-pub(crate) type Tag = Name;
+pub(crate) type Tag = Name<Box<str>>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct TaggedNode {

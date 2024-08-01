@@ -73,7 +73,7 @@ impl<'maker> Token<'maker> {
     pub(super) fn add_anchor<E>(
         self,
         mark: Mark,
-        name: Name,
+        name: Name<Box<str>>,
         index: usize,
     ) -> Result<(Self, ()), (Self, marked::Error<E>)>
     where
@@ -227,12 +227,12 @@ impl<'maker> ListToken<'maker> {
 
 /// Token allowing to add any number of nodes to the map.
 pub struct MapToken<'maker> {
-    result: HashMap<Name, usize>,
+    result: HashMap<Name<Box<str>>, usize>,
     maker: &'maker mut Maker,
 }
 
 impl<'maker> MapToken<'maker> {
-    pub(super) fn split(self) -> (Token<'maker>, HashMap<Name, usize>) {
+    pub(super) fn split(self) -> (Token<'maker>, HashMap<Name<Box<str>>, usize>) {
         (Token::new(self.maker), self.result)
     }
 
@@ -253,7 +253,7 @@ impl<'maker> MapToken<'maker> {
     where
         E: Error + PartialEq + Eq,
         F: FnOnce(Token<'maker>) -> marked::Result<'maker, O, E>,
-        S: Into<Name>,
+        S: Into<Name<Box<str>>>,
     {
         match f(Token::new(self.maker)) {
             Ok((used_token, output)) => {

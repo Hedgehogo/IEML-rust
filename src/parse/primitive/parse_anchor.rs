@@ -5,14 +5,14 @@ use super::super::{
     utils::combinator::cursor::char,
 };
 use crate::{
-    data::{make, name::NameRef},
+    data::{make, name::Name},
     parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 
 fn lex_anchor_name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> LexResult<'input, (NameRef<'input>, bool)> {
+) -> LexResult<'input, (Name<&'input str>, bool)> {
     match char('@')(cursor) {
         Ok((cursor, _)) => name(path, cursor, true),
         Err(_) => {

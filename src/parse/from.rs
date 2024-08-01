@@ -21,13 +21,13 @@ pub type AnchorsResult<'maker> =
 ///
 /// ```rust
 /// use serde_ieml::from_source_with_anchors;
-/// use serde_ieml::data::name::NameRef;
+/// use serde_ieml::data::name::Name;
 /// use serde_ieml::data::make;
 ///
 /// let data = from_source_with_anchors("@anchor", |token| {
 ///     let (token, _) = token.add(
 ///         Default::default(),
-///         NameRef::new("anchor").unwrap(),
+///         Name::new("anchor").unwrap(),
 ///         make::null(Default::default(), ()),
 ///     )?;
 ///     Ok(token)
@@ -78,7 +78,6 @@ where
 ///
 /// ```rust
 /// use serde_ieml::from_source;
-/// use serde_ieml::data::name::NameRef;
 /// use serde_ieml::data::make;
 ///
 /// let data = from_source("> hello").unwrap();

@@ -1,5 +1,5 @@
 use super::super::{
-    super::{data::Data, mark::Mark, name::NameRef, node::get_anchor_node::GetAnchorNode},
+    super::{data::Data, mark::Mark, name::Name, node::get_anchor_node::GetAnchorNode},
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
@@ -35,7 +35,7 @@ impl<'data, A: AnalyseAnchors<'data>> GetAnchorView<'data, A> {
     }
 
     /// Gets the path.
-    pub fn name(&self) -> NameRef<'data> {
+    pub fn name(&self) -> Name<&'data str> {
         (&self.node.name).into()
     }
 

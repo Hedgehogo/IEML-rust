@@ -16,14 +16,14 @@ use std::{
 
 #[derive(Clone)]
 pub struct MapIter<'data, A: AnalyseAnchors<'data>> {
-    iter: hash_map::Iter<'data, Name, usize>,
+    iter: hash_map::Iter<'data, Name<Box<str>>, usize>,
     data: &'data Data,
     anchor_analyser: A,
 }
 
 impl<'data, A: AnalyseAnchors<'data>> MapIter<'data, A> {
     fn new(
-        iter: hash_map::Iter<'data, Name, usize>,
+        iter: hash_map::Iter<'data, Name<Box<str>>, usize>,
         data: &'data Data,
         anchor_analyser: A,
     ) -> Self {
@@ -42,7 +42,7 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for MapIter<'data, A> {
 }
 
 impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
-    type Item = (&'data Name, View<'data, A>);
+    type Item = (&'data Name<Box<str>>, View<'data, A>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|(key, i)| {
@@ -143,7 +143,7 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for MapView<'data, A> {
 
 impl<'data, A: AnalyseAnchors<'data>> IntoIterator for MapView<'data, A> {
     type IntoIter = MapIter<'data, A>;
-    type Item = (&'data Name, View<'data, A>);
+    type Item = (&'data Name<Box<str>>, View<'data, A>);
 
     fn into_iter(self) -> Self::IntoIter {
         MapIter::new(self.node.data.iter(), self.data, self.anchor_analyser)

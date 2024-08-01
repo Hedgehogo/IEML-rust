@@ -7,7 +7,7 @@ use super::super::{
 };
 use super::parse_classic_string;
 use crate::{
-    data::{make, name::NameRef},
+    data::{make, name::Name},
     parse::{
         utils::combinator::parse::match_line, Error, ErrorKind, LexResult, ListResult, RateError,
         Result,
@@ -83,10 +83,10 @@ fn parse_raw_or_null<'input>(
 fn lex_get_anchor<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
-) -> LexResult<'input, NameRef<'input>> {
+) -> LexResult<'input, Name<&'input str>> {
     let name = many1_count(tuple((not_any_ending, anychar)));
     let error_kind = match tuple((char('@'), recognize(name)))(cursor) {
-        Ok((cursor, (_, result))) => match NameRef::new(result.input) {
+        Ok((cursor, (_, result))) => match Name::new(result.input) {
             Ok(result) => return Ok((cursor, result)),
             Err(error) => error.into(),
         },

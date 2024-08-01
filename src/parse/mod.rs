@@ -16,7 +16,7 @@ pub use error::{marked::*, ErrorKind};
 mod test_utils {
     use std::{collections::HashMap, path::Path};
 
-    use crate::data::{make, name::NameRef};
+    use crate::data::{make, name::Name};
     use cursor::Cursor;
     use read_source::{ReadResult, ReadSource};
 
@@ -77,7 +77,7 @@ mod test_utils {
         }
     }
 
-    pub(super) fn name(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
+    pub(super) fn name(i: &str) -> Name<&str> {
+        Name::new(i.into()).unwrap()
     }
 }

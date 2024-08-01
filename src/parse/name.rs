@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    data::name::NameRef,
+    data::name::Name,
     parse::{Error, LexResult},
 };
 
@@ -13,11 +13,11 @@ pub(crate) fn name<'input>(
     path: &'input Path,
     cursor: Cursor<'input>,
     line_ending: bool,
-) -> LexResult<'input, (NameRef<'input>, bool)> {
+) -> LexResult<'input, (Name<&'input str>, bool)> {
     let (output, (result, ending)) = match_name(cursor);
 
     let error_kind = if line_ending || ending {
-        match NameRef::new(result.input) {
+        match Name::new(result.input) {
             Ok(i) => return Ok((output, (i, ending))),
             Err(e) => e.into(),
         }
@@ -36,8 +36,8 @@ mod tests {
 
     use super::*;
 
-    fn name_ref(i: &str) -> NameRef {
-        NameRef::new(i.into()).unwrap()
+    fn name_ref(i: &str) -> Name<&str> {
+        Name::new(i.into()).unwrap()
     }
 
     #[test]
