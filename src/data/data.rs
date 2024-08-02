@@ -26,12 +26,6 @@ impl Data {
             .expect("Incorrect structure, the node does not exist.")
     }
 
-    pub(crate) fn get_mut(&mut self, index: usize) -> &mut MarkedNode {
-        self.data
-            .get_mut(index)
-            .expect("Incorrect structure, the node does not exist.")
-    }
-
     /// Gets the view on the top document node.
     pub fn view(&self) -> View {
         View::new(
