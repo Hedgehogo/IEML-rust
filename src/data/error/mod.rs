@@ -5,19 +5,25 @@ pub mod invalid_length;
 pub mod invalid_type;
 pub mod invalid_value;
 pub mod missing_key;
+pub mod unknown_key;
+pub mod unknown_tag;
 
 pub use deserialize::DeserializeError;
 pub use invalid_length::InvalidLengthError;
 pub use invalid_type::InvalidTypeError;
 pub use invalid_value::InvalidValueError;
+pub use unknown_tag::UnknownTagError;
+pub use unknown_key::UnknownKeyError;
 pub use missing_key::MissingKeyError;
 
 pub mod marked {
     pub use crate::error::marked::MarkedError;
 
-    pub type DeserializeError<E> = super::deserialize::marked::DeserializeError<E>;
-    pub type InvalidTypeError = super::invalid_type::marked::InvalidTypeError;
-    pub type InvalidValueError<E> = super::invalid_value::marked::InvalidValueError<E>;
-    pub type InvalidLengthError = super::invalid_length::marked::InvalidLengthError;
-    pub type MissingKeyError = super::missing_key::marked::MissingKeyError;
+    pub use super::deserialize::marked::DeserializeError;
+    pub use super::invalid_type::marked::InvalidTypeError;
+    pub use super::invalid_value::marked::InvalidValueError;
+    pub use super::invalid_length::marked::InvalidLengthError;
+    pub use super::unknown_tag::marked::UnknownTagError;
+    pub use super::unknown_key::marked::UnknownKeyError;
+    pub use super::missing_key::marked::MissingKeyError;
 }

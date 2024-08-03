@@ -7,7 +7,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
-/// Deserialisation error type containing a child error - the cause.
+/// Deserialisation error type containing a child error - the reason.
 #[derive(PartialEq, Eq, Debug)]
 pub struct InvalidValueError<E> {
     type_name: &'static str,
