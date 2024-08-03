@@ -1,4 +1,5 @@
 //! This module is designed to describe [`NodeType`]
+use std::fmt::Display;
 
 /// Describes the node type without storing the data itself
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -12,4 +13,21 @@ pub enum NodeType {
     Tagged,
     Document,
     Anchor,
+}
+
+impl Display for NodeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let result = match self {
+            NodeType::Null => "null",
+            NodeType::Raw => "number, boolean, raw data",
+            NodeType::String => "string",
+            NodeType::List => "list",
+            NodeType::Map => "map",
+            NodeType::Tagged => "tagged",
+            NodeType::Document => "document",
+            NodeType::Anchor => "anchor",
+        };
+
+        write!(f, "{}", result)
+    }
 }

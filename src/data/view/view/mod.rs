@@ -1,7 +1,7 @@
 use super::{
     super::{
         data::Data,
-        error::{marked, AnotherTypeError, FailedDeserializeError},
+        error::{marked, InvalidTypeError, InvalidValueError},
         mark::Mark,
         node::node::{MarkedNode, Node},
         node_type::NodeType,
@@ -206,63 +206,106 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         marked::WithMarkError::<T>::new(self.mark(), error)
     }
 
-    fn make_another_type_error(&self, requested_type: NodeType) -> marked::AnotherTypeError {
-        self.make_error(AnotherTypeError::new(requested_type, self.node_type()))
+    fn make_invalid_type_error(
+        &self,
+        expected_types: &'static [NodeType],
+    ) -> marked::InvalidTypeError {
+        self.make_error(InvalidTypeError::new(self.node_type(), expected_types))
     }
 
     /// Gets the null data.
-    pub fn null(&self) -> Result<NullView, marked::AnotherTypeError> {
+    pub fn null(&self) -> Result<NullView, marked::InvalidTypeError> {
         let clear = self.clear();
         match &clear.node.node {
             Node::Null => Ok(NullView::new(clear.node.mark)),
-            _ => Err(self.make_another_type_error(NodeType::Raw)),
+            _ => {
+                let expected = &[
+                    NodeType::Null,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document,
+                ];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the raw data.
-    pub fn raw(&self) -> Result<RawView<'data>, marked::AnotherTypeError> {
+    pub fn raw(&self) -> Result<RawView<'data>, marked::InvalidTypeError> {
         let clear = self.clear();
         match &clear.node.node {
             Node::Raw(i) => Ok(RawView::new(clear.node.mark, i)),
-            _ => Err(self.make_another_type_error(NodeType::Raw)),
+            _ => {
+                let expected = &[
+                    NodeType::Raw,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document,
+                ];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the string data.
-    pub fn string(&self) -> Result<StringView<'data>, marked::AnotherTypeError> {
+    pub fn string(&self) -> Result<StringView<'data>, marked::InvalidTypeError> {
         let clear = self.clear();
         match &clear.node.node {
             Node::String(i) => Ok(StringView::new(clear.node.mark, i)),
-            _ => Err(self.make_another_type_error(NodeType::String)),
+            _ => {
+                let expected = &[
+                    NodeType::String,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document,
+                ];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the list view.
-    pub fn list(&self) -> Result<ListView<'data, A>, marked::AnotherTypeError> {
+    pub fn list(&self) -> Result<ListView<'data, A>, marked::InvalidTypeError> {
         let clear = self.clear();
         match &clear.node.node {
             Node::List(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.clone();
                 ListView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::List)),
+            _ => {
+                let expected = &[
+                    NodeType::List,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document,
+                ];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the map view.
-    pub fn map(&self) -> Result<MapView<'data, A>, marked::AnotherTypeError> {
+    pub fn map(&self) -> Result<MapView<'data, A>, marked::InvalidTypeError> {
         let clear = self.clear();
         match &clear.node.node {
             Node::Map(i) => Ok({
                 let anchor_analyser = self.anchor_analyser.clone();
                 MapView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::Map)),
+            _ => {
+                let expected = &[
+                    NodeType::Map,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document,
+                ];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the tagged view.
-    pub fn tagged(&self) -> Result<TaggedView<'data, A>, marked::AnotherTypeError> {
+    pub fn tagged(&self) -> Result<TaggedView<'data, A>, marked::InvalidTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(Document, Anchor)>();
         match &clear.node.node {
@@ -270,12 +313,15 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                 let anchor_analyser = self.anchor_analyser.clone();
                 TaggedView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::Tagged)),
+            _ => {
+                let expected = &[NodeType::Tagged, NodeType::Anchor, NodeType::Document];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the document view.
-    pub fn document(&self) -> Result<DocumentView<'data, A>, marked::AnotherTypeError> {
+    pub fn document(&self) -> Result<DocumentView<'data, A>, marked::InvalidTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(Tagged, Anchor)>();
         match &clear.node.node {
@@ -283,12 +329,15 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                 let anchor_analyser = self.anchor_analyser.child(i.path.as_path());
                 DocumentView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::Document)),
+            _ => {
+                let expected = &[NodeType::Document, NodeType::Tagged, NodeType::Anchor];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
     /// Gets the anchor view.
-    pub fn anchor(&self) -> Result<AnchorView<'data, A>, marked::AnotherTypeError> {
+    pub fn anchor(&self) -> Result<AnchorView<'data, A>, marked::InvalidTypeError> {
         use super::clear::*;
         let clear = self.clear_advanced::<(Document, Tagged)>();
         match &clear.node.node {
@@ -296,7 +345,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                 let anchor_analyser = self.anchor_analyser.clone();
                 AnchorView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
-            _ => Err(self.make_another_type_error(NodeType::Anchor)),
+            _ => {
+                let expected = &[NodeType::Anchor, NodeType::Tagged, NodeType::Document];
+                Err(self.make_invalid_type_error(expected))
+            }
         }
     }
 
@@ -307,9 +359,9 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     /// * `T` Value type.
     pub fn decode<E: Error + PartialEq + Eq, T: Deserialize<'data, A, E>>(
         &self,
-    ) -> Result<T, marked::FailedDeserializeError<E>> {
+    ) -> Result<T, marked::InvalidValueError<E>> {
         T::deserialize(self.clone())
-            .map_err(|e| self.make_error(FailedDeserializeError::new::<T>(Box::new(e))))
+            .map_err(|e| self.make_error(InvalidValueError::new::<T>(Box::new(e))))
     }
 }
 

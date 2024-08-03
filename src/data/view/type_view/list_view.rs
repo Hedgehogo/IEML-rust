@@ -1,7 +1,7 @@
 use super::super::{
     super::{
         data::Data,
-        error::{marked, InvalidIndexError},
+        error::{marked, InvalidLengthError},
         mark::Mark,
         node::node::ListNode,
     },
@@ -85,14 +85,14 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
     ///
     /// # Arguments
     /// * `index` Index of the requested item.
-    pub fn get(&self, index: usize) -> Result<View<'data, A>, marked::InvalidIndexError> {
+    pub fn get(&self, index: usize) -> Result<View<'data, A>, marked::InvalidLengthError> {
         match self.node.data.get(index) {
             Some(i) => Ok({
                 let node = self.data.get(*i);
                 View::new(node, self.data, self.anchor_analyser.clone())
             }),
             None => Err({
-                let error = InvalidIndexError::new(index, self.len());
+                let error = InvalidLengthError::new(self.len());
                 marked::WithMarkError::new(self.mark, error)
             }),
         }

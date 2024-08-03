@@ -17,7 +17,7 @@ macro_rules! impl_number_decode {
 	($T:ty) => {
 		impl<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> Deserialize<'data, A, E> for $T {
 			fn deserialize(view: View<'data, A>) -> Result<Self, marked::DeserializeError<E>> {
-                to_number::<Self>(view.raw()?.raw()).ok_or(marked::DeserializeError::Failed)
+                to_number::<Self>(view.raw()?.raw()).ok_or(marked::DeserializeError::failed(view.mark()))
 			}
 		}
 	};
@@ -28,7 +28,7 @@ impl_number_decode!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
 
 impl<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> Deserialize<'data, A, E> for bool {
     fn deserialize(view: View<'data, A>) -> Result<Self, marked::DeserializeError<E>> {
-        to_bool(view.raw()?.raw()).ok_or(marked::DeserializeError::Failed)
+        to_bool(view.raw()?.raw()).ok_or(marked::DeserializeError::failed(view.mark()))
     }
 }
 

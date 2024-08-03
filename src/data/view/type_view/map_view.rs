@@ -1,7 +1,7 @@
 use super::super::{
     super::{
         data::Data,
-        error::{marked, InvalidKeyError},
+        error::{marked, MissingKeyError},
         mark::Mark,
         name::Name,
         node::map_node::MapNode,
@@ -96,14 +96,14 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
     ///
     /// # Arguments
     /// * `key` Key of the requested item.
-    pub fn get(&self, key: &str) -> Result<View<'data, A>, marked::InvalidKeyError> {
+    pub fn get(&self, key: &str) -> Result<View<'data, A>, marked::MissingKeyError> {
         match self.node.data.get(key) {
             Some(i) => Ok({
                 let node = self.data.get(*i);
                 View::new(node, self.data, self.anchor_analyser.clone())
             }),
             None => Err({
-                let error = InvalidKeyError::new(key.into());
+                let error = MissingKeyError::new(key.into());
                 marked::WithMarkError::new(self.mark, error)
             }),
         }
