@@ -1,3 +1,5 @@
+//! Type definition [`MissingKeyError`]
+
 use std::fmt::{Display, Formatter};
 
 /// Error of key access to a map item.
@@ -25,7 +27,7 @@ impl Display for MissingKeyError {
 impl std::error::Error for MissingKeyError {}
 
 pub mod marked {
-    use super::super::with_mark::WithMarkError;
+    use crate::error::marked::MarkedError;
 
-    pub type MissingKeyError = WithMarkError<super::MissingKeyError>;
+    pub type MissingKeyError = MarkedError<super::MissingKeyError>;
 }

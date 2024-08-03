@@ -12,7 +12,7 @@ use super::super::{
 use super::parse_map::parse_map_item;
 use crate::{
     data::make,
-    parse::{Error, ErrorKind, LexResult, MapResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, MapResult, RateError, Result},
 };
 use nom::sequence::tuple;
 
@@ -105,7 +105,7 @@ pub(crate) mod tests {
 
     use crate::{
         data::{data::Data, make, mark::Mark},
-        parse::test_utils::*,
+        de::parse::test_utils::*,
     };
 
     use super::*;

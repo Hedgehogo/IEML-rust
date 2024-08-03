@@ -1,3 +1,5 @@
+//! Type definition [`InvalidValueError`]
+
 use super::deserialize::DeserializeError;
 use std::{
     any::type_name,
@@ -42,9 +44,9 @@ impl<E: Display> Display for InvalidValueError<E> {
 impl<E: Error> Error for InvalidValueError<E> {}
 
 pub mod marked {
-    use super::super::with_mark::WithMarkError;
+    use crate::error::marked::MarkedError;
 
     pub(super) use super::super::deserialize::marked::DeserializeError;
 
-    pub type InvalidValueError<E> = WithMarkError<super::InvalidValueError<E>>;
+    pub type InvalidValueError<E> = MarkedError<super::InvalidValueError<E>>;
 }

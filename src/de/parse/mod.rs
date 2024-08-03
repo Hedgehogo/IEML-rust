@@ -1,3 +1,5 @@
+//! Deserialize IEML input to a IEML data structure.
+
 pub mod cursor;
 pub mod error;
 pub mod from;

@@ -6,7 +6,7 @@ use super::super::{
 };
 use crate::{
     data::make,
-    parse::{RateError, Error, ErrorKind, LexResult, Result}
+    de::parse::{RateError, Error, ErrorKind, LexResult, Result}
 };
 use nom::sequence::tuple;
 

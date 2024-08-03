@@ -11,8 +11,8 @@ use nom::{
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind}, IResult};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
-/// use serde_ieml::parse::utils::combinator::cursor::anychar;
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
+/// use serde_ieml::de::parse::utils::combinator::cursor::anychar;
 ///
 /// fn parser(input: Cursor) -> IResult<Cursor, char> {
 ///     anychar(input)
@@ -40,8 +40,8 @@ pub fn anychar(input: Cursor) -> IResult<Cursor, char> {
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind}, IResult};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
-/// use serde_ieml::parse::utils::combinator::cursor::char;
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
+/// use serde_ieml::de::parse::utils::combinator::cursor::char;
 ///
 /// fn parser(input: Cursor) -> IResult<Cursor, char> {
 ///     char('a')(input)
@@ -70,8 +70,8 @@ pub fn char(ch: char) -> impl FnMut(Cursor) -> IResult<Cursor, char> {
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind, ParseError}};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
-/// use serde_ieml::parse::utils::combinator::cursor::one_of;
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
+/// use serde_ieml::de::parse::utils::combinator::cursor::one_of;
 ///
 /// let mark = Default::default();
 /// assert_eq!(one_of("abc")(("b", mark).into()), Ok((("", Mark::new(0, 1)).into(), 'b')));
@@ -100,8 +100,8 @@ pub fn one_of<'input>(
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind, ParseError}};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
-/// use serde_ieml::parse::utils::combinator::cursor::none_of;
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
+/// use serde_ieml::de::parse::utils::combinator::cursor::none_of;
 ///
 /// let mark = Default::default();
 /// assert_eq!(none_of("abc")(("z", mark).into()), Ok((("", Mark::new(0, 1)).into(), 'z')));
@@ -129,10 +129,10 @@ pub fn none_of<'input>(
 ///
 /// ```rust
 /// # use nom::{Err, Parser, error::{Error, ErrorKind, ParseError}};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
 /// use nom::combinator::value;
-/// use serde_ieml::parse::utils::combinator::cursor::char;
-/// use serde_ieml::parse::utils::combinator::cursor::recognize;
+/// use serde_ieml::de::parse::utils::combinator::cursor::char;
+/// use serde_ieml::de::parse::utils::combinator::cursor::recognize;
 ///
 /// let mut parser = recognize(char('0').or(char('1')));
 ///
@@ -167,10 +167,10 @@ where
 ///
 /// ```rust
 /// # use nom::{Err, Parser, error::{Error, ErrorKind, ParseError}};
-/// # use serde_ieml::{data::mark::Mark, parse::cursor::Cursor};
+/// # use serde_ieml::{data::mark::Mark, de::parse::cursor::Cursor};
 /// use nom::combinator::value;
-/// use serde_ieml::parse::utils::combinator::cursor::char;
-/// use serde_ieml::parse::utils::combinator::cursor::consumed;
+/// use serde_ieml::de::parse::utils::combinator::cursor::char;
+/// use serde_ieml::de::parse::utils::combinator::cursor::consumed;
 ///
 /// let mut parser = consumed(char('0').or(char('1')));
 ///

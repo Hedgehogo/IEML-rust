@@ -1,3 +1,5 @@
+//! Definitions of token types
+
 use super::{
     super::{
         data::Data,

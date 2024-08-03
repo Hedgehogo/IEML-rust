@@ -8,7 +8,7 @@ use super::super::{
 use super::parse_classic_string;
 use crate::{
     data::{make, name::Name},
-    parse::{
+    de::parse::{
         utils::combinator::parse::match_line, Error, ErrorKind, LexResult, ListResult, RateError,
         Result,
     },
@@ -105,7 +105,7 @@ fn parse_anchor_request<'input>(
         Ok((output, name)) => make::anchor_request(cursor.mark, output, name)(token),
 
         Err(error) => match error.data.kind {
-            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+            make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
                 Err(RateError::Recoverable((token, error)))
             }
 

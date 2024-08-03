@@ -1,3 +1,5 @@
+//! Type definition [`MapView`]
+
 use super::super::{
     super::{
         data::Data,
@@ -104,7 +106,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
             }),
             None => Err({
                 let error = MissingKeyError::new(key.into());
-                marked::WithMarkError::new(self.mark, error)
+                marked::MarkedError::new(self.mark, error)
             }),
         }
     }

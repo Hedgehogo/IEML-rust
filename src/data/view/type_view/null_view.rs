@@ -1,3 +1,5 @@
+//! Type definition [`NullView`]
+
 use super::super::super::mark::Mark;
 use std::fmt::Debug;
 

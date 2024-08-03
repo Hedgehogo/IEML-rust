@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
     data::name::Name,
-    parse::{Error, LexResult},
+    de::parse::{Error, LexResult},
 };
 
 use super::{

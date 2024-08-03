@@ -1,7 +1,7 @@
 use super::{cursor::Cursor, read_source::ReadSource};
 use crate::{
     data::make,
-    parse::{Error, ErrorKind, RateError, Result},
+    de::parse::{Error, ErrorKind, RateError, Result},
 };
 
 pub(crate) type Parse<'input, R> =

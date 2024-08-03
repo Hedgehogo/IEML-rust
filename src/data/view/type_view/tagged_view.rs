@@ -1,3 +1,5 @@
+//! Type definition [`TaggedView`]
+
 use super::super::{
     super::{name::Name, data::Data, mark::Mark, node::tag_node::TaggedNode},
     analyse_anchors::AnalyseAnchors,

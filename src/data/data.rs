@@ -1,4 +1,4 @@
-//! This module is designed to describe [`Data`]
+//! Type definition [`Data`]
 
 use super::{
     node::node::MarkedNode,

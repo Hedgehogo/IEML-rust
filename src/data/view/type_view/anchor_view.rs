@@ -1,3 +1,5 @@
+//! Type definition [`AnchorView`]
+
 use super::super::{
     super::{name::Name, data::Data, mark::Mark, node::anchor_node::AnchorNode},
     analyse_anchors::AnalyseAnchors,

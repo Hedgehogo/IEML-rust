@@ -6,7 +6,7 @@ use super::{
     },
     read_source::ReadSource,
 };
-use crate::{data::make, parse::Result};
+use crate::{data::make, de::parse::Result};
 
 pub(crate) fn parse_scalar<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
@@ -31,7 +31,7 @@ mod tests {
 
     use crate::{
         data::mark::Mark,
-        parse::{Error, ErrorKind},
+        de::parse::{Error, ErrorKind},
     };
 
     use super::*;

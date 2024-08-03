@@ -6,7 +6,7 @@ use super::super::{
 };
 use crate::{
     data::{make, name::Name},
-    parse::{Error, ErrorKind, LexResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 use nom::sequence::tuple;
 
@@ -44,7 +44,7 @@ pub(crate) fn parse_tagged<'input, R: ReadSource + ?Sized>(
 mod tests {
     use crate::{
         data::mark::Mark,
-        parse::{test_utils::name, Error, ErrorKind},
+        de::parse::{test_utils::name, Error, ErrorKind},
     };
 
     use super::*;

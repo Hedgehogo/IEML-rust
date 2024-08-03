@@ -1,10 +1,12 @@
+//! Trait definition [`Deserialize`]
+
 use super::{
     super::error::marked,
     analyse_anchors::AnalyseAnchors,
     type_view::{list_view::ListView, map_view::MapView},
     view::View,
 };
-use crate::parse::utils::to_value::{to_bool, to_number};
+use crate::de::parse::utils::to_value::{to_bool, to_number};
 use std::error::Error;
 
 pub trait Deserialize<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> {

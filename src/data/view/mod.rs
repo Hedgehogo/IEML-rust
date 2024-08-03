@@ -1,4 +1,4 @@
-//! The module is designed to provide an API for reading IEML data and then deserializing it.
+//! API for reading IEML data structure.
 //! 
 //! All structure comparison operations declared in this module compare only the consistency of node organization and their contents directly, but do not compare marks. 
 

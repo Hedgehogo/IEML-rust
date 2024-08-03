@@ -9,7 +9,7 @@ use super::super::{
 };
 use crate::{
     data::{make, name::Name},
-    parse::{ErrorKind, LexResult, MapResult, RateError, Result},
+    de::parse::{ErrorKind, LexResult, MapResult, RateError, Result},
 };
 
 fn lex_key<'input>(
@@ -20,8 +20,8 @@ fn lex_key<'input>(
     match name(path, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {
-            if let make::ErrorKind::Parse(ErrorKind::FailedDetermineType) = e.data.kind {
-                e.data.kind = make::ErrorKind::Parse(error_kind)
+            if let make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) = e.data.kind {
+                e.data.kind = make::error::ErrorKind::Parse(error_kind)
             }
             Err(e)
         }
@@ -102,7 +102,7 @@ pub(crate) fn parse_map<'input, R: ReadSource + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::super::super::Error;
-    use crate::{data::mark::Mark, parse::test_utils::name};
+    use crate::{data::mark::Mark, de::parse::test_utils::name};
 
     use super::*;
 

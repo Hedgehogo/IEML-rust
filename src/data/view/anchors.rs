@@ -1,3 +1,5 @@
+//! Type definition [`Anchors`]
+
 use super::{
     super::{
         data::Data,

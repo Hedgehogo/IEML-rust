@@ -9,7 +9,7 @@ use super::super::{
 };
 use crate::{
     data::make,
-    parse::{Error, ErrorKind, LexResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 use nom::sequence::tuple;
 
@@ -79,7 +79,7 @@ pub(crate) fn parse_not_escaped_string<'input>(
     move |token: make::Token| match lex_not_escaped_string(path, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => match error.data.kind {
-            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+            make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
                 Err(RateError::Recoverable((token, error)))
             }
             _ => Err(RateError::Unrecoverable((token.error(), error))),

@@ -18,7 +18,7 @@ use nom::{Err, IResult, Parser};
 ///
 /// ```rust
 /// # use nom::{Err, error::ErrorKind, Needed, IResult};
-/// use serde_ieml::parse::utils::combinator::many::many_m_n_count;
+/// use serde_ieml::de::parse::utils::combinator::many::many_m_n_count;
 /// use nom::bytes::complete::tag;
 ///
 /// fn parser(s: &str) -> IResult<&str, usize> {
@@ -84,7 +84,7 @@ where
 ///
 /// ```rust
 /// # use nom::{Err, error::{Error, ErrorKind}, Needed, IResult};
-/// use serde_ieml::parse::utils::combinator::many::many_till_count;
+/// use serde_ieml::de::parse::utils::combinator::many::many_till_count;
 /// use nom::bytes::complete::tag;
 ///
 /// fn parser(s: &str) -> IResult<&str, (usize, &str)> {

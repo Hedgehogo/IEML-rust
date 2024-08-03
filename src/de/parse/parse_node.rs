@@ -6,7 +6,7 @@ use super::{
     read_source::ReadSource,
     utils::combinator::parse::{skip_blank_lines_ln, skip_indent},
 };
-use crate::{data::make, parse::Result};
+use crate::{data::make, de::parse::Result};
 
 pub(crate) fn parse_node_on_own_line<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
@@ -57,7 +57,7 @@ pub(crate) fn parse_node<'input, R: ReadSource + ?Sized>(
 mod tests {
     use crate::{
         data::mark::Mark,
-        parse::{test_utils::*, Error, ErrorKind},
+        de::parse::{test_utils::*, Error, ErrorKind},
     };
     use std::path::Path;
 

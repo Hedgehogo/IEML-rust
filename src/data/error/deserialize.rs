@@ -1,3 +1,5 @@
+//! Type definition [`DeserializeError`]
+
 use super::*;
 use std::{
     error::Error,
@@ -63,25 +65,25 @@ impl<E> From<MissingKeyError> for DeserializeError<E> {
 pub mod marked {
     use super::super::super::mark::Mark;
     use super::super::marked::*;
-    use super::super::with_mark::WithMarkError;
+    use crate::error::marked::MarkedError;
 
-    pub type DeserializeError<E> = WithMarkError<super::DeserializeError<E>>;
+    pub type DeserializeError<E> = MarkedError<super::DeserializeError<E>>;
 
     impl<E> DeserializeError<E> {
         pub fn failed(mark: Mark) -> Self {
-            WithMarkError::new(mark, super::DeserializeError::Failed)
+            MarkedError::new(mark, super::DeserializeError::Failed)
         }
     }
 
     impl<E> From<InvalidTypeError> for DeserializeError<E> {
         fn from(value: InvalidTypeError) -> Self {
-            WithMarkError::new(value.mark, super::DeserializeError::InvalidType(value.data))
+            MarkedError::new(value.mark, super::DeserializeError::InvalidType(value.data))
         }
     }
 
     impl<E> From<InvalidValueError<E>> for DeserializeError<E> {
         fn from(value: InvalidValueError<E>) -> Self {
-            WithMarkError::new(
+            MarkedError::new(
                 value.mark,
                 super::DeserializeError::InvalidValue(value.data),
             )
@@ -90,7 +92,7 @@ pub mod marked {
 
     impl<E> From<InvalidLengthError> for DeserializeError<E> {
         fn from(value: InvalidLengthError) -> Self {
-            WithMarkError::new(
+            MarkedError::new(
                 value.mark,
                 super::DeserializeError::InvalidLength(value.data),
             )
@@ -99,7 +101,7 @@ pub mod marked {
 
     impl<E> From<MissingKeyError> for DeserializeError<E> {
         fn from(value: MissingKeyError) -> Self {
-            WithMarkError::new(value.mark, super::DeserializeError::MissingKey(value.data))
+            MarkedError::new(value.mark, super::DeserializeError::MissingKey(value.data))
         }
     }
 }

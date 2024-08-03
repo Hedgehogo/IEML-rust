@@ -1,3 +1,5 @@
+//! Type definition [`ListView`]
+
 use super::super::{
     super::{
         data::Data,
@@ -93,7 +95,7 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
             }),
             None => Err({
                 let error = InvalidLengthError::new(self.len());
-                marked::WithMarkError::new(self.mark, error)
+                marked::MarkedError::new(self.mark, error)
             }),
         }
     }

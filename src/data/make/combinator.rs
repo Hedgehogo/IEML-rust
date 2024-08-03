@@ -1,3 +1,5 @@
+//! Functions for creating [`Data`]
+
 use super::{
     super::{
         data::Data,

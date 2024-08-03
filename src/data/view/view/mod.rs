@@ -1,3 +1,5 @@
+//! Type definition [`View`]
+
 use super::{
     super::{
         data::Data,
@@ -202,8 +204,8 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         clear::<(Tagged, Document), A>(self.clone())
     }
 
-    fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::WithMarkError<T> {
-        marked::WithMarkError::<T>::new(self.mark(), error)
+    fn make_error<T: Error + PartialEq + Eq>(&self, error: T) -> marked::MarkedError<T> {
+        marked::MarkedError::<T>::new(self.mark(), error)
     }
 
     fn make_invalid_type_error(

@@ -1,3 +1,5 @@
+//! Trait definition [`AnalyseAnchors`]
+
 use std::path::Path;
 
 /// Trait allowing you to track the anchor organization and save some data about it.

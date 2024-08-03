@@ -1,3 +1,5 @@
+//! Type definition [`DocumentView`]
+
 use super::super::{
     super::{data::Data, mark::Mark, node::document_node::DocumentNode},
     analyse_anchors::AnalyseAnchors,

@@ -1,4 +1,4 @@
-//! This module is designed to define the data structures used in IEML operations.
+//! Definitions of types required to work with IEML.
 
 pub mod data;
 pub mod error;

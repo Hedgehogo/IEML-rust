@@ -1,3 +1,5 @@
+//! Type definition [`InvalidLengthError`]
+
 use std::fmt::{Debug, Display, Formatter};
 
 /// Error of index access to a list item.
@@ -25,7 +27,7 @@ impl Display for InvalidLengthError {
 impl std::error::Error for InvalidLengthError {}
 
 pub mod marked {
-    use super::super::with_mark::WithMarkError;
+    use crate::error::marked::MarkedError;
 
-    pub type InvalidLengthError = WithMarkError<super::InvalidLengthError>;
+    pub type InvalidLengthError = MarkedError<super::InvalidLengthError>;
 }

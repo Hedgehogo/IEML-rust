@@ -1,3 +1,5 @@
+//! Type definition [`StringView`]
+
 use super::super::super::{
     node::node::StringNode,
     mark::Mark

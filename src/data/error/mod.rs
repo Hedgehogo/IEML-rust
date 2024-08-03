@@ -1,11 +1,10 @@
-//! This module is designed to describe the types of errors that can occur during deserialization
+//! Definition of error types occurring during reading of IEML data structure
 
 pub mod deserialize;
 pub mod invalid_length;
 pub mod invalid_type;
 pub mod invalid_value;
 pub mod missing_key;
-pub mod with_mark;
 
 pub use deserialize::DeserializeError;
 pub use invalid_length::InvalidLengthError;
@@ -14,7 +13,7 @@ pub use invalid_value::InvalidValueError;
 pub use missing_key::MissingKeyError;
 
 pub mod marked {
-    pub use super::with_mark::WithMarkError;
+    pub use crate::error::marked::MarkedError;
 
     pub type DeserializeError<E> = super::deserialize::marked::DeserializeError<E>;
     pub type InvalidTypeError = super::invalid_type::marked::InvalidTypeError;

@@ -1,4 +1,5 @@
-//! This module is designed to describe [`NodeType`]
+//! Type definition [`NodeType`]
+
 use std::fmt::Display;
 
 /// Describes the node type without storing the data itself

@@ -1,4 +1,4 @@
-//! This module is designed to describe [`Mark`]
+//! Type definition [`Mark`]
 
 /// Structure storing row and column number in the document
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]

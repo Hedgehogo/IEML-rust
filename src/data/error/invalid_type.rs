@@ -1,3 +1,5 @@
+//! Type definition [`InvalidTypeError`]
+
 use super::super::node_type::NodeType;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -41,7 +43,7 @@ impl Display for InvalidTypeError {
 impl std::error::Error for InvalidTypeError {}
 
 pub mod marked {
-    use super::super::with_mark::WithMarkError;
+    use crate::error::marked::MarkedError;
 
-    pub type InvalidTypeError = WithMarkError<super::InvalidTypeError>;
+    pub type InvalidTypeError = MarkedError<super::InvalidTypeError>;
 }

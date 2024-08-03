@@ -1,3 +1,5 @@
+//! Type definition [`ToMatchView`]
+
 use super::analyse_anchors::AnalyseAnchors;
 use std::fmt::Debug;
 

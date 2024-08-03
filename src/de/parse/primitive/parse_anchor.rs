@@ -6,7 +6,7 @@ use super::super::{
 };
 use crate::{
     data::{make, name::Name},
-    parse::{Error, ErrorKind, LexResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 
 fn lex_anchor_name<'input>(
@@ -34,7 +34,7 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
         }
         Ok((output, (name, false))) => make::anchor_request(cursor.mark, output, name)(token),
         Err(error) => match error.data.kind {
-            make::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
+            make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
                 Err(RateError::Recoverable((token, error)))
             }
             _ => Err(RateError::Unrecoverable((token.error(), error))),
@@ -46,7 +46,7 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
 mod tests {
     use crate::{
         data::mark::Mark,
-        parse::{test_utils::name, ErrorKind},
+        de::parse::{test_utils::name, ErrorKind},
     };
 
     use super::*;

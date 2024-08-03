@@ -9,7 +9,7 @@ use super::super::{
 };
 use crate::{
     data::make,
-    parse::{Error, ErrorKind, LexResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 use nom::{combinator::eof, multi::many1_count, sequence::tuple};
 

@@ -1,3 +1,5 @@
+//! Trait definition [`Clear`]
+
 use super::view::View;
 use super::analyse_anchors::AnalyseAnchors;
 

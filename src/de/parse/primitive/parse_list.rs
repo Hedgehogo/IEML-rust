@@ -11,7 +11,7 @@ use super::super::{
 };
 use crate::{
     data::make,
-    parse::{Error, ErrorKind, LexResult, ListResult, RateError, Result},
+    de::parse::{Error, ErrorKind, LexResult, ListResult, RateError, Result},
 };
 use nom::sequence::tuple;
 

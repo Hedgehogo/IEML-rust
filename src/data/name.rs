@@ -1,4 +1,5 @@
-//! This module is designed to describe structure that guarantee that their contents are names conforming to the IEML standard.
+//! Type definition [`Name`]
+
 use std::{
     borrow::Borrow,
     fmt::{Debug, Display},

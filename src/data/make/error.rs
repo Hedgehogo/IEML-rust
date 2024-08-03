@@ -1,3 +1,5 @@
+//! Type definition [`Error`]
+
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 
@@ -102,13 +104,13 @@ where
 
 pub mod marked {
     use super::super::{
-        super::{error::marked::WithMarkError, mark::Mark},
+        super::{error::marked::MarkedError, mark::Mark},
         maker::{ListToken, MapToken, Token, UsedToken, ErrorToken},
     };
     use std::path::PathBuf;
     use std::result;
 
-    pub type Error<E> = WithMarkError<super::Error<E>>;
+    pub type Error<E> = MarkedError<super::Error<E>>;
     pub type RateError<'maker, E, R> =
         super::RateError<(R, Error<E>), (ErrorToken<'maker>, Error<E>)>;
     pub type Result<'maker, O, E> =

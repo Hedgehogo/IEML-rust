@@ -1,7 +1,7 @@
 use super::{cursor::Cursor, parse_complete::parse_complete, read_source::ReadSource};
 use crate::{
     data::{data::Data, make},
-    parse::{Error, ErrorKind, RateError},
+    de::parse::{Error, ErrorKind, RateError},
 };
 use std::path::Path;
 

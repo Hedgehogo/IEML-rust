@@ -1,3 +1,5 @@
+//! Type definition [`RawView`]
+
 use super::super::super::{
     node::node::RawNode,
     mark::Mark
