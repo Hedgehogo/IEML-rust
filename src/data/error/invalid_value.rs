@@ -2,7 +2,6 @@
 
 use super::deserialize::DeserializeError;
 use std::{
-    any::type_name,
     error::Error,
     fmt::{Debug, Display, Formatter},
 };
@@ -10,20 +9,20 @@ use std::{
 /// Deserialisation error type containing a child error - the reason.
 #[derive(PartialEq, Eq, Debug)]
 pub struct InvalidValueError<E> {
-    type_name: &'static str,
+    expected: String,
     reason: Box<marked::DeserializeError<E>>,
 }
 
 impl<E> InvalidValueError<E> {
-    pub fn new<T>(reason: Box<marked::DeserializeError<E>>) -> Self {
+    pub fn new(expected: String, reason: Box<marked::DeserializeError<E>>) -> Self {
         Self {
-            type_name: type_name::<T>(),
+            expected,
             reason,
         }
     }
 
-    pub fn type_name(&self) -> &'static str {
-        self.type_name
+    pub fn expected(&self) -> &str {
+        &self.expected
     }
 
     pub fn reason(&self) -> &Box<marked::DeserializeError<E>> {
@@ -37,7 +36,7 @@ impl<E: Display> Display for InvalidValueError<E> {
             DeserializeError::Failed => {}
             _ => write!(f, "{}\n", self.reason.data)?,
         }
-        write!(f, "error: expected value of type '{}'", self.type_name())
+        write!(f, "error: expected {}", self.expected())
     }
 }
 

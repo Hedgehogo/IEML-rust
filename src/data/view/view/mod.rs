@@ -11,7 +11,7 @@ use super::{
     analyse_anchors::AnalyseAnchors,
     deserialize::Deserialize,
 };
-use std::{error::Error, fmt::Debug};
+use std::{any::type_name, error::Error, fmt::Debug};
 
 pub use super::to_match::*;
 
@@ -362,8 +362,10 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     pub fn decode<E: Error + PartialEq + Eq, T: Deserialize<'data, A, E>>(
         &self,
     ) -> Result<T, marked::InvalidValueError<E>> {
-        T::deserialize(self.clone())
-            .map_err(|e| self.make_error(InvalidValueError::new::<T>(Box::new(e))))
+        T::deserialize(self.clone()).map_err(|e| {
+            let expected = format!("value of type '{}'", type_name::<T>());
+            self.make_error(InvalidValueError::new(expected, Box::new(e)))
+        })
     }
 }
 

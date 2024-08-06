@@ -25,7 +25,7 @@ impl<E: Display> Display for MarkedError<E> {
     }
 }
 
-impl<E: Error> Error for MarkedError<E> {}
+impl<E: Debug + Display> Error for MarkedError<E> {}
 
 // Add after specializations appear
 /*impl<F, I: From<F>> From<WithMarkError<F>> for WithMarkError<I> {

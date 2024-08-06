@@ -3,7 +3,7 @@
 use super::*;
 use std::{
     error::Error,
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
 };
 
 /// General type of deserialisation error
@@ -24,7 +24,7 @@ pub enum DeserializeError<E> {
     /// Occurs when the cause of an error cannot be expressed by this type.
     Failed,
     /// Additional error type for the possibility of extending this type
-    Other(E),
+    Custom(E),
 }
 
 impl<E: Display> Display for DeserializeError<E> {
@@ -37,12 +37,12 @@ impl<E: Display> Display for DeserializeError<E> {
             DeserializeError::UnknownKey(i) => write!(f, "{}", i),
             DeserializeError::MissingKey(i) => write!(f, "{}", i),
             DeserializeError::Failed => write!(f, "failed"),
-            DeserializeError::Other(i) => write!(f, "{}", i),
+            DeserializeError::Custom(i) => write!(f, "{}", i),
         }
     }
 }
 
-impl<E: Error> Error for DeserializeError<E> {}
+impl<E: Debug + Display> Error for DeserializeError<E> {}
 
 impl<E> From<InvalidTypeError> for DeserializeError<E> {
     fn from(value: InvalidTypeError) -> Self {
