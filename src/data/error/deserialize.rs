@@ -91,6 +91,8 @@ pub mod marked {
     use super::super::super::mark::Mark;
     use super::super::marked::*;
     use crate::error::{custom::marked::CustomError, marked::MarkedError};
+    use serde::de;
+    use std::fmt;
 
     pub type DeserializeError<E> = MarkedError<super::DeserializeError<E>>;
 
@@ -145,6 +147,55 @@ pub mod marked {
     impl From<CustomError> for DeserializeError<super::CustomError> {
         fn from(value: CustomError) -> Self {
             MarkedError::new(value.mark, super::DeserializeError::Custom(value.data))
+        }
+    }
+
+    impl de::Error for DeserializeError<super::CustomError> {
+        fn custom<T>(msg: T) -> Self
+        where
+            T: fmt::Display,
+        {
+            let custom = CustomError::from(msg.to_string());
+            MarkedError::new(custom.mark, super::DeserializeError::Custom(custom.data))
+        }
+
+        fn invalid_type(unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
+            let expected = format!("{}", exp);
+            let invelid_type = super::InvalidTypeError::new(unexp.into(), &[]);
+            let deserialize = DeserializeError::new(Default::default(), invelid_type.into());
+            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            DeserializeError::new(Default::default(), invalid_value.into())
+        }
+
+        fn invalid_value(_unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
+            let expected = format!("{}", exp);
+            let failed = super::DeserializeError::Failed;
+            let deserialize = DeserializeError::new(Default::default(), failed);
+            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            DeserializeError::new(Default::default(), invalid_value.into())
+        }
+
+        fn invalid_length(len: usize, exp: &dyn de::Expected) -> Self {
+            let expected = format!("{}", exp);
+            let invelid_length = super::InvalidLengthError::new(len);
+            let deserialize = DeserializeError::new(Default::default(), invelid_length.into());
+            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            DeserializeError::new(Default::default(), invalid_value.into())
+        }
+
+        fn unknown_variant(variant: &str, expected: &'static [&'static str]) -> Self {
+            let unknown_tag = super::UnknownTagError::new(variant.into(), expected);
+            DeserializeError::new(Default::default(), unknown_tag.into())
+        }
+
+        fn unknown_field(field: &str, expected: &'static [&'static str]) -> Self {
+            let unknown_key = super::UnknownKeyError::new(field.into(), expected);
+            DeserializeError::new(Default::default(), unknown_key.into())
+        }
+
+        fn missing_field(field: &'static str) -> Self {
+            let missing_key = super::MissingKeyError::new(field.into());
+            DeserializeError::new(Default::default(), missing_key.into())
         }
     }
 }
