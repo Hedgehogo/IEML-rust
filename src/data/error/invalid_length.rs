@@ -13,7 +13,7 @@ impl InvalidLengthError {
         Self { length }
     }
 
-    pub fn len(&self) -> usize {
+    pub fn length(&self) -> usize {
         self.length
     }
 }

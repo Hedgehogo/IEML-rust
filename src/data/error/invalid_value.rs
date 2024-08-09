@@ -25,7 +25,7 @@ impl<E> InvalidValueError<E> {
         &self.expected
     }
 
-    pub fn reason(&self) -> &Box<marked::DeserializeError<E>> {
+    pub fn reason(&self) -> &marked::DeserializeError<E> {
         &self.reason
     }
 }
@@ -34,7 +34,7 @@ impl<E: Display> Display for InvalidValueError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.reason.data {
             DeserializeError::Failed => {}
-            _ => write!(f, "{}\n", self.reason.data)?,
+            _ => writeln!(f, "{}", self.reason.data)?,
         }
         write!(f, "error: expected {}", self.expected())
     }

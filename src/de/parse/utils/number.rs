@@ -65,8 +65,8 @@ pub fn parse_minus_unsigned(input: &str) -> (&str, bool) {
 
 pub fn to_digit(input: char, radix: u8) -> Option<u8> {
     match input {
-        '0'..='9' => Some((input as u8) - ('0' as u8)),
-        'A'..='Z' => Some(10 + (input as u8) - ('A' as u8)),
+        '0'..='9' => Some((input as u8) - b'0'),
+        'A'..='Z' => Some(10 + (input as u8) - b'A'),
         _ => None,
     }
     .and_then(|i| if i < radix { Some(i) } else { None })
@@ -143,7 +143,7 @@ pub fn parse_number<T: ToNumber>(input: &str, radix: u8) -> Option<(&str, T)> {
 }
 
 pub fn parse_number_radix<T: ToNumber>(input: &str) -> Option<(&str, (T, u8))> {
-    let (new_input, minus) = T::parse_minus(&input);
+    let (new_input, minus) = T::parse_minus(input);
     let (new_input, (number_or_radix, factor)) = parse_number_part::<T>(new_input, 10)?;
     if factor > T::from(1) {
         let mut chars = new_input.chars();

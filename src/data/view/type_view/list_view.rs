@@ -78,6 +78,11 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         self.mark
     }
 
+    /// Asks if the list is empty.
+    pub fn is_empty(&self) -> bool {
+        self.node.data.is_empty()
+    }
+
     /// Gets the number of elements.
     pub fn len(&self) -> usize {
         self.node.data.len()

@@ -12,8 +12,9 @@ use super::super::{
     view::View,
 };
 use std::{
+    borrow::Borrow,
     collections::hash_map,
-    fmt::{self, Debug, Formatter}, borrow::Borrow,
+    fmt::{self, Debug, Formatter},
 };
 
 #[derive(Clone)]
@@ -84,6 +85,11 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
         self.mark
     }
 
+    /// Asks if the map is empty.
+    pub fn is_empty(&self) -> bool {
+        self.node.data.is_empty()
+    }
+
     /// Gets the number of elements.
     pub fn len(&self) -> usize {
         self.node.data.len()
@@ -127,7 +133,7 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for MapView<'data, A> {
             other
                 .get(k.borrow())
                 .ok()
-                .and_then(|i| (i == v).then(|| ()))
+                .and_then(|i| (i == v).then_some(()))
                 .is_some()
         })
     }
@@ -159,7 +165,7 @@ mod tests {
         node::node::{MarkedNode, Node, TaggedNode},
         node_type::NodeType,
     };
-    use std::{collections::HashMap, borrow::Borrow};
+    use std::{borrow::Borrow, collections::HashMap};
 
     fn test_data() -> Data {
         let name = |i: &str| Name::new(i.into()).unwrap();

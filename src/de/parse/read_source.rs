@@ -47,7 +47,7 @@ impl ReadSource for Path {
     where
         F: for<'input> FnOnce(Token<'maker>, Cursor<'input>) -> T,
     {
-        match fs::read_to_string(&self) {
+        match fs::read_to_string(self) {
             Ok(content) => Ok(f(token, (content.as_str(), Default::default()).into())),
             Err(_) => Err(token),
         }

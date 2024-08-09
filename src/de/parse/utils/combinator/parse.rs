@@ -50,13 +50,13 @@ pub fn skip_blank_lines_ln(input: Cursor) -> IResult<Cursor, usize> {
     })(input)
 }
 
-pub fn match_line<'input>(input: Cursor<'input>) -> (Cursor<'input>, Cursor<'input>) {
+pub fn match_line(input: Cursor) -> (Cursor, Cursor) {
     let (output, result) = recognize(many0_count(skip_not_line_ending))(input)
         .expect("Internal error in `match_line` function operation.");
     (output, result)
 }
 
-pub fn match_name<'input>(input: Cursor<'input>) -> (Cursor<'input>, (Cursor<'input>, bool)) {
+pub fn match_name(input: Cursor) -> (Cursor, (Cursor, bool)) {
     let (output, result, special) = {
         let match_line_ending = peek(skip_line_ending.or(eof.map(|_| ()))).map(|_| false);
         let match_special = tuple((char(':'), skip_space)).map(|_| true);

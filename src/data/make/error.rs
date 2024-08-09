@@ -48,7 +48,7 @@ pub struct Error<E: std::error::Error + PartialEq + Eq> {
 
 impl<E: std::error::Error + PartialEq + Eq> Error<E> {
     pub fn new(path: PathBuf, kind: ErrorKind<E>) -> Self {
-        Self { path, kind: kind }
+        Self { path, kind }
     }
 }
 

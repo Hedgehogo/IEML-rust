@@ -17,7 +17,7 @@ fn lex_tag<'input>(
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, (result, _)) = name(path, cursor, false)?;
-            return Ok((cursor, result));
+            Ok((cursor, result))
         }
         Err(_) => {
             let error_kind = ErrorKind::FailedDetermineType;

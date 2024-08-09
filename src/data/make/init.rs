@@ -97,7 +97,7 @@ pub(super) fn init<E: std::error::Error + PartialEq + Eq>(
     
     match &last.node {
         Node::Document(i) => {
-            let anchors = Anchors::new(&*i, None);
+            let anchors = Anchors::new(i, None);
             init_step(slice, &anchors)
         }
 

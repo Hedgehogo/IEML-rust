@@ -46,7 +46,7 @@ fn lex_special<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<
     }
 }
 
-fn not_any_ending<'input>(cursor: Cursor<'input>) -> IResult<Cursor<'input>, ()> {
+fn not_any_ending(cursor: Cursor) -> IResult<Cursor, ()> {
     let ending = char(']').map(|_| ());
     let separator = tuple((char(','), char(' '))).map(|_| ());
     let comment = tuple((char('#'), one_of("! "))).map(|_| ());

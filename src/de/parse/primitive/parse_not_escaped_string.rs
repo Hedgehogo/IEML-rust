@@ -13,13 +13,12 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn analyze<'input>(
-    path: &'input Path,
-    cursor: Cursor<'input>,
+fn analyze(
+    cursor: Cursor,
     indent: usize,
     capacity: usize,
     lines: usize,
-) -> (Cursor<'input>, (usize, usize)) {
+) -> (Cursor, (usize, usize)) {
     let match_whitespace =
         skip_line_ending(cursor).and_then(|(cursor, _)| skip_indent(indent)(cursor));
 
@@ -31,10 +30,10 @@ fn analyze<'input>(
     let (cursor, line) = match_line(cursor);
     let capacity = capacity + line.input.len() + 1;
     let lines = lines + 1;
-    analyze(path, cursor, indent, capacity, lines)
+    analyze(cursor, indent, capacity, lines)
 }
 
-fn parse<'input>(input: &'input str, indent: usize, lines: usize, result: &mut String) {
+fn parse(input: &str, indent: usize, lines: usize, result: &mut String) {
     let mut input = input;
     for _ in 1..lines {
         let (_, end_input) = input.split_at(indent + 1);
@@ -62,7 +61,7 @@ pub(crate) fn lex_not_escaped_string<'input>(
     let (cursor, line) = match_line(cursor);
 
     let capacity = line.input.len() + 1;
-    let (output, (capacity, lines)) = analyze(path, cursor, indent, capacity, 1);
+    let (output, (capacity, lines)) = analyze(cursor, indent, capacity, 1);
 
     let mut result = String::with_capacity(capacity);
     result.push_str(line.input);
