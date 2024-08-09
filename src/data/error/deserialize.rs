@@ -1,6 +1,7 @@
 //! Type definition [`DeserializeError`]
 
 use super::*;
+use crate::error::custom::CustomError;
 use std::{
     error::Error,
     fmt::{Debug, Display, Formatter},
@@ -80,10 +81,16 @@ impl<E> From<MissingKeyError> for DeserializeError<E> {
     }
 }
 
+impl From<CustomError> for DeserializeError<CustomError> {
+    fn from(value: CustomError) -> Self {
+        DeserializeError::Custom(value)
+    }
+}
+
 pub mod marked {
     use super::super::super::mark::Mark;
     use super::super::marked::*;
-    use crate::error::marked::MarkedError;
+    use crate::error::{custom::marked::CustomError, marked::MarkedError};
 
     pub type DeserializeError<E> = MarkedError<super::DeserializeError<E>>;
 
@@ -132,6 +139,12 @@ pub mod marked {
     impl<E> From<MissingKeyError> for DeserializeError<E> {
         fn from(value: MissingKeyError) -> Self {
             MarkedError::new(value.mark, super::DeserializeError::MissingKey(value.data))
+        }
+    }
+
+    impl From<CustomError> for DeserializeError<super::CustomError> {
+        fn from(value: CustomError) -> Self {
+            MarkedError::new(value.mark, super::DeserializeError::Custom(value.data))
         }
     }
 }
