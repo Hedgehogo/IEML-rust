@@ -381,5 +381,7 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for View<'data, A> {
     }
 }
 
+mod deserializer;
+
 #[cfg(test)]
 mod tests;

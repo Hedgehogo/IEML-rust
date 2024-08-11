@@ -3,51 +3,18 @@
 use super::super::{
     super::{
         data::Data,
-        error::{marked, InvalidLengthError},
+        error::{marked, CustomError, InvalidLengthError, InvalidValueError},
         mark::Mark,
         node::node::ListNode,
     },
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
+use serde::de;
 use std::{
     fmt::{self, Debug, Formatter},
     slice,
 };
-
-#[derive(Clone)]
-pub struct ListIter<'data, A: AnalyseAnchors<'data>> {
-    iter: slice::Iter<'data, usize>,
-    data: &'data Data,
-    anchor_analyser: A,
-}
-
-impl<'data, A: AnalyseAnchors<'data>> ListIter<'data, A> {
-    fn new(iter: slice::Iter<'data, usize>, data: &'data Data, anchor_analyser: A) -> Self {
-        Self {
-            data,
-            iter,
-            anchor_analyser,
-        }
-    }
-}
-
-impl<'data, A: AnalyseAnchors<'data>> Debug for ListIter<'data, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{{ next: {:?} }}", self.clone().next())
-    }
-}
-
-impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
-    type Item = View<'data, A>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|i| {
-            let node = self.data.get(*i);
-            View::new(node, self.data, self.anchor_analyser.clone())
-        })
-    }
-}
 
 /// Structure for reading List node data.
 #[derive(Clone, Eq)]
@@ -110,6 +77,14 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         ListIter::new(self.node.data.iter(), self.data, anchor_analyser)
     }
+
+    pub(crate) fn seq_access(self) -> SeqAccess<'data, A> {
+        SeqAccess::new(self.mark, self.iter())
+    }
+
+    pub(crate) fn map_access(self) -> MapAccess<'data, A> {
+        MapAccess::new(self.mark, self.iter())
+    }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> PartialEq for ListView<'data, A> {
@@ -137,6 +112,173 @@ impl<'data, A: AnalyseAnchors<'data>> IntoIterator for ListView<'data, A> {
 
     fn into_iter(self) -> Self::IntoIter {
         ListIter::new(self.node.data.iter(), self.data, self.anchor_analyser)
+    }
+}
+
+#[derive(Clone)]
+pub struct ListIter<'data, A: AnalyseAnchors<'data>> {
+    iter: slice::Iter<'data, usize>,
+    data: &'data Data,
+    anchor_analyser: A,
+}
+
+impl<'data, A: AnalyseAnchors<'data>> ListIter<'data, A> {
+    fn new(iter: slice::Iter<'data, usize>, data: &'data Data, anchor_analyser: A) -> Self {
+        Self {
+            data,
+            iter,
+            anchor_analyser,
+        }
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> Debug for ListIter<'data, A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{{ next: {:?} }}", self.clone().next())
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
+    type Item = View<'data, A>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|i| {
+            let node = self.data.get(*i);
+            View::new(node, self.data, self.anchor_analyser.clone())
+        })
+    }
+}
+
+pub struct SeqAccess<'data, A: AnalyseAnchors<'data>> {
+    mark: Mark,
+    iter: ListIter<'data, A>,
+}
+
+impl<'data, A: AnalyseAnchors<'data>> SeqAccess<'data, A> {
+    fn new(mark: Mark, iter: ListIter<'data, A>) -> Self {
+        Self { mark, iter }
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, A> {
+    type Error = marked::DeserializeError<CustomError>;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: de::DeserializeSeed<'data>,
+    {
+        match self.iter.next() {
+            Some(i) => match seed.deserialize(i) {
+                Ok(i) => Ok(Some(i)),
+
+                Err(i) => {
+                    let expected = "list".into();
+                    let invalid_value = InvalidValueError::new(expected, Box::new(i));
+                    let error = marked::DeserializeError::new(self.mark, invalid_value.into());
+                    Err(error)
+                }
+            },
+
+            None => Ok(None),
+        }
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.iter.iter.len())
+    }
+}
+
+pub struct MapAccess<'data, A: AnalyseAnchors<'data>> {
+    mark: Mark,
+    last: Option<(usize, usize)>,
+    iter: slice::Iter<'data, usize>,
+    data: &'data Data,
+    anchor_analyser: A,
+}
+
+impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
+    fn new(mark: Mark, iter: ListIter<'data, A>) -> Self {
+        Self {
+            mark: mark,
+            last: None,
+            data: iter.data,
+            iter: iter.iter,
+            anchor_analyser: iter.anchor_analyser,
+        }
+    }
+
+    fn next(&mut self) -> Result<(), marked::DeserializeError<CustomError>> {
+        let result = self.iter.next().map(|i| {
+            let node = self.data.get(*i);
+            View::new(node, self.data, self.anchor_analyser.clone())
+        });
+
+        match result {
+            Some(i) => {
+                let list = i.list()?;
+                let mut iter = list.node.data.iter();
+                match (iter.next(), iter.next(), iter.next()) {
+                    (Some(i), Some(j), None) => self.last = Some((*i, *j)),
+
+                    _ => {
+                        let invalid_length = InvalidLengthError::new(list.len()).into();
+                        let error = marked::DeserializeError::new(list.mark(), invalid_length);
+                        return Err(error);
+                    }
+                }
+            }
+
+            None => self.last = None,
+        }
+
+        Ok(())
+    }
+
+    fn last_key(&self) -> Option<View<'data, A>> {
+        self.last.map(|(i, _)| {
+            let node = self.data.get(i);
+            View::new(node, self.data, self.anchor_analyser.clone())
+        })
+    }
+
+    fn last_value(&self) -> Option<View<'data, A>> {
+        self.last.map(|(_, i)| {
+            let node = self.data.get(i);
+            View::new(node, self.data, self.anchor_analyser.clone())
+        })
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
+    type Error = marked::DeserializeError<CustomError>;
+
+    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
+    where
+        K: de::DeserializeSeed<'data>,
+    {
+        self.next()?;
+        match self.last_key() {
+            Some(i) => seed.deserialize(i).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::DeserializeSeed<'data>,
+    {
+        match self.last_value() {
+            Some(i) => seed.deserialize(i),
+            None => {
+                let invalid_value = InvalidValueError::new_expected("value".into());
+                let error = marked::DeserializeError::new(self.mark, invalid_value.into());
+                Err(error)
+            }
+        }
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.iter.len())
     }
 }
 
