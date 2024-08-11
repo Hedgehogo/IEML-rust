@@ -1,6 +1,5 @@
 //! Type definition [`InvalidValueError`]
 
-use super::deserialize::DeserializeError;
 use std::{
     error::Error,
     fmt::{Debug, Display, Formatter},
@@ -10,35 +9,29 @@ use std::{
 #[derive(PartialEq, Eq, Debug)]
 pub struct InvalidValueError<E> {
     expected: String,
-    reason: Box<marked::DeserializeError<E>>,
+    reason: Option<Box<marked::DeserializeError<E>>>,
 }
 
 impl<E> InvalidValueError<E> {
-    pub fn new(expected: String, reason: Box<marked::DeserializeError<E>>) -> Self {
+    pub fn new(expected: String, reason: Option<Box<marked::DeserializeError<E>>>) -> Self {
         Self { expected, reason }
-    }
-
-    pub fn new_expected(expected: String) -> Self {
-        let deserialize = marked::DeserializeError::failed(Default::default());
-        Self::new(expected, Box::new(deserialize))
     }
 
     pub fn expected(&self) -> &str {
         &self.expected
     }
 
-    pub fn reason(&self) -> &marked::DeserializeError<E> {
+    pub fn reason(&self) -> &Option<Box<marked::DeserializeError<E>>> {
         &self.reason
     }
 }
 
 impl<E: Display> Display for InvalidValueError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self.reason.data {
-            DeserializeError::Failed => {}
-            _ => writeln!(f, "{}", self.reason.data)?,
+        match &self.reason {
+            Some(i) => write!(f, "{}note: received {}", i.as_ref(), self.expected()),
+            None => write!(f, "error: expected {}", self.expected()),
         }
-        write!(f, "error: expected {}", self.expected())
     }
 }
 

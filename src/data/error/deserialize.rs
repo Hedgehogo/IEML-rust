@@ -22,8 +22,6 @@ pub enum DeserializeError<E> {
     UnknownKey(UnknownKeyError),
     /// Occurs when reading a map, but the input data does not contain the requested key.
     MissingKey(MissingKeyError),
-    /// Occurs when the cause of an error cannot be expressed by this type.
-    Failed,
     /// Additional error type for the possibility of extending this type
     Custom(E),
 }
@@ -37,7 +35,6 @@ impl<E: Display> Display for DeserializeError<E> {
             DeserializeError::UnknownTag(i) => write!(f, "{}", i),
             DeserializeError::UnknownKey(i) => write!(f, "{}", i),
             DeserializeError::MissingKey(i) => write!(f, "{}", i),
-            DeserializeError::Failed => write!(f, "failed"),
             DeserializeError::Custom(i) => write!(f, "{}", i),
         }
     }
@@ -88,19 +85,12 @@ impl From<CustomError> for DeserializeError<CustomError> {
 }
 
 pub mod marked {
-    use super::super::super::mark::Mark;
     use super::super::marked::*;
     use crate::error::{custom::marked::CustomError, marked::MarkedError};
     use serde::de;
     use std::fmt;
 
     pub type DeserializeError<E> = MarkedError<super::DeserializeError<E>>;
-
-    impl<E> DeserializeError<E> {
-        pub fn failed(mark: Mark) -> Self {
-            MarkedError::new(mark, super::DeserializeError::Failed)
-        }
-    }
 
     impl<E> From<InvalidTypeError> for DeserializeError<E> {
         fn from(value: InvalidTypeError) -> Self {
@@ -163,13 +153,14 @@ pub mod marked {
             let expected = format!("{}", exp);
             let invelid_type = super::InvalidTypeError::new(unexp.into(), &[]);
             let deserialize = DeserializeError::new(Default::default(), invelid_type.into());
-            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            let invalid_value =
+                super::InvalidValueError::new(expected, Some(Box::new(deserialize)));
             DeserializeError::new(Default::default(), invalid_value.into())
         }
 
         fn invalid_value(_unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
             let expected = format!("{}", exp);
-            let invalid_value = super::InvalidValueError::new_expected(expected);
+            let invalid_value = super::InvalidValueError::new(expected, None);
             DeserializeError::new(Default::default(), invalid_value.into())
         }
 
@@ -177,7 +168,8 @@ pub mod marked {
             let expected = format!("{}", exp);
             let invelid_length = super::InvalidLengthError::new(len);
             let deserialize = DeserializeError::new(Default::default(), invelid_length.into());
-            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            let invalid_value =
+                super::InvalidValueError::new(expected, Some(Box::new(deserialize)));
             DeserializeError::new(Default::default(), invalid_value.into())
         }
 

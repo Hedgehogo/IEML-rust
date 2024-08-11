@@ -231,7 +231,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
                         Err(error)
                     }
                     _ => {
-                        let invalid_value = InvalidValueError::new("map".into(), Box::new(i));
+                        let invalid_value = InvalidValueError::new("map".into(), Some(Box::new(i)));
                         let error = marked::DeserializeError::new(self.mark, invalid_value.into());
                         Err(error)
                     }
@@ -249,13 +249,13 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
             Some(i) => match seed.deserialize(i) {
                 Ok(i) => Ok(i),
                 Err(i) => {
-                    let invalid_value = InvalidValueError::new("map".into(), Box::new(i));
+                    let invalid_value = InvalidValueError::new("map".into(), Some(Box::new(i)));
                     let error = marked::DeserializeError::new(self.mark, invalid_value.into());
                     Err(error)
                 }
             },
             None => {
-                let invalid_value = InvalidValueError::new_expected("value".into());
+                let invalid_value = InvalidValueError::new("value".into(), None);
                 let error = marked::DeserializeError::new(self.mark, invalid_value.into());
                 Err(error)
             }

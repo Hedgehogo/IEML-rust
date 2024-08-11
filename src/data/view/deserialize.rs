@@ -6,7 +6,10 @@ use super::{
     type_view::{list_view::ListView, map_view::MapView},
     view::View,
 };
-use crate::de::parse::utils::to_value::{to_bool, to_number};
+use crate::{
+    data::error::InvalidValueError,
+    de::parse::utils::to_value::{to_bool, to_number},
+};
 use std::error::Error;
 
 pub trait Deserialize<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> {
@@ -19,7 +22,11 @@ macro_rules! impl_number_decode {
 	($T:ty) => {
 		impl<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> Deserialize<'data, A, E> for $T {
 			fn deserialize(view: View<'data, A>) -> Result<Self, marked::DeserializeError<E>> {
-                to_number::<Self>(view.raw()?.raw()).ok_or(marked::DeserializeError::failed(view.mark()))
+                let raw = view.raw()?;
+                to_number::<Self>(raw.raw()).ok_or_else(|| {
+                    let invalid_value = InvalidValueError::new("number".into(), None);
+                    marked::DeserializeError::new(raw.mark(), invalid_value.into())
+                })
 			}
 		}
 	};
@@ -30,7 +37,11 @@ impl_number_decode!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128, f32, f64);
 
 impl<'data, A: AnalyseAnchors<'data>, E: Error + PartialEq + Eq> Deserialize<'data, A, E> for bool {
     fn deserialize(view: View<'data, A>) -> Result<Self, marked::DeserializeError<E>> {
-        to_bool(view.raw()?.raw()).ok_or(marked::DeserializeError::failed(view.mark()))
+        let raw = view.raw()?;
+        to_bool(raw.raw()).ok_or_else(|| {
+            let invalid_value = InvalidValueError::new("number".into(), None);
+            marked::DeserializeError::new(raw.mark(), invalid_value.into())
+        })
     }
 }
 

@@ -8,7 +8,7 @@ use serde::{
 
 fn deserialize_number<'data, A, T>(
     deserializer: View<'data, A>,
-    expected: &'static str,
+    expected: String,
 ) -> Result<T, marked::DeserializeError<CustomError>>
 where
     A: AnalyseAnchors<'data>,
@@ -16,7 +16,7 @@ where
 {
     let raw = deserializer.raw()?;
     to_number::<T>(raw.raw()).ok_or_else(|| {
-        let invalid_value = InvalidValueError::new_expected(expected.into());
+        let invalid_value = InvalidValueError::new(expected, None);
         marked::DeserializeError::new(raw.mark(), invalid_value.into())
     })
 }
@@ -47,7 +47,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
         let raw = self.raw()?;
         let boolean = to_bool(raw.raw()).ok_or_else(|| {
             let expected = "boolean value".into();
-            let invalid_value = InvalidValueError::new_expected(expected);
+            let invalid_value = InvalidValueError::new(expected, None);
             marked::DeserializeError::new(raw.mark(), invalid_value.into())
         })?;
         visitor.visit_bool(boolean)
@@ -57,7 +57,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from -2^7 to 2^7 - 1";
+        let expected = "integer in the range from -2^7 to 2^7 - 1".into();
         let number = deserialize_number::<_, i8>(self, expected)?;
         visitor.visit_i8(number)
     }
@@ -66,7 +66,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from -2^15 to 2^15 - 1";
+        let expected = "integer in the range from -2^15 to 2^15 - 1".into();
         let number = deserialize_number::<_, i16>(self, expected)?;
         visitor.visit_i16(number)
     }
@@ -75,7 +75,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from -2^31 to 2^31 - 1";
+        let expected = "integer in the range from -2^31 to 2^31 - 1".into();
         let number = deserialize_number::<_, i32>(self, expected)?;
         visitor.visit_i32(number)
     }
@@ -84,7 +84,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from -2^64 to 2^64 - 1";
+        let expected = "integer in the range from -2^64 to 2^64 - 1".into();
         let number = deserialize_number::<_, i64>(self, expected)?;
         visitor.visit_i64(number)
     }
@@ -93,7 +93,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from -2^128 to 2^128 - 1";
+        let expected = "integer in the range from -2^128 to 2^128 - 1".into();
         let number = deserialize_number::<_, i128>(self, expected)?;
         visitor.visit_i128(number)
     }
@@ -102,7 +102,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from 0 to 2^8 - 1";
+        let expected = "integer in the range from 0 to 2^8 - 1".into();
         let number = deserialize_number::<_, u8>(self, expected)?;
         visitor.visit_u8(number)
     }
@@ -111,7 +111,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from 0 to 2^16 - 1";
+        let expected = "integer in the range from 0 to 2^16 - 1".into();
         let number = deserialize_number::<_, u16>(self, expected)?;
         visitor.visit_u16(number)
     }
@@ -120,7 +120,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from 0 to 2^32 - 1";
+        let expected = "integer in the range from 0 to 2^32 - 1".into();
         let number = deserialize_number::<_, u32>(self, expected)?;
         visitor.visit_u32(number)
     }
@@ -129,7 +129,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from 0 to 2^64 - 1";
+        let expected = "integer in the range from 0 to 2^64 - 1".into();
         let number = deserialize_number::<_, u64>(self, expected)?;
         visitor.visit_u64(number)
     }
@@ -138,7 +138,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let expected = "integer in the range from 0 to 2^128 - 1";
+        let expected = "integer in the range from 0 to 2^128 - 1".into();
         let number = deserialize_number::<_, u128>(self, expected)?;
         visitor.visit_u128(number)
     }
@@ -147,7 +147,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let number = deserialize_number::<_, f32>(self, "number")?;
+        let number = deserialize_number::<_, f32>(self, "number".into())?;
         visitor.visit_f32(number)
     }
 
@@ -155,7 +155,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let number = deserialize_number::<_, f64>(self, "number")?;
+        let number = deserialize_number::<_, f64>(self, "number".into())?;
         visitor.visit_f64(number)
     }
 
@@ -170,7 +170,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
 
             _ => {
                 let expected = "one-character string".into();
-                let invalid_value = InvalidValueError::new_expected(expected);
+                let invalid_value = InvalidValueError::new(expected, None);
                 let error = marked::DeserializeError::new(string.mark(), invalid_value.into());
                 Err(error)
             }
@@ -205,10 +205,10 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
         let list = self.list()?;
         let mut result = Vec::with_capacity(list.len());
         for i in list {
-            let expected = "integer in the range from 0 to 2^8 - 1";
+            let expected = "integer in the range from 0 to 2^8 - 1".into();
             let byte = deserialize_number::<_, u8>(i, expected).map_err(|i| {
                 let expected = "byte sequence".into();
-                let invalid_value = InvalidValueError::new(expected, Box::new(i));
+                let invalid_value = InvalidValueError::new(expected, Some(Box::new(i)));
                 marked::DeserializeError::new(self.mark(), invalid_value.into())
             })?;
             result.push(byte);
@@ -231,7 +231,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
 
         visitor.visit_some(view).map_err(|error| {
             let expected = "optional value".into();
-            let invalid_value = super::InvalidValueError::new(expected, Box::new(error));
+            let invalid_value = super::InvalidValueError::new(expected, Some(Box::new(error)));
             marked::DeserializeError::new(self.mark(), invalid_value.into())
         })
     }
@@ -373,7 +373,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for View<'data, A
         let list = self.list()?;
         if !list.is_empty() {
             let expected = "zero-length list".into();
-            let invalid_value = InvalidValueError::new_expected(expected);
+            let invalid_value = InvalidValueError::new(expected, None);
             let error = marked::DeserializeError::new(list.mark(), invalid_value.into());
             Err(error)
         } else {

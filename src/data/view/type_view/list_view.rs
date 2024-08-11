@@ -173,7 +173,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, 
 
                 Err(i) => {
                     let expected = "list".into();
-                    let invalid_value = InvalidValueError::new(expected, Box::new(i));
+                    let invalid_value = InvalidValueError::new(expected, Some(Box::new(i)));
                     let error = marked::DeserializeError::new(self.mark, invalid_value.into());
                     Err(error)
                 }
@@ -270,7 +270,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
         match self.last_value() {
             Some(i) => seed.deserialize(i),
             None => {
-                let invalid_value = InvalidValueError::new_expected("value".into());
+                let invalid_value = InvalidValueError::new("value".into(), None);
                 let error = marked::DeserializeError::new(self.mark, invalid_value.into());
                 Err(error)
             }

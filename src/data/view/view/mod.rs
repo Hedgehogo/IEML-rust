@@ -364,7 +364,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
     ) -> Result<T, marked::InvalidValueError<E>> {
         T::deserialize(self.clone()).map_err(|e| {
             let expected = format!("value of type '{}'", type_name::<T>());
-            self.make_error(InvalidValueError::new(expected, Box::new(e)))
+            self.make_error(InvalidValueError::new(expected, Some(Box::new(e))))
         })
     }
 }
