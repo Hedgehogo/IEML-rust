@@ -25,11 +25,11 @@ impl UnknownKeyError {
 
 impl Display for UnknownKeyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "error: map contains an extra key named {}", self.unexpected_key)?;
+        write!(f, "error: map contains an extra key named {:?}", self.unexpected_key)?;
         if !self.expected_keys.is_empty() {
-            write!(f, ", one of these keys was expected: {}", self.expected_keys[0])?;
+            write!(f, ", one of these keys was expected: {:?}", self.expected_keys[0])?;
             for i in self.expected_keys.iter().skip(1) {
-                write!(f, ", {}", i)?;
+                write!(f, ", {:?}", i)?;
             }
         }
         Ok(())

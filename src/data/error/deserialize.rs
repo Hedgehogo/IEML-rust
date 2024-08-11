@@ -169,9 +169,7 @@ pub mod marked {
 
         fn invalid_value(_unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
             let expected = format!("{}", exp);
-            let failed = super::DeserializeError::Failed;
-            let deserialize = DeserializeError::new(Default::default(), failed);
-            let invalid_value = super::InvalidValueError::new(expected, Box::new(deserialize));
+            let invalid_value = super::InvalidValueError::new_expected(expected);
             DeserializeError::new(Default::default(), invalid_value.into())
         }
 

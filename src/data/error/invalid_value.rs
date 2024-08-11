@@ -15,10 +15,12 @@ pub struct InvalidValueError<E> {
 
 impl<E> InvalidValueError<E> {
     pub fn new(expected: String, reason: Box<marked::DeserializeError<E>>) -> Self {
-        Self {
-            expected,
-            reason,
-        }
+        Self { expected, reason }
+    }
+
+    pub fn new_expected(expected: String) -> Self {
+        let deserialize = marked::DeserializeError::failed(Default::default());
+        Self::new(expected, Box::new(deserialize))
     }
 
     pub fn expected(&self) -> &str {
