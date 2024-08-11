@@ -226,7 +226,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
                 Ok(i) => Ok(Some(i)),
                 Err(i) => match i.data {
                     DeserializeError::InvalidType(_) => {
-                        let invalid_type = InvalidTypeError::new(NodeType::Map, &[NodeType::List]);
+                        let invalid_type = InvalidTypeError::new(NodeType::Map, &[NodeType::List] as &_);
                         let error = marked::DeserializeError::new(self.mark, invalid_type.into());
                         Err(error)
                     }

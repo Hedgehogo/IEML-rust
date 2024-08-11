@@ -1,7 +1,7 @@
 //! Definition of error types occurring during reading of IEML data structure
 
 pub mod deserialize;
-pub mod expected_names;
+pub mod expected;
 pub mod invalid_length;
 pub mod invalid_type;
 pub mod invalid_value;

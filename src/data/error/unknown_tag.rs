@@ -1,17 +1,17 @@
 //! Type definition [`UnknownTagError`]
 
 use std::fmt;
-use super::expected_names::ExpectedNames;
+use super::expected::Expected;
 
 /// Error occurring when an extra key is detected in the map.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnknownTagError {
     unexpected_tag: String,
-    expected_tags: ExpectedNames,
+    expected_tags: Expected<&'static str>,
 }
 
 impl UnknownTagError {
-    pub fn new(unexpected_tag: String, expected_tags: impl Into<ExpectedNames>) -> Self {
+    pub fn new(unexpected_tag: String, expected_tags: impl Into<Expected<&'static str>>) -> Self {
         Self {
             unexpected_tag,
             expected_tags: expected_tags.into(),
@@ -22,7 +22,7 @@ impl UnknownTagError {
         &self.unexpected_tag
     }
 
-    pub fn expected_tags(&self) -> ExpectedNames {
+    pub fn expected_tags(&self) -> Expected<&'static str> {
         self.expected_tags
     }
 }
@@ -31,8 +31,8 @@ impl fmt::Display for UnknownTagError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "error: unexpected tag {:?}", self.unexpected_tag)?;
         match self.expected_tags {
-            ExpectedNames::One(i) => write!(f, ", expected tag {:?}", i)?,
-            ExpectedNames::Many(i) => {
+            Expected::One(i) => write!(f, ", expected tag {:?}", i)?,
+            Expected::Many(i) => {
                 let mut iter = i.iter();
                 if let Some(i) = iter.next() {
                     write!(f, ", one of these tags was expected: {:?}", i)?;

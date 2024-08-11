@@ -151,7 +151,7 @@ pub mod marked {
 
         fn invalid_type(unexp: de::Unexpected, exp: &dyn de::Expected) -> Self {
             let expected = format!("{}", exp);
-            let invelid_type = super::InvalidTypeError::new(unexp.into(), &[]);
+            let invelid_type = super::InvalidTypeError::new(unexp.into(), &[] as &_);
             let deserialize = DeserializeError::new(Default::default(), invelid_type.into());
             let invalid_value =
                 super::InvalidValueError::new(expected, Some(Box::new(deserialize)));

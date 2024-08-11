@@ -3,7 +3,7 @@
 use super::super::{
     super::{
         data::Data,
-        error::{expected_names::ExpectedNames, marked, CustomError, UnknownTagError},
+        error::{expected::Expected, marked, CustomError, UnknownTagError},
         mark::Mark,
         name::Name,
         node::tag_node::TaggedNode,
@@ -59,9 +59,9 @@ impl<'data, A: AnalyseAnchors<'data>> TaggedView<'data, A> {
     /// Returns the matched tag and node.
     pub fn verified(
         &self,
-        expected: impl Into<ExpectedNames>,
+        expected: impl Into<Expected<&'static str>>,
     ) -> Result<(&'static str, View<'data, A>), marked::UnknownTagError> {
-        let expected = Into::<ExpectedNames>::into(expected);
+        let expected = Into::<Expected<&'static str>>::into(expected);
 
         for expected in expected.into_iter() {
             if expected == self.tag().as_str() {
