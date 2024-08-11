@@ -49,17 +49,19 @@ impl<T: AsRef<str>> Name<T> {
         }?;
         Ok(Self { data })
     }
-
-    /// Extracts a string slice containing the entire [`Name`].
-    pub fn as_str(&self) -> &str {
-        self.data.as_ref()
-    }
 }
 
 impl<T> Name<T> {
     /// Consumes the [`Name`], returning the wrapped value.
     pub fn into_inner(self) -> T {
         self.data
+    }
+}
+
+impl<'data> Name<&'data str> {
+    /// Extracts a string slice containing the entire [`Name`].
+    pub fn as_str(&self) -> &'data str {
+        self.data.as_ref()
     }
 }
 
@@ -78,6 +80,12 @@ impl<T: Display> Display for Name<T> {
 impl<T: Borrow<str>> Borrow<str> for Name<T> {
     fn borrow(&self) -> &str {
         self.data.borrow()
+    }
+}
+
+impl<T: AsRef<str>> AsRef<str> for Name<T> {
+    fn as_ref(&self) -> &str {
+        self.data.as_ref()
     }
 }
 

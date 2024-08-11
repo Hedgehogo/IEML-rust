@@ -70,7 +70,7 @@ fn init_step<E: std::error::Error + PartialEq + Eq>(
             if i.creation {
                 init_step(split_index(slice, i.node_index), anchors)?;
             } else {
-                match anchors.get(i.name.as_str()) {
+                match anchors.get(i.name.as_ref()) {
                     Some(index) => i.node_index = index,
 
                     None => {
