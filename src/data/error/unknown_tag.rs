@@ -1,7 +1,7 @@
 //! Type definition [`UnknownTagError`]
 
-use std::fmt;
 use super::expected::Expected;
+use std::fmt;
 
 /// Error occurring when an extra key is detected in the map.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,21 +28,10 @@ impl UnknownTagError {
 }
 
 impl fmt::Display for UnknownTagError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "error: unexpected tag {:?}", self.unexpected_tag)?;
-        match self.expected_tags {
-            Expected::One(i) => write!(f, ", expected tag {:?}", i)?,
-            Expected::Many(i) => {
-                let mut iter = i.iter();
-                if let Some(i) = iter.next() {
-                    write!(f, ", one of these tags was expected: {:?}", i)?;
-                    for i in iter {
-                        write!(f, ", {:?}", i)?;
-                    }
-                }
-            }
-        }
-        Ok(())
+        self.expected_tags
+            .display(f, "tag", "tags", fmt::Debug::fmt)
     }
 }
 

@@ -24,37 +24,37 @@ pub type MakeError = error::Error<ErrorKind>;
 impl Display for ErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            ErrorKind::FailedDetermineType => write!(f, "Node type couldn't be determined."),
-            ErrorKind::ExpectedMapKey => write!(f, "Expected a map key."),
-            ErrorKind::ExpectedListItem => write!(f, "Expected a list item."),
-            ErrorKind::ExpectedTab => write!(f, "Expected a tab."),
-            ErrorKind::ExpectedBlankLine => write!(f, "Expected a blank line."),
+            ErrorKind::FailedDetermineType => write!(f, "error: node type couldn't be determined."),
+            ErrorKind::ExpectedMapKey => write!(f, "error: expected a map key."),
+            ErrorKind::ExpectedListItem => write!(f, "error: expected a list item."),
+            ErrorKind::ExpectedTab => write!(f, "error: expected a tab."),
+            ErrorKind::ExpectedBlankLine => write!(f, "error: expected a blank line."),
             ErrorKind::ImpermissibleSpace => write!(
                 f,
-                "There is a space at the beginning of the name. Note: You may have meant to indent, you should use tabs for that."
+                "error: there is a space at the beginning of the name. Note: You may have meant to indent, you should use tabs for that."
             ),
             ErrorKind::ImpermissibleTab => write!(
                 f,
-                "There is a tab at the beginning of the name. Note: A lower indentation level was expected."
+                "error: there is a tab at the beginning of the name. Note: A lower indentation level was expected."
             ),
             ErrorKind::ImpermissibleAnchor => write!(
                 f,
-                "There is a special sequence for anchors (`@`) at the beginning of the name."
+                "error: there is a special sequence for anchors (`@`) at the beginning of the name."
             ),
             ErrorKind::ImpermissibleTagged => write!(
                 f,
-                "There is a special sequence for tags (`= `) at the beginning of the name. "
+                "error: there is a special sequence for tags (`= `) at the beginning of the name. "
             ),
             ErrorKind::ImpermissibleColon => write!(
                 f,
-                "There is a colon at the ending of the name. "
+                "error: there is a colon at the ending of the name. "
             ),
-            ErrorKind::IncompleteString => write!(f, "The string is incomplete."),
-            ErrorKind::IncompleteShortList => write!(f, "Expected `, `, or `]` as a continuation or closure of the short list."),
+            ErrorKind::IncompleteString => write!(f, "error: the string is incomplete."),
+            ErrorKind::IncompleteShortList => write!(f, "error: expected `, `, or `]` as a continuation or closure of the short list."),
             ErrorKind::IncompleteDocument => {
-                write!(f, "There are extra characters at the end of the document.")
+                write!(f, "error: there are extra characters at the end of the document.")
             }
-            ErrorKind::NonexistentDocument => write!(f, "The requested document does not exist."),
+            ErrorKind::NonexistentDocument => write!(f, "error: the requested document does not exist."),
         }
     }
 }

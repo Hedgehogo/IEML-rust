@@ -1,7 +1,7 @@
 //! Type definition [`UnknownKeyError`]
 
 use super::expected::Expected;
-use std::fmt::{Display, Formatter};
+use std::fmt;
 
 /// Error occurring when an extra key is detected in the map.
 #[derive(PartialEq, Eq, Debug)]
@@ -27,24 +27,15 @@ impl UnknownKeyError {
     }
 }
 
-impl Display for UnknownKeyError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for UnknownKeyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "error: map contains an extra key named {:?}",
             self.unexpected_key
         )?;
-        if !self.expected_keys.is_empty() {
-            write!(
-                f,
-                ", one of these keys was expected: {:?}",
-                self.expected_keys[0]
-            )?;
-            for i in self.expected_keys.into_iter().skip(1) {
-                write!(f, ", {:?}", i)?;
-            }
-        }
-        Ok(())
+        self.expected_keys
+            .display(f, "key", "keys", fmt::Debug::fmt)
     }
 }
 

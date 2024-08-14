@@ -44,7 +44,7 @@ impl<'data> From<de::Unexpected<'data>> for NodeType {
             de::Unexpected::Char(_) => NodeType::Raw,
             de::Unexpected::Str(_) => NodeType::String,
             de::Unexpected::Bytes(_) => NodeType::Raw,
-            de::Unexpected::Unit => NodeType::Tagged,
+            de::Unexpected::Unit => NodeType::List,
             de::Unexpected::Option => NodeType::Null,
             de::Unexpected::NewtypeStruct => NodeType::Tagged,
             de::Unexpected::Seq => NodeType::List,

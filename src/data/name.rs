@@ -61,7 +61,7 @@ impl<T> Name<T> {
 impl<'data> Name<&'data str> {
     /// Extracts a string slice containing the entire [`Name`].
     pub fn as_str(&self) -> &'data str {
-        self.data.as_ref()
+        self.data
     }
 }
 

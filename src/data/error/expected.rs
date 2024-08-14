@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Expected<T: 'static> {
     One(T),
@@ -17,6 +19,40 @@ impl<T: 'static> Expected<T> {
             Expected::One(_) => false,
             Expected::Many(i) => i.is_empty(),
         }
+    }
+
+    pub fn iter(&self) -> Iter<T> {
+        self.into_iter()
+    }
+
+    pub fn display<F>(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        one: &str,
+        many: &str,
+        display: F,
+    ) -> fmt::Result
+    where
+        F: Fn(&T, &mut fmt::Formatter<'_>) -> fmt::Result,
+    {
+        match self {
+            Expected::One(i) => {
+                write!(f, ", expected {} ", one)?;
+                display(i, f)?;
+            }
+            Expected::Many(i) => {
+                let mut iter = i.iter();
+                if let Some(i) = iter.next() {
+                    write!(f, ", expected {}: ", many)?;
+                    display(i, f)?;
+                    for i in iter {
+                        write!(f, ", ")?;
+                        display(i, f)?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -43,10 +79,10 @@ impl<T: 'static> std::ops::Index<usize> for Expected<T> {
     }
 }
 
-impl<T: 'static + Clone> IntoIterator for Expected<T> {
-    type Item = T;
+impl<'data, T: 'static> IntoIterator for &'data Expected<T> {
+    type Item = &'data T;
 
-    type IntoIter = Iter<T>;
+    type IntoIter = Iter<'data, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         match self {
@@ -56,18 +92,18 @@ impl<T: 'static + Clone> IntoIterator for Expected<T> {
     }
 }
 
-pub enum Iter<T: 'static> {
-    One(std::iter::Once<T>),
+pub enum Iter<'data, T: 'static> {
+    One(std::iter::Once<&'data T>),
     Many(std::slice::Iter<'static, T>),
 }
 
-impl<T: 'static + Clone> Iterator for Iter<T> {
-    type Item = T;
+impl<'data, T: 'static> Iterator for Iter<'data, T> {
+    type Item = &'data T;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Iter::One(i) => i.next(),
-            Iter::Many(i) => i.next().map(|i| i.clone()),
+            Iter::Many(i) => i.next(),
         }
     }
 }

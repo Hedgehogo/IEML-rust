@@ -1,10 +1,7 @@
 use super::super::super::error::*;
 use super::*;
 use crate::de::parse::utils::to_value::*;
-use serde::{
-    de::{self, VariantAccess},
-    Deserializer,
-};
+use serde::de::{self, value::UnitDeserializer, VariantAccess};
 
 fn deserialize_number<'data, A, T>(
     deserializer: View<'data, A>,
@@ -18,6 +15,23 @@ where
     to_number::<T>(raw.raw()).ok_or_else(|| {
         let invalid_value = InvalidValueError::new(expected, None);
         marked::DeserializeError::new(raw.mark(), invalid_value.into())
+    })
+}
+
+fn deserialize_type<'data, A, F, T>(
+    deserializer: View<'data, A>,
+    name: &'static str,
+    f: F,
+) -> Result<T, marked::DeserializeError<CustomError>>
+where
+    A: AnalyseAnchors<'data>,
+    F: FnOnce(View<'data, A>) -> Result<T, marked::DeserializeError<CustomError>>,
+{
+    let mark = deserializer.mark();
+    f(deserializer).map_err(|i| {
+        let expected = format!("value of type {:?}", name);
+        let invalid_value = super::InvalidValueError::new(expected, Some(Box::new(i)));
+        marked::DeserializeError::new(mark, invalid_value.into())
     })
 }
 
@@ -220,18 +234,41 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let view = match self.tagged().map(TaggedView::split) {
-            Ok(("Some", view)) => view,
+        let deserialize = || {
+            let view = self.clear_tag();
 
-            _ => match self.null() {
-                Ok(_) => return visitor.visit_none(),
-                Err(_) => self.clone(),
-            },
+            let expected = &["Some", "None"] as &[_];
+            match view.to_match() {
+                ToMatchView::Tagged(i) => match i.verify(expected)? {
+                    0 => return visitor.visit_some(i.view()),
+                    _ => return i.unit_variant().and_then(|_| visitor.visit_none()),
+                },
+
+                ToMatchView::Raw(i) => match i.verify(expected)? {
+                    0 => {
+                        let unit_deserializer = UnitDeserializer::<Self::Error>::new();
+                        return visitor.visit_some(unit_deserializer).map_err(|_| {
+                            use NodeType::*;
+                            let expected = &[Tagged, Anchor, Document] as &[_];
+                            let invalid_type = InvalidTypeError::new(Raw, expected);
+                            marked::DeserializeError::new(view.mark(), invalid_type.into())
+                        });
+                    }
+
+                    _ => return visitor.visit_none(),
+                },
+
+                ToMatchView::Null(_) => return visitor.visit_none(),
+
+                _ => {}
+            };
+
+            visitor.visit_some(self.clone())
         };
 
-        visitor.visit_some(view).map_err(|error| {
+        deserialize().map_err(|error| {
             let expected = "optional value".into();
-            let invalid_value = super::InvalidValueError::new(expected, Some(Box::new(error)));
+            let invalid_value = InvalidValueError::new(expected, Some(Box::new(error)));
             marked::DeserializeError::new(self.mark(), invalid_value.into())
         })
     }
@@ -240,8 +277,14 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        self.unit_variant()?;
-        visitor.visit_unit()
+        let list = self.list()?;
+        if list.is_empty() {
+            return visitor.visit_unit();
+        }
+
+        let invalid_length = InvalidLengthError::new(list.len());
+        let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
+        Err(error)
     }
 
     fn deserialize_unit_struct<V>(
@@ -252,8 +295,9 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let (_, view) = self.tagged()?.verified(name)?;
-        view.deserialize_unit(visitor)
+        let tagged = self.tagged()?;
+        tagged.verify(name)?;
+        tagged.view().deserialize_unit(visitor)
     }
 
     fn deserialize_newtype_struct<V>(
@@ -264,8 +308,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let (_, view) = self.tagged()?.verified(name)?;
-        visitor.visit_newtype_struct(view)
+        deserialize_type(self, name, |i| visitor.visit_newtype_struct(i))
     }
 
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -298,8 +341,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let (_, view) = self.tagged()?.verified(name)?;
-        view.deserialize_tuple(len, visitor)
+        deserialize_type(self, name, |i| i.deserialize_tuple(len, visitor))
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -309,7 +351,9 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
         let view = self.clear();
         match view.to_match() {
             ToMatchView::List(i) => visitor.visit_map(i.map_access()),
+
             ToMatchView::Map(i) => visitor.visit_map(i.access()),
+
             _ => {
                 let expected = &[
                     NodeType::Map,
@@ -332,9 +376,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let (_, view) = self.tagged()?.verified(name)?;
-        let map = view.map()?;
-        visitor.visit_map(map.access())
+        deserialize_type(self, name, |i| visitor.visit_map(i.map()?.access()))
     }
 
     fn deserialize_enum<V>(
@@ -346,9 +388,10 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        let (_, view) = self.tagged()?.verified(name)?;
-        let tagged = view.tagged()?;
-        visitor.visit_enum(tagged)
+        deserialize_type(self, name, |i| match i.tagged() {
+            Ok(i) => visitor.visit_enum(i),
+            Err(_) => visitor.visit_enum(i.raw()?),
+        })
     }
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -366,44 +409,160 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for View<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+    use std::collections::HashMap;
 
-    fn unit_variant(self) -> Result<(), Self::Error> {
-        let list = self.list()?;
-        if !list.is_empty() {
-            let expected = "zero-length list".into();
-            let invalid_value = InvalidValueError::new(expected, None);
-            let error = marked::DeserializeError::new(list.mark(), invalid_value.into());
-            Err(error)
-        } else {
-            Ok(())
-        }
+    #[test]
+    fn test_number() {
+        let data = crate::from_source("10").unwrap();
+        let result = i32::deserialize(data.view()).unwrap();
+        assert_eq!(result, 10);
+
+        let data = crate::from_source("hello").unwrap();
+        let error = i32::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: expected integer in the range from -2^31 to 2^31 - 1
+ --> 0:0"#
+        );
     }
 
-    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
-    where
-        T: de::DeserializeSeed<'data>,
-    {
-        seed.deserialize(self)
+    #[test]
+    fn test_char() {
+        let data = crate::from_source("> h").unwrap();
+        let result = char::deserialize(data.view()).unwrap();
+        assert_eq!(result, 'h');
+
+        let data = crate::from_source("> hello").unwrap();
+        let error = char::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: expected one-character string
+ --> 0:0"#
+        );
     }
 
-    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'data>,
-    {
-        self.deserialize_tuple(len, visitor)
+    #[test]
+    fn test_str() {
+        let data = crate::from_source("> hello").unwrap();
+        let result = <&str>::deserialize(data.view()).unwrap();
+        assert_eq!(result, "hello");
+
+        let data = crate::from_source("hello").unwrap();
+        let error = <&str>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: value of unexpected type number, boolean, raw data, expected types: string, tagged, anchor, document
+ --> 0:0"#
+        );
     }
 
-    fn struct_variant<V>(
-        self,
-        _fields: &'static [&'static str],
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'data>,
-    {
-        let map = self.map()?;
-        visitor.visit_map(map.access())
+    #[test]
+    fn test_option() {
+        let data = crate::from_source("= Some: 42").unwrap();
+        let result = Option::<u8>::deserialize(data.view()).unwrap();
+        assert_eq!(result, Some(42));
+
+        let data = crate::from_source("Some").unwrap();
+        let error = Option::<u8>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: value of unexpected type number, boolean, raw data, expected types: tagged, anchor, document
+ --> 0:0
+note: when trying to receive optional value
+ --> 0:0"#
+        );
+    }
+
+    #[test]
+    fn test_seq() {
+        let data = crate::from_source("[0, 2, 67]").unwrap();
+        let result = Vec::<u8>::deserialize(data.view()).unwrap();
+        assert_eq!(result, vec![0, 2, 67]);
+
+        let data = crate::from_source("[0, 2, 457]").unwrap();
+        let error = Vec::<u8>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: expected integer in the range from 0 to 2^8 - 1
+ --> 0:7"#
+        );
+    }
+
+    #[test]
+    fn test_tuple() {
+        let data = crate::from_source("[2, 67]").unwrap();
+        let result = <(u8, u8)>::deserialize(data.view()).unwrap();
+        assert_eq!(result, (2, 67));
+
+        let data = crate::from_source("[0, 2, 457]").unwrap();
+        let error = <(u8, u8)>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: list or map of unexpected length equal to 3
+ --> 0:0"#
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        let data = crate::from_source("first: 42\nsecond: 15").unwrap();
+        let result = HashMap::<String, i32>::deserialize(data.view()).unwrap();
+        assert_eq!(
+            result,
+            HashMap::from([("first".into(), 42), ("second".into(), 15)])
+        );
+
+        let data = crate::from_source(r#"[["first", 42], ["second"]]"#).unwrap();
+        let error = HashMap::<String, i32>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: list or map of unexpected length equal to 1
+ --> 0:16"#
+        );
+    }
+
+    #[derive(Deserialize, Debug, PartialEq, Eq)]
+    #[serde(deny_unknown_fields)]
+    struct TestStruct {
+        field: i32,
+    }
+
+    #[test]
+    fn test_struct() {
+        let data = crate::from_source("field: 42").unwrap();
+        let result = TestStruct::deserialize(data.view()).unwrap();
+        assert_eq!(result, TestStruct { field: 42 });
+
+        let data = crate::from_source("key: \n\tfield: 42\n\tkey: 15").unwrap();
+        let view = data.view().map().unwrap().get("key").unwrap();
+        let error = TestStruct::deserialize(view).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: map contains an extra key named "key", expected keys: "field"
+ --> 1:1
+note: when trying to receive value of type "TestStruct"
+ --> 1:1"#
+        );
+    }
+
+    #[test]
+    fn test_enum() {
+        let data = crate::from_source("= Ok: 42").unwrap();
+        let result = Result::<u8, u8>::deserialize(data.view()).unwrap();
+        assert_eq!(result, Ok(42));
+
+        let data = crate::from_source("15").unwrap();
+        let error = Result::<u8, u8>::deserialize(data.view()).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            r#"error: unexpected tag "15", expected tags: "Ok", "Err"
+ --> 0:0
+note: when trying to receive value of type "Result"
+ --> 0:0"#
+        );
     }
 }

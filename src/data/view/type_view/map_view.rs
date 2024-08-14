@@ -189,7 +189,7 @@ pub struct MapAccess<'data, A: AnalyseAnchors<'data>> {
 impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
     fn new(mark: Mark, iter: MapIter<'data, A>) -> Self {
         Self {
-            mark: mark,
+            mark,
             last: None,
             data: iter.data,
             iter: iter.iter,
@@ -224,19 +224,19 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
         match self.last_key() {
             Some(i) => match seed.deserialize(StrDeserializer::<Self::Error>::new(i.as_ref())) {
                 Ok(i) => Ok(Some(i)),
+
                 Err(i) => match i.data {
                     DeserializeError::InvalidType(_) => {
-                        let invalid_type = InvalidTypeError::new(NodeType::Map, &[NodeType::List] as &_);
+                        let expected = &[NodeType::List] as &[_];
+                        let invalid_type = InvalidTypeError::new(NodeType::Map, expected);
                         let error = marked::DeserializeError::new(self.mark, invalid_type.into());
                         Err(error)
                     }
-                    _ => {
-                        let invalid_value = InvalidValueError::new("map".into(), Some(Box::new(i)));
-                        let error = marked::DeserializeError::new(self.mark, invalid_value.into());
-                        Err(error)
-                    }
+
+                    _ => Err(marked::DeserializeError::new(self.mark, i.data)),
                 },
             },
+
             None => Ok(None),
         }
     }
@@ -246,14 +246,8 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
         V: de::DeserializeSeed<'data>,
     {
         match self.last_value() {
-            Some(i) => match seed.deserialize(i) {
-                Ok(i) => Ok(i),
-                Err(i) => {
-                    let invalid_value = InvalidValueError::new("map".into(), Some(Box::new(i)));
-                    let error = marked::DeserializeError::new(self.mark, invalid_value.into());
-                    Err(error)
-                }
-            },
+            Some(i) => return seed.deserialize(i),
+
             None => {
                 let invalid_value = InvalidValueError::new("value".into(), None);
                 let error = marked::DeserializeError::new(self.mark, invalid_value.into());
@@ -278,6 +272,7 @@ mod tests {
 
     fn test_data() -> Data {
         let name = |i: &str| Name::new(i.into()).unwrap();
+
         Data::new([
             MarkedNode::new(Node::Null, Default::default()),
             MarkedNode::new(Node::Null, Default::default()),

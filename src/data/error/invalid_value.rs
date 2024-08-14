@@ -29,7 +29,7 @@ impl<E> InvalidValueError<E> {
 impl<E: Display> Display for InvalidValueError<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.reason {
-            Some(i) => write!(f, "{}note: received {}", i.as_ref(), self.expected()),
+            Some(i) => write!(f, "{}\nnote: when trying to receive {}", i.as_ref(), self.expected()),
             None => write!(f, "error: expected {}", self.expected()),
         }
     }

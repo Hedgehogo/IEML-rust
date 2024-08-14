@@ -3,7 +3,7 @@
 use super::super::{
     super::{
         data::Data,
-        error::{expected::Expected, marked, CustomError, UnknownTagError},
+        error::{expected::Expected, marked, CustomError, InvalidLengthError, UnknownTagError},
         mark::Mark,
         name::Name,
         node::tag_node::TaggedNode,
@@ -11,7 +11,10 @@ use super::super::{
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
-use serde::de::{self, value::StrDeserializer};
+use serde::{
+    de::{self, value::StrDeserializer},
+    Deserializer,
+};
 use std::fmt::{self, Debug, Formatter};
 
 /// Structure for reading Tagged node data.
@@ -54,18 +57,18 @@ impl<'data, A: AnalyseAnchors<'data>> TaggedView<'data, A> {
         View::new(node, self.data, self.anchor_analyser.clone())
     }
 
-    /// Gets a child node if the tag matches at least one of the expected ones.
+    /// Checks if the tag is equal to one of the expected tags.
     ///
-    /// Returns the matched tag and node.
-    pub fn verified(
+    /// Returns the index of the matched tag.
+    pub fn verify(
         &self,
         expected: impl Into<Expected<&'static str>>,
-    ) -> Result<(&'static str, View<'data, A>), marked::UnknownTagError> {
+    ) -> Result<usize, marked::UnknownTagError> {
         let expected = Into::<Expected<&'static str>>::into(expected);
 
-        for expected in expected.into_iter() {
+        for (i, &expected) in expected.iter().enumerate() {
             if expected == self.tag().as_str() {
-                return Ok((expected, self.view()));
+                return Ok(i);
             }
         }
 
@@ -100,16 +103,57 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for TaggedView<'data, A> {
 impl<'data, A: AnalyseAnchors<'data>> de::EnumAccess<'data> for TaggedView<'data, A> {
     type Error = marked::DeserializeError<CustomError>;
 
-    type Variant = View<'data, A>;
+    type Variant = TaggedView<'data, A>;
 
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
     where
         V: de::DeserializeSeed<'data>,
     {
-        let tag_deserializer = StrDeserializer::<Self::Error>::new(self.tag().as_str());
-        match seed.deserialize(tag_deserializer) {
-            Ok(i) => Ok((i, self.view())),
-            Err(i) => Err(marked::MarkedError::new(self.mark(), i.data)), 
+        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.tag().as_str());
+        match seed.deserialize(variant_deserializer) {
+            Ok(i) => Ok((i, self)),
+            Err(i) => Err(marked::MarkedError::new(self.mark(), i.data)),
         }
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for TaggedView<'data, A> {
+    type Error = marked::DeserializeError<CustomError>;
+
+    fn unit_variant(self) -> Result<(), Self::Error> {
+        let list = self.view().list()?;
+        if !list.is_empty() {
+            let invalid_length = InvalidLengthError::new(list.len());
+            let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
+            Err(error)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
+    where
+        T: de::DeserializeSeed<'data>,
+    {
+        seed.deserialize(self.view())
+    }
+
+    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'data>,
+    {
+        self.view().deserialize_tuple(len, visitor)
+    }
+
+    fn struct_variant<V>(
+        self,
+        _fields: &'static [&'static str],
+        visitor: V,
+    ) -> Result<V::Value, Self::Error>
+    where
+        V: de::Visitor<'data>,
+    {
+        let map = self.view().map()?;
+        visitor.visit_map(map.access())
     }
 }

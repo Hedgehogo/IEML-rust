@@ -61,14 +61,14 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
     /// * `index` Index of the requested item.
     pub fn get(&self, index: usize) -> Result<View<'data, A>, marked::InvalidLengthError> {
         match self.node.data.get(index) {
-            Some(i) => Ok({
+            Some(i) => {
                 let node = self.data.get(*i);
-                View::new(node, self.data, self.anchor_analyser.clone())
-            }),
-            None => Err({
+                Ok(View::new(node, self.data, self.anchor_analyser.clone()))
+            }
+            None => {
                 let error = InvalidLengthError::new(self.len());
-                marked::MarkedError::new(self.mark, error)
-            }),
+                Err(marked::MarkedError::new(self.mark, error))
+            }
         }
     }
 
@@ -79,7 +79,7 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
     }
 
     pub(crate) fn seq_access(self) -> SeqAccess<'data, A> {
-        SeqAccess::new(self.mark, self.iter())
+        SeqAccess::new(self.iter())
     }
 
     pub(crate) fn map_access(self) -> MapAccess<'data, A> {
@@ -150,13 +150,12 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
 }
 
 pub struct SeqAccess<'data, A: AnalyseAnchors<'data>> {
-    mark: Mark,
     iter: ListIter<'data, A>,
 }
 
 impl<'data, A: AnalyseAnchors<'data>> SeqAccess<'data, A> {
-    fn new(mark: Mark, iter: ListIter<'data, A>) -> Self {
-        Self { mark, iter }
+    fn new(iter: ListIter<'data, A>) -> Self {
+        Self { iter }
     }
 }
 
@@ -168,17 +167,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, 
         T: de::DeserializeSeed<'data>,
     {
         match self.iter.next() {
-            Some(i) => match seed.deserialize(i) {
-                Ok(i) => Ok(Some(i)),
-
-                Err(i) => {
-                    let expected = "list".into();
-                    let invalid_value = InvalidValueError::new(expected, Some(Box::new(i)));
-                    let error = marked::DeserializeError::new(self.mark, invalid_value.into());
-                    Err(error)
-                }
-            },
-
+            Some(i) => Ok(Some(seed.deserialize(i)?)),
             None => Ok(None),
         }
     }
@@ -199,7 +188,7 @@ pub struct MapAccess<'data, A: AnalyseAnchors<'data>> {
 impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
     fn new(mark: Mark, iter: ListIter<'data, A>) -> Self {
         Self {
-            mark: mark,
+            mark,
             last: None,
             data: iter.data,
             iter: iter.iter,
@@ -259,6 +248,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
         self.next()?;
         match self.last_key() {
             Some(i) => seed.deserialize(i).map(Some),
+            
             None => Ok(None),
         }
     }
@@ -269,6 +259,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
     {
         match self.last_value() {
             Some(i) => seed.deserialize(i),
+
             None => {
                 let invalid_value = InvalidValueError::new("value".into(), None);
                 let error = marked::DeserializeError::new(self.mark, invalid_value.into());

@@ -16,7 +16,7 @@ use std::{any::type_name, error::Error, fmt::Debug};
 pub use super::to_match::*;
 
 /// Structure for reading node data.
-#[derive(Clone, Eq)]
+#[derive(Clone, Copy, Eq)]
 pub struct View<'data, A: AnalyseAnchors<'data> = ()> {
     node: &'data MarkedNode,
     data: &'data Data,
@@ -244,7 +244,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                     NodeType::Anchor,
                     NodeType::Document,
                 ];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -261,7 +261,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                     NodeType::Anchor,
                     NodeType::Document,
                 ];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -281,7 +281,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                     NodeType::Anchor,
                     NodeType::Document,
                 ];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -301,7 +301,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                     NodeType::Anchor,
                     NodeType::Document,
                 ];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -317,7 +317,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             }),
             _ => {
                 let expected = &[NodeType::Tagged, NodeType::Anchor, NodeType::Document];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -333,7 +333,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             }),
             _ => {
                 let expected = &[NodeType::Document, NodeType::Tagged, NodeType::Anchor];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -349,7 +349,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             }),
             _ => {
                 let expected = &[NodeType::Anchor, NodeType::Tagged, NodeType::Document];
-                Err(self.make_invalid_type_error(expected))
+                Err(clear.make_invalid_type_error(expected))
             }
         }
     }
@@ -363,7 +363,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         &self,
     ) -> Result<T, marked::InvalidValueError<E>> {
         T::deserialize(self.clone()).map_err(|e| {
-            let expected = format!("value of type '{}'", type_name::<T>());
+            let expected = format!("value of type {:?}", type_name::<T>());
             self.make_error(InvalidValueError::new(expected, Some(Box::new(e))))
         })
     }
