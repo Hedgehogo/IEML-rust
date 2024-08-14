@@ -25,6 +25,10 @@ impl UnknownKeyError {
     pub fn expected_keys(&self) -> Expected<&'static str> {
         self.expected_keys
     }
+
+    pub fn split(self) -> (String, Expected<&'static str>) {
+        (self.unexpected_key, self.expected_keys)
+    }
 }
 
 impl fmt::Display for UnknownKeyError {

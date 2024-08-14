@@ -586,15 +586,16 @@ mod tests {
         let result = Result::<u8, u8>::deserialize(data.view());
         assert_eq!(result, Ok(Ok(42)));
 
-        let data = crate::from_source("15").unwrap();
-        let result = Result::<u8, u8>::deserialize(data.view());
+        let data = crate::from_source("key: 15").unwrap();
+        let view = data.view().map().unwrap().get("key").unwrap();
+        let result = Result::<u8, u8>::deserialize(view);
         assert_eq!(
             result,
             Err(marked::DeserializeError::new_invalid_value(
-                Mark::new(0, 0),
+                Mark::new(0, 5),
                 r#"value of type "Result""#.into(),
-                Some(Box::new(marked::DeserializeError::new_unknown_tag(
-                    Mark::new(0, 0),
+                Some(Box::new(marked::DeserializeError::new_unknown_raw(
+                    Mark::new(0, 5),
                     "15".into(),
                     &["Ok", "Err"] as &[_]
                 )))

@@ -3,7 +3,7 @@
 use super::expected::Expected;
 use std::fmt;
 
-/// Error occurring when an extra key is detected in the map.
+/// Error occurring when a tag does not match any of the expected ones.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnknownTagError {
     unexpected_tag: String,
@@ -24,6 +24,10 @@ impl UnknownTagError {
 
     pub fn expected_tags(&self) -> Expected<&'static str> {
         self.expected_tags
+    }
+
+    pub fn split(self) -> (String, Expected<&'static str>) {
+        (self.unexpected_tag, self.expected_tags)
     }
 }
 

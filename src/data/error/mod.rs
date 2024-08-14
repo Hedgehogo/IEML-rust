@@ -7,6 +7,7 @@ pub mod invalid_type;
 pub mod invalid_value;
 pub mod missing_key;
 pub mod unknown_key;
+pub mod unknown_raw;
 pub mod unknown_tag;
 
 pub use crate::error::custom::CustomError;
@@ -17,6 +18,7 @@ pub use invalid_type::InvalidTypeError;
 pub use invalid_value::InvalidValueError;
 pub use missing_key::MissingKeyError;
 pub use unknown_key::UnknownKeyError;
+pub use unknown_raw::UnknownRawError;
 pub use unknown_tag::UnknownTagError;
 
 pub mod marked {
@@ -28,5 +30,6 @@ pub mod marked {
     pub use super::invalid_value::marked::InvalidValueError;
     pub use super::missing_key::marked::MissingKeyError;
     pub use super::unknown_key::marked::UnknownKeyError;
+    pub use super::unknown_raw::marked::UnknownRawError;
     pub use super::unknown_tag::marked::UnknownTagError;
 }

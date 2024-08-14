@@ -15,6 +15,8 @@ pub enum DeserializeError<E> {
     InvalidLength(InvalidLengthError),
     /// Occurs when reading a tagged node, but the tag does not match any of the expected ones.
     UnknownTag(UnknownTagError),
+    /// Occurs when reading a raw data, but the content does not match any of the expected ones.
+    UnknownRaw(UnknownRawError),
     /// Occurs when reading a map, but the input data contains the extra key.
     UnknownKey(UnknownKeyError),
     /// Occurs when reading a map, but the input data does not contain the requested key.
@@ -30,6 +32,7 @@ impl<E: fmt::Display> fmt::Display for DeserializeError<E> {
             DeserializeError::InvalidValue(i) => write!(f, "{}", i),
             DeserializeError::InvalidLength(i) => write!(f, "{}", i),
             DeserializeError::UnknownTag(i) => write!(f, "{}", i),
+            DeserializeError::UnknownRaw(i) => write!(f, "{}", i),
             DeserializeError::UnknownKey(i) => write!(f, "{}", i),
             DeserializeError::MissingKey(i) => write!(f, "{}", i),
             DeserializeError::Custom(i) => write!(f, "{}", i),
@@ -54,6 +57,12 @@ impl<E> From<InvalidValueError<E>> for DeserializeError<E> {
 impl<E> From<InvalidLengthError> for DeserializeError<E> {
     fn from(value: InvalidLengthError) -> Self {
         DeserializeError::InvalidLength(value)
+    }
+}
+
+impl<E> From<UnknownRawError> for DeserializeError<E> {
+    fn from(value: UnknownRawError) -> Self {
+        DeserializeError::UnknownRaw(value)
     }
 }
 
@@ -114,6 +123,17 @@ pub mod marked {
             Self::new(mark, super::InvalidLengthError::new(length).into())
         }
 
+        pub fn new_unknown_raw(
+            mark: Mark,
+            unexpected_raw: String,
+            expected_raw: impl Into<Expected<&'static str>>,
+        ) -> Self {
+            Self::new(
+                mark,
+                super::UnknownRawError::new(unexpected_raw, expected_raw).into(),
+            )
+        }
+
         pub fn new_unknown_tag(
             mark: Mark,
             unexpected_tag: String,
@@ -168,6 +188,12 @@ pub mod marked {
     impl<E> From<UnknownTagError> for DeserializeError<E> {
         fn from(value: UnknownTagError) -> Self {
             MarkedError::new(value.mark, super::DeserializeError::UnknownTag(value.data))
+        }
+    }
+
+    impl<E> From<UnknownRawError> for DeserializeError<E> {
+        fn from(value: UnknownRawError) -> Self {
+            MarkedError::new(value.mark, super::DeserializeError::UnknownRaw(value.data))
         }
     }
 

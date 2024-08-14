@@ -1,12 +1,14 @@
 //! Type definition [`RawView`]
 
 use super::super::super::{
-    error::{marked, CustomError, InvalidTypeError, InvalidValueError},
+    error::{
+        expected::Expected, marked, CustomError, DeserializeError, InvalidTypeError,
+        UnknownRawError,
+    },
     mark::Mark,
     node::node::RawNode,
     node_type::NodeType,
 };
-use crate::data::error::expected::Expected;
 use serde::de::{self, value::StrDeserializer};
 
 type Error = marked::DeserializeError<CustomError>;
@@ -33,13 +35,13 @@ impl<'data> RawView<'data> {
         self.raw.as_str()
     }
 
-    /// Checks if the content is equal to one of the expected tags.
+    /// Checks if the content is equal to one of the expected raw data.
     ///
-    /// Returns the index of the matched tag.
-    pub fn verify<E>(
+    /// Returns the index of the matched raw data.
+    pub fn verify(
         &self,
         expected: impl Into<Expected<&'static str>>,
-    ) -> Result<usize, marked::InvalidValueError<E>> {
+    ) -> Result<usize, marked::UnknownRawError> {
         let expected = Into::<Expected<&'static str>>::into(expected);
 
         for (i, &expected) in expected.iter().enumerate() {
@@ -48,8 +50,8 @@ impl<'data> RawView<'data> {
             }
         }
 
-        let error = InvalidValueError::new(self.raw().into(), None);
-        Err(marked::InvalidValueError::new(self.mark, error))
+        let error = UnknownRawError::new(self.raw().into(), expected);
+        Err(marked::UnknownRawError::new(self.mark, error))
     }
 
     pub(in super::super) fn access(self) -> impl de::EnumAccess<'data, Error = Error> {
@@ -91,7 +93,15 @@ impl<'data> de::EnumAccess<'data> for EnumAccess<'data> {
         let variant_deserializer = StrDeserializer::<Self::Error>::new(self.raw.raw());
         match seed.deserialize(variant_deserializer) {
             Ok(i) => Ok((i, self)),
-            Err(i) => Err(Error::new(self.raw.mark(), i.data)),
+
+            Err(i) => {
+                let error = match i.data {
+                    DeserializeError::UnknownTag(i) => UnknownRawError::from(i).into(),
+                    i => i,
+                };
+
+                Err(Error::new(self.raw.mark(), error))
+            }
         }
     }
 }
