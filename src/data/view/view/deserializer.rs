@@ -46,9 +46,9 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
             ToMatchView::Null(_) => visitor.visit_none(),
             ToMatchView::Raw(i) => visitor.visit_borrowed_bytes(i.raw().as_bytes()),
             ToMatchView::String(i) => visitor.visit_borrowed_str(i.string()),
-            ToMatchView::List(i) => visitor.visit_seq(i.seq_access()),
+            ToMatchView::List(i) => visitor.visit_seq(i.access()),
             ToMatchView::Map(i) => visitor.visit_map(i.access()),
-            ToMatchView::Tagged(i) => visitor.visit_enum(i),
+            ToMatchView::Tagged(i) => visitor.visit_enum(i.access()),
             ToMatchView::Document(i) => i.view().deserialize_any(visitor),
             ToMatchView::Anchor(i) => i.view().deserialize_any(visitor),
         }
@@ -241,7 +241,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
             match view.to_match() {
                 ToMatchView::Tagged(i) => match i.verify(expected)? {
                     0 => return visitor.visit_some(i.view()),
-                    _ => return i.unit_variant().and_then(|_| visitor.visit_none()),
+                    _ => return i.access().unit_variant().and_then(|_| visitor.visit_none()),
                 },
 
                 ToMatchView::Raw(i) => match i.verify(expected)? {
@@ -315,7 +315,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        visitor.visit_seq(self.list()?.seq_access())
+        visitor.visit_seq(self.list()?.access())
     }
 
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
@@ -324,7 +324,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     {
         let list = self.list()?;
         if list.len() == len {
-            visitor.visit_seq(list.seq_access())
+            visitor.visit_seq(list.access())
         } else {
             let invalid_length = InvalidLengthError::new(list.len());
             let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
@@ -389,8 +389,8 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
         V: de::Visitor<'data>,
     {
         deserialize_type(self, name, |i| match i.tagged() {
-            Ok(i) => visitor.visit_enum(i),
-            Err(_) => visitor.visit_enum(i.raw()?),
+            Ok(i) => visitor.visit_enum(i.access()),
+            Err(_) => visitor.visit_enum(i.raw()?.access()),
         })
     }
 

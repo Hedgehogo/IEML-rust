@@ -20,6 +20,8 @@ use std::{
     fmt::{self, Debug, Formatter},
 };
 
+type Error = marked::DeserializeError<CustomError>;
+
 /// Structure for reading Map node data.
 #[derive(Clone, Eq)]
 pub struct MapView<'data, A: AnalyseAnchors<'data>> {
@@ -87,7 +89,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
         MapIter::new(self.mark, self.node.data.iter(), self.data, anchor_analyser)
     }
 
-    pub(crate) fn access(self) -> MapAccess<'data, A> {
+    pub(in super::super) fn access(self) -> impl de::MapAccess<'data, Error = Error> {
         MapAccess::new(self.mark, self.iter())
     }
 }
@@ -178,7 +180,7 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
     }
 }
 
-pub struct MapAccess<'data, A: AnalyseAnchors<'data>> {
+struct MapAccess<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
     last: Option<(&'data Name<Box<str>>, usize)>,
     iter: hash_map::Iter<'data, Name<Box<str>>, usize>,
@@ -214,7 +216,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
 }
 
 impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+    type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where

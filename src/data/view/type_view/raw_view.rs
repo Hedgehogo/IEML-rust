@@ -9,6 +9,8 @@ use super::super::super::{
 use crate::data::error::expected::Expected;
 use serde::de::{self, value::StrDeserializer};
 
+type Error = marked::DeserializeError<CustomError>;
+
 /// Structure for reading Raw node data.
 #[derive(Debug, Clone, Eq)]
 pub struct RawView<'data> {
@@ -49,6 +51,10 @@ impl<'data> RawView<'data> {
         let error = InvalidValueError::new(self.raw().into(), None);
         Err(marked::InvalidValueError::new(self.mark, error))
     }
+
+    pub(in super::super) fn access(self) -> impl de::EnumAccess<'data, Error = Error> {
+        EnumAccess::new(self)
+    }
 }
 
 impl<'data> PartialEq for RawView<'data> {
@@ -57,30 +63,40 @@ impl<'data> PartialEq for RawView<'data> {
     }
 }
 
-impl<'data> de::EnumAccess<'data> for RawView<'data> {
-    type Error = marked::DeserializeError<CustomError>;
+struct EnumAccess<'data> {
+    raw: RawView<'data>,
+}
 
-    type Variant = RawView<'data>;
+impl<'data> EnumAccess<'data> {
+    fn new(raw: RawView<'data>) -> Self {
+        Self { raw }
+    }
+
+    fn error(&self) -> marked::DeserializeError<CustomError> {
+        let expected = &[NodeType::Tagged, NodeType::Anchor, NodeType::Document];
+        let invalid_type = InvalidTypeError::new(NodeType::Raw, expected as &_);
+        marked::DeserializeError::new(self.raw.mark(), invalid_type.into())
+    }
+}
+
+impl<'data> de::EnumAccess<'data> for EnumAccess<'data> {
+    type Error = Error;
+
+    type Variant = Self;
 
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
     where
         V: de::DeserializeSeed<'data>,
     {
-        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.raw());
+        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.raw.raw());
         match seed.deserialize(variant_deserializer) {
             Ok(i) => Ok((i, self)),
-            Err(i) => Err(marked::MarkedError::new(self.mark(), i.data)),
+            Err(i) => Err(Error::new(self.raw.mark(), i.data)),
         }
     }
 }
 
-fn variant_error(view: RawView) -> marked::DeserializeError<CustomError> {
-    let expected = &[NodeType::Tagged, NodeType::Anchor, NodeType::Document];
-    let invalid_type = InvalidTypeError::new(NodeType::Raw, expected as &_);
-    marked::DeserializeError::new(view.mark(), invalid_type.into())
-}
-
-impl<'data> de::VariantAccess<'data> for RawView<'data> {
+impl<'data> de::VariantAccess<'data> for EnumAccess<'data> {
     type Error = marked::DeserializeError<CustomError>;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
@@ -91,14 +107,14 @@ impl<'data> de::VariantAccess<'data> for RawView<'data> {
     where
         T: de::DeserializeSeed<'data>,
     {
-        Err(variant_error(self))
+        Err(self.error())
     }
 
     fn tuple_variant<V>(self, _len: usize, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'data>,
     {
-        Err(variant_error(self))
+        Err(self.error())
     }
 
     fn struct_variant<V>(
@@ -109,6 +125,6 @@ impl<'data> de::VariantAccess<'data> for RawView<'data> {
     where
         V: de::Visitor<'data>,
     {
-        Err(variant_error(self))
+        Err(self.error())
     }
 }

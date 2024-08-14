@@ -16,6 +16,8 @@ use std::{
     slice,
 };
 
+type Error = marked::DeserializeError<CustomError>;
+
 /// Structure for reading List node data.
 #[derive(Clone, Eq)]
 pub struct ListView<'data, A: AnalyseAnchors<'data>> {
@@ -78,11 +80,11 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         ListIter::new(self.node.data.iter(), self.data, anchor_analyser)
     }
 
-    pub(crate) fn seq_access(self) -> SeqAccess<'data, A> {
+    pub(in super::super) fn access(self) -> impl de::SeqAccess<'data, Error = Error> {
         SeqAccess::new(self.iter())
     }
 
-    pub(crate) fn map_access(self) -> MapAccess<'data, A> {
+    pub(in super::super) fn map_access(self) -> impl de::MapAccess<'data, Error = Error> {
         MapAccess::new(self.mark, self.iter())
     }
 }
@@ -149,7 +151,7 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
     }
 }
 
-pub struct SeqAccess<'data, A: AnalyseAnchors<'data>> {
+struct SeqAccess<'data, A: AnalyseAnchors<'data>> {
     iter: ListIter<'data, A>,
 }
 
@@ -160,7 +162,7 @@ impl<'data, A: AnalyseAnchors<'data>> SeqAccess<'data, A> {
 }
 
 impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+    type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
     where
@@ -177,7 +179,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, 
     }
 }
 
-pub struct MapAccess<'data, A: AnalyseAnchors<'data>> {
+struct MapAccess<'data, A: AnalyseAnchors<'data>> {
     mark: Mark,
     last: Option<(usize, usize)>,
     iter: slice::Iter<'data, usize>,
@@ -239,7 +241,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
 }
 
 impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+    type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
     where
@@ -262,7 +264,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
 
             None => {
                 let invalid_value = InvalidValueError::new("value".into(), None);
-                let error = marked::DeserializeError::new(self.mark, invalid_value.into());
+                let error = Error::new(self.mark, invalid_value.into());
                 Err(error)
             }
         }

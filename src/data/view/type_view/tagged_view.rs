@@ -17,6 +17,8 @@ use serde::{
 };
 use std::fmt::{self, Debug, Formatter};
 
+type Error = marked::DeserializeError<CustomError>;
+
 /// Structure for reading Tagged node data.
 #[derive(Clone, Eq)]
 pub struct TaggedView<'data, A: AnalyseAnchors<'data>> {
@@ -80,6 +82,10 @@ impl<'data, A: AnalyseAnchors<'data>> TaggedView<'data, A> {
     pub fn split(self) -> (&'data str, View<'data, A>) {
         (self.tag().as_str(), self.view())
     }
+
+    pub(in super::super) fn access(self) -> EnumAccess<'data, A> {
+        EnumAccess::new(self)
+    }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> PartialEq for TaggedView<'data, A> {
@@ -100,31 +106,41 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for TaggedView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::EnumAccess<'data> for TaggedView<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+pub(in super::super) struct EnumAccess<'data, A: AnalyseAnchors<'data>> {
+    tagged: TaggedView<'data, A>,
+}
 
-    type Variant = TaggedView<'data, A>;
+impl<'data, A: AnalyseAnchors<'data>> EnumAccess<'data, A> {
+    fn new(tagged: TaggedView<'data, A>) -> Self {
+        Self { tagged }
+    }
+}
+
+impl<'data, A: AnalyseAnchors<'data>> de::EnumAccess<'data> for EnumAccess<'data, A> {
+    type Error = Error;
+
+    type Variant = Self;
 
     fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
     where
         V: de::DeserializeSeed<'data>,
     {
-        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.tag().as_str());
+        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.tagged.tag().as_str());
         match seed.deserialize(variant_deserializer) {
             Ok(i) => Ok((i, self)),
-            Err(i) => Err(marked::MarkedError::new(self.mark(), i.data)),
+            Err(i) => Err(Error::new(self.tagged.mark(), i.data)),
         }
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for TaggedView<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
+impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for EnumAccess<'data, A> {
+    type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {
-        let list = self.view().list()?;
+        let list = self.tagged.view().list()?;
         if !list.is_empty() {
             let invalid_length = InvalidLengthError::new(list.len());
-            let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
+            let error = Error::new(list.mark(), invalid_length.into());
             Err(error)
         } else {
             Ok(())
@@ -135,14 +151,14 @@ impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for TaggedView<'d
     where
         T: de::DeserializeSeed<'data>,
     {
-        seed.deserialize(self.view())
+        seed.deserialize(self.tagged.view())
     }
 
     fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'data>,
     {
-        self.view().deserialize_tuple(len, visitor)
+        self.tagged.view().deserialize_tuple(len, visitor)
     }
 
     fn struct_variant<V>(
@@ -153,7 +169,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for TaggedView<'d
     where
         V: de::Visitor<'data>,
     {
-        let map = self.view().map()?;
+        let map = self.tagged.view().map()?;
         visitor.visit_map(map.access())
     }
 }
