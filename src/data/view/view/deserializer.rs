@@ -418,110 +418,136 @@ mod tests {
     #[test]
     fn test_number() {
         let data = crate::from_source("10").unwrap();
-        let result = i32::deserialize(data.view()).unwrap();
-        assert_eq!(result, 10);
+        let result = i32::deserialize(data.view());
+        assert_eq!(result, Ok(10));
 
         let data = crate::from_source("hello").unwrap();
-        let error = i32::deserialize(data.view()).unwrap_err();
+        let result = i32::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: expected integer in the range from -2^31 to 2^31 - 1
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(0, 0),
+                "integer in the range from -2^31 to 2^31 - 1".into(),
+                None
+            ))
         );
     }
 
     #[test]
     fn test_char() {
         let data = crate::from_source("> h").unwrap();
-        let result = char::deserialize(data.view()).unwrap();
-        assert_eq!(result, 'h');
+        let result = char::deserialize(data.view());
+        assert_eq!(result, Ok('h'));
 
         let data = crate::from_source("> hello").unwrap();
-        let error = char::deserialize(data.view()).unwrap_err();
+        let result = char::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: expected one-character string
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(0, 0),
+                "one-character string".into(),
+                None
+            ))
         );
     }
 
     #[test]
     fn test_str() {
         let data = crate::from_source("> hello").unwrap();
-        let result = <&str>::deserialize(data.view()).unwrap();
-        assert_eq!(result, "hello");
+        let result = <&str>::deserialize(data.view());
+        assert_eq!(result, Ok("hello"));
 
         let data = crate::from_source("hello").unwrap();
-        let error = <&str>::deserialize(data.view()).unwrap_err();
+        let result = <&str>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: value of unexpected type number, boolean, raw data, expected types: string, tagged, anchor, document
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_type(
+                Mark::new(0, 0),
+                NodeType::Raw,
+                &[
+                    NodeType::String,
+                    NodeType::Tagged,
+                    NodeType::Anchor,
+                    NodeType::Document
+                ] as &[_]
+            ))
         );
     }
 
     #[test]
     fn test_option() {
         let data = crate::from_source("= Some: 42").unwrap();
-        let result = Option::<u8>::deserialize(data.view()).unwrap();
-        assert_eq!(result, Some(42));
+        let result = Option::<u8>::deserialize(data.view());
+        assert_eq!(result, Ok(Some(42)));
 
         let data = crate::from_source("Some").unwrap();
-        let error = Option::<u8>::deserialize(data.view()).unwrap_err();
+        let result = Option::<u8>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: value of unexpected type number, boolean, raw data, expected types: tagged, anchor, document
- --> 0:0
-note: when trying to receive optional value
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(0, 0),
+                "optional value".into(),
+                Some(Box::new(marked::DeserializeError::new_invalid_type(
+                    Mark::new(0, 0),
+                    NodeType::Raw,
+                    &[NodeType::Tagged, NodeType::Anchor, NodeType::Document] as &[_]
+                )))
+            ))
         );
     }
 
     #[test]
     fn test_seq() {
         let data = crate::from_source("[0, 2, 67]").unwrap();
-        let result = Vec::<u8>::deserialize(data.view()).unwrap();
-        assert_eq!(result, vec![0, 2, 67]);
+        let result = Vec::<u8>::deserialize(data.view());
+        assert_eq!(result, Ok(vec![0, 2, 67]));
 
         let data = crate::from_source("[0, 2, 457]").unwrap();
-        let error = Vec::<u8>::deserialize(data.view()).unwrap_err();
+        let result = Vec::<u8>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: expected integer in the range from 0 to 2^8 - 1
- --> 0:7"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(0, 7),
+                "integer in the range from 0 to 2^8 - 1".into(),
+                None
+            ))
         );
     }
 
     #[test]
     fn test_tuple() {
         let data = crate::from_source("[2, 67]").unwrap();
-        let result = <(u8, u8)>::deserialize(data.view()).unwrap();
-        assert_eq!(result, (2, 67));
+        let result = <(u8, u8)>::deserialize(data.view());
+        assert_eq!(result, Ok((2, 67)));
 
         let data = crate::from_source("[0, 2, 457]").unwrap();
-        let error = <(u8, u8)>::deserialize(data.view()).unwrap_err();
+        let result = <(u8, u8)>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: list or map of unexpected length equal to 3
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_length(
+                Mark::new(0, 0),
+                3
+            ))
         );
     }
 
     #[test]
     fn test_map() {
         let data = crate::from_source("first: 42\nsecond: 15").unwrap();
-        let result = HashMap::<String, i32>::deserialize(data.view()).unwrap();
+        let result = HashMap::<String, i32>::deserialize(data.view());
         assert_eq!(
             result,
-            HashMap::from([("first".into(), 42), ("second".into(), 15)])
+            Ok(HashMap::from([("first".into(), 42), ("second".into(), 15)]))
         );
 
         let data = crate::from_source(r#"[["first", 42], ["second"]]"#).unwrap();
-        let error = HashMap::<String, i32>::deserialize(data.view()).unwrap_err();
+        let result = HashMap::<String, i32>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: list or map of unexpected length equal to 1
- --> 0:16"#
+            result,
+            Err(marked::DeserializeError::new_invalid_length(
+                Mark::new(0, 16),
+                1
+            ))
         );
     }
 
@@ -534,35 +560,45 @@ note: when trying to receive optional value
     #[test]
     fn test_struct() {
         let data = crate::from_source("field: 42").unwrap();
-        let result = TestStruct::deserialize(data.view()).unwrap();
-        assert_eq!(result, TestStruct { field: 42 });
+        let result = TestStruct::deserialize(data.view());
+        assert_eq!(result, Ok(TestStruct { field: 42 }));
 
         let data = crate::from_source("key: \n\tfield: 42\n\tkey: 15").unwrap();
         let view = data.view().map().unwrap().get("key").unwrap();
-        let error = TestStruct::deserialize(view).unwrap_err();
+        let result = TestStruct::deserialize(view);
         assert_eq!(
-            error.to_string(),
-            r#"error: map contains an extra key named "key", expected keys: "field"
- --> 1:1
-note: when trying to receive value of type "TestStruct"
- --> 1:1"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(1, 1),
+                r#"value of type "TestStruct""#.into(),
+                Some(Box::new(marked::DeserializeError::new_unknown_key(
+                    Mark::new(1, 1),
+                    "key".into(),
+                    &["field"] as &[_]
+                )))
+            ))
         );
     }
 
     #[test]
     fn test_enum() {
         let data = crate::from_source("= Ok: 42").unwrap();
-        let result = Result::<u8, u8>::deserialize(data.view()).unwrap();
-        assert_eq!(result, Ok(42));
+        let result = Result::<u8, u8>::deserialize(data.view());
+        assert_eq!(result, Ok(Ok(42)));
 
         let data = crate::from_source("15").unwrap();
-        let error = Result::<u8, u8>::deserialize(data.view()).unwrap_err();
+        let result = Result::<u8, u8>::deserialize(data.view());
         assert_eq!(
-            error.to_string(),
-            r#"error: unexpected tag "15", expected tags: "Ok", "Err"
- --> 0:0
-note: when trying to receive value of type "Result"
- --> 0:0"#
+            result,
+            Err(marked::DeserializeError::new_invalid_value(
+                Mark::new(0, 0),
+                r#"value of type "Result""#.into(),
+                Some(Box::new(marked::DeserializeError::new_unknown_tag(
+                    Mark::new(0, 0),
+                    "15".into(),
+                    &["Ok", "Err"] as &[_]
+                )))
+            ))
         );
     }
 }

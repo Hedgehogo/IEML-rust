@@ -46,3 +46,18 @@ pub mod marked {
 
     pub type InvalidTypeError = MarkedError<super::InvalidTypeError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let expected = &[NodeType::Tagged, NodeType::Anchor, NodeType::Document] as &[_];
+        let error = InvalidTypeError::new(NodeType::Raw, expected);
+        assert_eq!(
+            error.to_string(),
+            "error: value of unexpected type number, boolean, raw data, expected types: tagged, anchor, document"
+        );
+    }
+}

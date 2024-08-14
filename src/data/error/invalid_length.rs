@@ -31,3 +31,17 @@ pub mod marked {
 
     pub type InvalidLengthError = MarkedError<super::InvalidLengthError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let error = InvalidLengthError::new(3);
+        assert_eq!(
+            error.to_string(),
+            "error: list or map of unexpected length equal to 3"
+        );
+    }
+}

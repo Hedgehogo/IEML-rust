@@ -20,7 +20,11 @@ impl MissingKeyError {
 
 impl Display for MissingKeyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "error: map that does not contain a key named {:?}", self.expected_key)
+        write!(
+            f,
+            "error: map that does not contain a key named {:?}",
+            self.expected_key
+        )
     }
 }
 
@@ -30,4 +34,18 @@ pub mod marked {
     use crate::error::marked::MarkedError;
 
     pub type MissingKeyError = MarkedError<super::MissingKeyError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let error = MissingKeyError::new("field".into());
+        assert_eq!(
+            error.to_string(),
+            r#"error: map that does not contain a key named "field""#
+        );
+    }
 }

@@ -46,3 +46,17 @@ pub mod marked {
 
     pub type UnknownKeyError = MarkedError<super::UnknownKeyError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let error = UnknownKeyError::new("key".into(), &["field"] as &[_]);
+        assert_eq!(
+            error.to_string(),
+            r#"error: map contains an extra key named "key", expected keys: "field""#
+        );
+    }
+}

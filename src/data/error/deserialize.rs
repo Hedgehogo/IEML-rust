@@ -1,11 +1,8 @@
 //! Type definition [`DeserializeError`]
 
 use super::*;
-use crate::error::custom::CustomError;
-use std::{
-    error::Error,
-    fmt::{Debug, Display, Formatter},
-};
+
+use std::{error::Error, fmt};
 
 /// General type of deserialisation error
 #[derive(PartialEq, Eq, Debug)]
@@ -14,7 +11,7 @@ pub enum DeserializeError<E> {
     InvalidType(InvalidTypeError),
     /// Occurs when the reader receives a value of the right type but wrong for another reason.
     InvalidValue(InvalidValueError<E>),
-    /// Occurs when reading a list or map, but the input data contains too many or too few elements..
+    /// Occurs when reading a list or map, but the input data contains too many or too few elements.
     InvalidLength(InvalidLengthError),
     /// Occurs when reading a tagged node, but the tag does not match any of the expected ones.
     UnknownTag(UnknownTagError),
@@ -26,8 +23,8 @@ pub enum DeserializeError<E> {
     Custom(E),
 }
 
-impl<E: Display> Display for DeserializeError<E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl<E: fmt::Display> fmt::Display for DeserializeError<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DeserializeError::InvalidType(i) => write!(f, "{}", i),
             DeserializeError::InvalidValue(i) => write!(f, "{}", i),
@@ -40,7 +37,7 @@ impl<E: Display> Display for DeserializeError<E> {
     }
 }
 
-impl<E: Debug + Display> Error for DeserializeError<E> {}
+impl<E: fmt::Debug + fmt::Display> Error for DeserializeError<E> {}
 
 impl<E> From<InvalidTypeError> for DeserializeError<E> {
     fn from(value: InvalidTypeError) -> Self {
@@ -85,12 +82,64 @@ impl From<CustomError> for DeserializeError<CustomError> {
 }
 
 pub mod marked {
-    use super::super::marked::*;
+    use super::super::super::{mark::Mark, node_type::NodeType};
+    use super::super::{expected::Expected, marked::*};
     use crate::error::{custom::marked::CustomError, marked::MarkedError};
     use serde::de;
     use std::fmt;
 
     pub type DeserializeError<E> = MarkedError<super::DeserializeError<E>>;
+
+    impl<E> DeserializeError<E> {
+        pub fn new_invalid_type(
+            mark: Mark,
+            unexpected_type: NodeType,
+            expected_types: impl Into<Expected<NodeType>>,
+        ) -> Self {
+            Self::new(
+                mark,
+                super::InvalidTypeError::new(unexpected_type, expected_types).into(),
+            )
+        }
+
+        pub fn new_invalid_value(
+            mark: Mark,
+            expected: String,
+            reason: Option<Box<DeserializeError<E>>>,
+        ) -> Self {
+            Self::new(mark, super::InvalidValueError::new(expected, reason).into())
+        }
+
+        pub fn new_invalid_length(mark: Mark, length: usize) -> Self {
+            Self::new(mark, super::InvalidLengthError::new(length).into())
+        }
+
+        pub fn new_unknown_tag(
+            mark: Mark,
+            unexpected_tag: String,
+            expected_tags: impl Into<Expected<&'static str>>,
+        ) -> Self {
+            Self::new(
+                mark,
+                super::UnknownTagError::new(unexpected_tag, expected_tags).into(),
+            )
+        }
+
+        pub fn new_unknown_key(
+            mark: Mark,
+            unexpected_key: String,
+            expected_keys: impl Into<Expected<&'static str>>,
+        ) -> Self {
+            Self::new(
+                mark,
+                super::UnknownKeyError::new(unexpected_key, expected_keys).into(),
+            )
+        }
+
+        pub fn new_missing_key(mark: Mark, expected_key: String) -> Self {
+            Self::new(mark, super::MissingKeyError::new(expected_key).into())
+        }
+    }
 
     impl<E> From<InvalidTypeError> for DeserializeError<E> {
         fn from(value: InvalidTypeError) -> Self {

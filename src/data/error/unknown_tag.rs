@@ -42,3 +42,18 @@ pub mod marked {
 
     pub type UnknownTagError = MarkedError<super::UnknownTagError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        let expected = &["Ok", "Err"] as &[_];
+        let error = UnknownTagError::new("Error".into(), expected);
+        assert_eq!(
+            error.to_string(),
+            r#"error: unexpected tag "Error", expected tags: "Ok", "Err""#
+        );
+    }
+}
