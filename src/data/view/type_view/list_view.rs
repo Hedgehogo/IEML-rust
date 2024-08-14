@@ -3,7 +3,9 @@
 use super::super::{
     super::{
         data::Data,
-        error::{marked, CustomError, InvalidLengthError, InvalidValueError},
+        error::{
+            invalid_length::Origin, marked, CustomError, InvalidLengthError, InvalidValueError,
+        },
         mark::Mark,
         node::node::ListNode,
     },
@@ -68,7 +70,7 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
                 Ok(View::new(node, self.data, self.anchor_analyser.clone()))
             }
             None => {
-                let error = InvalidLengthError::new(self.len());
+                let error = InvalidLengthError::new(self.len(), Some(Origin::List), Some(index));
                 Err(marked::MarkedError::new(self.mark, error))
             }
         }
@@ -212,7 +214,9 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
                     (Some(i), Some(j), None) => self.last = Some((*i, *j)),
 
                     _ => {
-                        let invalid_length = InvalidLengthError::new(list.len()).into();
+                        let length = list.len();
+                        let origin = Some(Origin::List);
+                        let invalid_length = InvalidLengthError::new(length, origin, Some(2)).into();
                         let error = marked::DeserializeError::new(list.mark(), invalid_length);
                         return Err(error);
                     }
@@ -250,7 +254,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, 
         self.next()?;
         match self.last_key() {
             Some(i) => seed.deserialize(i).map(Some),
-            
+
             None => Ok(None),
         }
     }

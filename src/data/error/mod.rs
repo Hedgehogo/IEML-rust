@@ -22,6 +22,7 @@ pub use unknown_raw::UnknownRawError;
 pub use unknown_tag::UnknownTagError;
 
 pub mod marked {
+    pub use crate::error::custom::marked::CustomError;
     pub use crate::error::marked::MarkedError;
 
     pub use super::deserialize::marked::DeserializeError;

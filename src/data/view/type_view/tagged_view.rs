@@ -3,7 +3,10 @@
 use super::super::{
     super::{
         data::Data,
-        error::{expected::Expected, marked, CustomError, InvalidLengthError, UnknownTagError},
+        error::{
+            expected::Expected, invalid_length::Origin, marked, CustomError, InvalidLengthError,
+            UnknownTagError,
+        },
         mark::Mark,
         name::Name,
         node::tag_node::TaggedNode,
@@ -139,7 +142,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for EnumAccess<'d
     fn unit_variant(self) -> Result<(), Self::Error> {
         let list = self.tagged.view().list()?;
         if !list.is_empty() {
-            let invalid_length = InvalidLengthError::new(list.len());
+            let invalid_length = InvalidLengthError::new(list.len(), Some(Origin::List), Some(0));
             let error = Error::new(list.mark(), invalid_length.into());
             Err(error)
         } else {

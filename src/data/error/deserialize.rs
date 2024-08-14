@@ -93,7 +93,8 @@ impl From<CustomError> for DeserializeError<CustomError> {
 pub mod marked {
     use super::super::super::{mark::Mark, node_type::NodeType};
     use super::super::{expected::Expected, marked::*};
-    use crate::error::{custom::marked::CustomError, marked::MarkedError};
+    use super::{invalid_length::Origin, marked::CustomError};
+    use crate::error::marked::MarkedError;
     use serde::de;
     use std::fmt;
 
@@ -119,8 +120,16 @@ pub mod marked {
             Self::new(mark, super::InvalidValueError::new(expected, reason).into())
         }
 
-        pub fn new_invalid_length(mark: Mark, length: usize) -> Self {
-            Self::new(mark, super::InvalidLengthError::new(length).into())
+        pub fn new_invalid_length(
+            mark: Mark,
+            length: usize,
+            origin: Option<Origin>,
+            expected: Option<usize>,
+        ) -> Self {
+            Self::new(
+                mark,
+                super::InvalidLengthError::new(length, origin, expected).into(),
+            )
         }
 
         pub fn new_unknown_raw(
@@ -241,7 +250,7 @@ pub mod marked {
 
         fn invalid_length(len: usize, exp: &dyn de::Expected) -> Self {
             let expected = format!("{}", exp);
-            let invelid_length = super::InvalidLengthError::new(len);
+            let invelid_length = super::InvalidLengthError::new(len, None, None);
             let deserialize = DeserializeError::new(Default::default(), invelid_length.into());
             let invalid_value =
                 super::InvalidValueError::new(expected, Some(Box::new(deserialize)));

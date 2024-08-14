@@ -1,6 +1,7 @@
 use super::super::super::error::*;
 use super::*;
 use crate::de::parse::utils::to_value::*;
+use invalid_length::Origin;
 use serde::de::{self, value::UnitDeserializer, VariantAccess};
 
 fn deserialize_number<'data, A, T>(
@@ -282,7 +283,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
             return visitor.visit_unit();
         }
 
-        let invalid_length = InvalidLengthError::new(list.len());
+        let invalid_length = InvalidLengthError::new(list.len(), Some(Origin::List), Some(0));
         let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
         Err(error)
     }
@@ -326,7 +327,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
         if list.len() == len {
             visitor.visit_seq(list.access())
         } else {
-            let invalid_length = InvalidLengthError::new(list.len());
+            let invalid_length = InvalidLengthError::new(list.len(), Some(Origin::List), Some(len));
             let error = marked::DeserializeError::new(list.mark(), invalid_length.into());
             Err(error)
         }
@@ -526,7 +527,9 @@ mod tests {
             result,
             Err(marked::DeserializeError::new_invalid_length(
                 Mark::new(0, 0),
-                3
+                3,
+                Some(Origin::List),
+                Some(2),
             ))
         );
     }
@@ -546,7 +549,9 @@ mod tests {
             result,
             Err(marked::DeserializeError::new_invalid_length(
                 Mark::new(0, 16),
-                1
+                1,
+                Some(Origin::List),
+                Some(2),
             ))
         );
     }
