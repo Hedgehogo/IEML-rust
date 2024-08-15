@@ -5,7 +5,7 @@ A Rust library for using the [Serde](https://crates.io/crates/serde) serializati
 ## Progress
 - [x] Data structures and APIs for working with them
 - [x] Parsing from raw input to an intermediate data structure
-- [ ] Implementation of Serde traits for deserialization
+- [x] Implementation of Serde traits for deserialization
 - [ ] Generating a set of documents from an intermediate data structure
 - [ ] Implementation of Serde traits for serialization
 

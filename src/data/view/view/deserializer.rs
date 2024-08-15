@@ -1,4 +1,5 @@
 use super::super::super::error::*;
+use super::super::buffer_anchors::BufferAnchors;
 use super::*;
 use crate::de::parse::utils::to_value::*;
 use invalid_length::Origin;
@@ -36,7 +37,7 @@ where
     })
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> {
     type Error = marked::DeserializeError<CustomError>;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -309,7 +310,10 @@ impl<'data, A: AnalyseAnchors<'data>> de::Deserializer<'data> for View<'data, A>
     where
         V: de::Visitor<'data>,
     {
-        deserialize_type(self, name, |i| visitor.visit_newtype_struct(i))
+        match name.chars().next() {
+            Some('@') => visitor.visit_some(self.anchor()?.deserializer()),
+            _ => deserialize_type(self, name, |i| visitor.visit_newtype_struct(i)),
+        }
     }
 
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>

@@ -12,6 +12,7 @@ use super::super::{
         node::tag_node::TaggedNode,
     },
     analyse_anchors::AnalyseAnchors,
+    buffer_anchors::BufferAnchors,
     view::View,
 };
 use serde::{
@@ -85,10 +86,6 @@ impl<'data, A: AnalyseAnchors<'data>> TaggedView<'data, A> {
     pub fn split(self) -> (&'data str, View<'data, A>) {
         (self.tag().as_str(), self.view())
     }
-
-    pub(in super::super) fn access(self) -> EnumAccess<'data, A> {
-        EnumAccess::new(self)
-    }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> PartialEq for TaggedView<'data, A> {
@@ -109,17 +106,23 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for TaggedView<'data, A> {
     }
 }
 
-pub(in super::super) struct EnumAccess<'data, A: AnalyseAnchors<'data>> {
+impl<'data, A: BufferAnchors<'data>> TaggedView<'data, A> {
+    pub(in super::super) fn access(self) -> EnumAccess<'data, A> {
+        EnumAccess::new(self)
+    }
+}
+
+pub(in super::super) struct EnumAccess<'data, A: BufferAnchors<'data>> {
     tagged: TaggedView<'data, A>,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> EnumAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> EnumAccess<'data, A> {
     fn new(tagged: TaggedView<'data, A>) -> Self {
         Self { tagged }
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::EnumAccess<'data> for EnumAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::EnumAccess<'data> for EnumAccess<'data, A> {
     type Error = Error;
 
     type Variant = Self;
@@ -136,7 +139,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::EnumAccess<'data> for EnumAccess<'data
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::VariantAccess<'data> for EnumAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::VariantAccess<'data> for EnumAccess<'data, A> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Self::Error> {

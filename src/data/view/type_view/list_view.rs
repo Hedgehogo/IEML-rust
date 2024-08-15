@@ -10,6 +10,7 @@ use super::super::{
         node::node::ListNode,
     },
     analyse_anchors::AnalyseAnchors,
+    buffer_anchors::BufferAnchors,
     view::View,
 };
 use serde::de;
@@ -81,14 +82,6 @@ impl<'data, A: AnalyseAnchors<'data>> ListView<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         ListIter::new(self.node.data.iter(), self.data, anchor_analyser)
     }
-
-    pub(in super::super) fn access(self) -> impl de::SeqAccess<'data, Error = Error> {
-        SeqAccess::new(self.iter())
-    }
-
-    pub(in super::super) fn map_access(self) -> impl de::MapAccess<'data, Error = Error> {
-        MapAccess::new(self.mark, self.iter())
-    }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> PartialEq for ListView<'data, A> {
@@ -153,17 +146,27 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for ListIter<'data, A> {
     }
 }
 
-struct SeqAccess<'data, A: AnalyseAnchors<'data>> {
+impl<'data, A: BufferAnchors<'data>> ListView<'data, A> {
+    pub(in super::super) fn access(self) -> impl de::SeqAccess<'data, Error = Error> {
+        SeqAccess::new(self.iter())
+    }
+
+    pub(in super::super) fn map_access(self) -> impl de::MapAccess<'data, Error = Error> {
+        MapAccess::new(self.mark, self.iter())
+    }
+}
+
+struct SeqAccess<'data, A: BufferAnchors<'data>> {
     iter: ListIter<'data, A>,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> SeqAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> SeqAccess<'data, A> {
     fn new(iter: ListIter<'data, A>) -> Self {
         Self { iter }
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, A> {
     type Error = Error;
 
     fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
@@ -181,7 +184,7 @@ impl<'data, A: AnalyseAnchors<'data>> de::SeqAccess<'data> for SeqAccess<'data, 
     }
 }
 
-struct MapAccess<'data, A: AnalyseAnchors<'data>> {
+struct MapAccess<'data, A: BufferAnchors<'data>> {
     mark: Mark,
     last: Option<(usize, usize)>,
     iter: slice::Iter<'data, usize>,
@@ -189,7 +192,7 @@ struct MapAccess<'data, A: AnalyseAnchors<'data>> {
     anchor_analyser: A,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> MapAccess<'data, A> {
     fn new(mark: Mark, iter: ListIter<'data, A>) -> Self {
         Self {
             mark,
@@ -216,7 +219,8 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
                     _ => {
                         let length = list.len();
                         let origin = Some(Origin::List);
-                        let invalid_length = InvalidLengthError::new(length, origin, Some(2)).into();
+                        let invalid_length =
+                            InvalidLengthError::new(length, origin, Some(2)).into();
                         let error = marked::DeserializeError::new(list.mark(), invalid_length);
                         return Err(error);
                     }
@@ -244,7 +248,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>

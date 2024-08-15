@@ -10,6 +10,7 @@ use super::super::{
         name::Name,
         node::map_node::MapNode,
     },
+    buffer_anchors::BufferAnchors,
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
@@ -87,10 +88,6 @@ impl<'data, A: AnalyseAnchors<'data>> MapView<'data, A> {
     pub fn iter(&self) -> MapIter<'data, A> {
         let anchor_analyser = self.anchor_analyser.clone();
         MapIter::new(self.mark, self.node.data.iter(), self.data, anchor_analyser)
-    }
-
-    pub(in super::super) fn access(self) -> impl de::MapAccess<'data, Error = Error> {
-        MapAccess::new(self.mark, self.iter())
     }
 }
 
@@ -180,7 +177,13 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
     }
 }
 
-struct MapAccess<'data, A: AnalyseAnchors<'data>> {
+impl<'data, A: BufferAnchors<'data>> MapView<'data, A> {
+    pub(in super::super) fn access(self) -> impl de::MapAccess<'data, Error = Error> {
+        MapAccess::new(self.mark, self.iter())
+    }
+}
+
+struct MapAccess<'data, A: BufferAnchors<'data>> {
     mark: Mark,
     last: Option<(&'data Name<Box<str>>, usize)>,
     iter: hash_map::Iter<'data, Name<Box<str>>, usize>,
@@ -188,7 +191,7 @@ struct MapAccess<'data, A: AnalyseAnchors<'data>> {
     anchor_analyser: A,
 }
 
-impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> MapAccess<'data, A> {
     fn new(mark: Mark, iter: MapIter<'data, A>) -> Self {
         Self {
             mark,
@@ -215,7 +218,7 @@ impl<'data, A: AnalyseAnchors<'data>> MapAccess<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
