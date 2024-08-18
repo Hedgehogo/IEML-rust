@@ -1,14 +1,15 @@
 use super::super::super::error::*;
 use super::super::buffer_anchors::BufferAnchors;
 use super::*;
-use crate::de::parse::utils::to_value::*;
+use crate::{
+    data::view::type_view::anchor_view::AnchorDeserializer, de::parse::utils::to_value::*,
+};
 use invalid_length::Origin;
 use serde::de::{self, value::UnitDeserializer, VariantAccess};
 
-fn deserialize_number<'data, A, T>(
-    deserializer: View<'data, A>,
-    expected: String,
-) -> Result<T, marked::DeserializeError<CustomError>>
+pub type Result<T> = std::result::Result<T, marked::DeserializeError<CustomError>>;
+
+fn deserialize_number<'data, A, T>(deserializer: View<'data, A>, expected: String) -> Result<T>
 where
     A: AnalyseAnchors<'data>,
     T: ToNumber,
@@ -24,10 +25,10 @@ fn deserialize_type<'data, A, F, T>(
     deserializer: View<'data, A>,
     name: &'static str,
     f: F,
-) -> Result<T, marked::DeserializeError<CustomError>>
+) -> Result<T>
 where
     A: AnalyseAnchors<'data>,
-    F: FnOnce(View<'data, A>) -> Result<T, marked::DeserializeError<CustomError>>,
+    F: FnOnce(View<'data, A>) -> Result<T>,
 {
     let mark = deserializer.mark();
     f(deserializer).map_err(|i| {
@@ -40,7 +41,7 @@ where
 impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> {
     type Error = marked::DeserializeError<CustomError>;
 
-    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -56,7 +57,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         }
     }
 
-    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bool<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -69,7 +70,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_bool(boolean)
     }
 
-    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i8<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -78,7 +79,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_i8(number)
     }
 
-    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -87,7 +88,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_i16(number)
     }
 
-    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -96,7 +97,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_i32(number)
     }
 
-    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -105,7 +106,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_i64(number)
     }
 
-    fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_i128<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -114,7 +115,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_i128(number)
     }
 
-    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -123,7 +124,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_u8(number)
     }
 
-    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u16<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -132,7 +133,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_u16(number)
     }
 
-    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -141,7 +142,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_u32(number)
     }
 
-    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -150,7 +151,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_u64(number)
     }
 
-    fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_u128<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -159,7 +160,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_u128(number)
     }
 
-    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_f32<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -167,7 +168,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_f32(number)
     }
 
-    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_f64<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -175,7 +176,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_f64(number)
     }
 
-    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_char<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -193,28 +194,28 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         }
     }
 
-    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_str<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         visitor.visit_borrowed_str(self.string()?.string())
     }
 
-    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_string<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         visitor.visit_string(self.string()?.string().into())
     }
 
-    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_bytes<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         visitor.visit_borrowed_bytes(self.raw()?.raw().as_bytes())
     }
 
-    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_byte_buf<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -232,7 +233,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         visitor.visit_byte_buf(result)
     }
 
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -275,7 +276,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         })
     }
 
-    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_unit<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -289,11 +290,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         Err(error)
     }
 
-    fn deserialize_unit_struct<V>(
-        self,
-        name: &'static str,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    fn deserialize_unit_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -302,28 +299,28 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         tagged.view().deserialize_unit(visitor)
     }
 
-    fn deserialize_newtype_struct<V>(
-        self,
-        name: &'static str,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         match name.chars().next() {
-            Some('@') => visitor.visit_some(self.anchor()?.deserializer()),
+            Some('@') => match self.anchor() {
+                Ok(i) => visitor.visit_some(i.deserializer()),
+                Err(_) => visitor.visit_some(AnchorDeserializer::new(self.mark(), self, None)),
+            },
+
             _ => deserialize_type(self, name, |i| visitor.visit_newtype_struct(i)),
         }
     }
 
-    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         visitor.visit_seq(self.list()?.access())
     }
 
-    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -342,14 +339,14 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         name: &'static str,
         len: usize,
         visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    ) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         deserialize_type(self, name, |i| i.deserialize_tuple(len, visitor))
     }
 
-    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -377,7 +374,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         name: &'static str,
         _fields: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    ) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -389,7 +386,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         name: &'static str,
         _variants: &'static [&'static str],
         visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    ) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -399,14 +396,14 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
         })
     }
 
-    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
         visitor.visit_borrowed_str(self.raw()?.raw())
     }
 
-    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
+    fn deserialize_ignored_any<V>(self, visitor: V) -> Result<V::Value>
     where
         V: de::Visitor<'data>,
     {
@@ -418,7 +415,7 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for View<'data, A> 
 mod tests {
     use super::*;
     use serde::Deserialize;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, result::Result};
 
     #[test]
     fn test_number() {

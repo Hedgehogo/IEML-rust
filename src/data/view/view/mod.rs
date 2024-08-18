@@ -367,6 +367,16 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             self.make_error(InvalidValueError::new(expected, Some(Box::new(e))))
         })
     }
+
+    /// Gets the id unique for the whole Data.
+    pub fn anchor_analyser(self) -> A {
+        self.anchor_analyser
+    }
+
+    /// Gets the id unique for the whole Data.
+    pub fn id(&self) -> usize {
+        self.node as *const _ as usize
+    }
 }
 
 impl<'data, A: AnalyseAnchors<'data>> Debug for View<'data, A> {
@@ -381,7 +391,7 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for View<'data, A> {
     }
 }
 
-mod deserializer;
+pub mod deserializer;
 
 #[cfg(test)]
 mod tests;

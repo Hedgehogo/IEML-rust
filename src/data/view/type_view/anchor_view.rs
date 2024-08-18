@@ -87,23 +87,29 @@ impl<'data, A: AnalyseAnchors<'data>> fmt::Debug for AnchorView<'data, A> {
 }
 
 impl<'data, A: BufferAnchors<'data>> AnchorView<'data, A> {
-    pub(in super::super) fn deserializer(self) -> Deserializer<'data, A> {
-        Deserializer::new(self)
+    pub(in super::super) fn deserializer(self) -> AnchorDeserializer<'data, A> {
+        AnchorDeserializer::new(self.mark, self.view(), Some(self.name().as_str()))
     }
 }
 
-pub(in super::super) struct Deserializer<'data, A: BufferAnchors<'data>> {
-    anchor: AnchorView<'data, A>,
+pub(in super::super) struct AnchorDeserializer<'data, A: BufferAnchors<'data>> {
+    mark: Mark,
+    view: View<'data, A>,
+    name: Option<&'data str>,
 }
 
-impl<'data, A: BufferAnchors<'data>> Deserializer<'data, A> {
-    fn new(anchor: AnchorView<'data, A>) -> Self {
-        Self { anchor }
+impl<'data, A: BufferAnchors<'data>> AnchorDeserializer<'data, A> {
+    pub(in super::super) fn new(
+        mark: Mark,
+        view: View<'data, A>,
+        name: Option<&'data str>,
+    ) -> Self {
+        Self { mark, view, name }
     }
 
     fn error(self) -> marked::DeserializeError<CustomError> {
         let custom_error = CustomError::new("incorrect access to the anchor".into());
-        marked::DeserializeError::new(self.anchor.mark(), custom_error.into())
+        marked::DeserializeError::new(self.mark, custom_error.into())
     }
 }
 
@@ -120,30 +126,24 @@ macro_rules! impl_error_deserialize {
     };
 }
 
-impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for Deserializer<'data, A> {
+impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for AnchorDeserializer<'data, A> {
     type Error = marked::DeserializeError<CustomError>;
 
-    fn deserialize_newtype_struct<V>(
-        self,
-        name: &'static str,
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'data>,
     {
-        let anchor_analyser = self.anchor.anchor_analyser.clone();
-        let id = anchor_analyser.entry(name, self.anchor)?;
-        visitor.visit_u128(id as u128)
+        A::entry(self.view, self.name, visitor)
     }
-    
+
     impl_error_deserialize!(
-        deserialize_any(), 
+        deserialize_any(),
         deserialize_bool(),
         deserialize_i8(),
         deserialize_i16(),
         deserialize_i32(),
         deserialize_i64(),
-        deserialize_i128(), 
+        deserialize_i128(),
         deserialize_u8(),
         deserialize_u16(),
         deserialize_u32(),
@@ -156,9 +156,9 @@ impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for Deserializer<'d
         deserialize_string(),
         deserialize_bytes(),
         deserialize_byte_buf(),
-        deserialize_option(),
         deserialize_unit(),
         deserialize_unit_struct(_name: &'static str),
+        deserialize_newtype_struct(_name: &'static str),
         deserialize_seq(),
         deserialize_tuple(_len: usize),
         deserialize_tuple_struct(_name: &'static str, _len: usize),
