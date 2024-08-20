@@ -196,11 +196,19 @@ pub fn parse_number_scientific<T: ToNumber>(input: &str) -> Option<(&str, T)> {
     let mut chars = new_input.chars();
     match chars.next() {
         Some('e') => {
-            let (new_input, (exponent, _)) = parse_number_radix::<isize>(chars.as_str())?;
-            T::parse_exponent(number, exponent, radix).map(|i| (new_input, i))
+            let new_input = chars.as_str();
+            match chars.next() {
+                Some('0'..='9' | '-') => {
+                    let (new_input, (exponent, _)) = parse_number_radix::<isize>(new_input)?;
+                    let number = T::parse_exponent(number, exponent, radix)?;
+                    return Some((new_input, number));
+                }
+                _ => {}
+            }
         }
-        _ => Some((new_input, number)),
+        _ => {}
     }
+    Some((new_input, number))
 }
 
 impl_parse_number!(
@@ -277,15 +285,19 @@ mod tests {
 
     #[test]
     fn test_parse_number_scientific() {
-        assert_eq!(parse_number_scientific::<i32>("120").unwrap().1, 120);
-        assert_eq!(parse_number_scientific::<f32>("2'101.1").unwrap().1, 5.5);
+        assert_eq!(parse_number_scientific::<i32>("120"), Some(("", 120)));
+        assert_eq!(parse_number_scientific::<f32>("2'101.1"), Some(("", 5.5)));
         assert_eq!(
-            parse_number_scientific::<i32>("120e2'10").unwrap().1,
-            12_000
+            parse_number_scientific::<i32>("120e2'10"),
+            Some(("", 12_000))
         );
         assert_eq!(
-            parse_number_scientific::<f32>("2'101.1e-3").unwrap().1,
-            0.6875
+            parse_number_scientific::<f32>("2'101.1e-3"),
+            Some(("", 0.6875))
+        );
+        assert_eq!(
+            parse_number_scientific::<f32>("2'101.1edit"),
+            Some(("edit", 5.5))
         );
     }
 
