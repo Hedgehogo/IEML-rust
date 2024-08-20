@@ -1,5 +1,5 @@
 use super::combinator::parse::skip_blank_line;
-pub use super::number::*;
+pub use super::to_number::*;
 use nom::{bytes::complete::*, combinator::value, *};
 
 pub fn to_bool(input: &str) -> Option<bool> {
