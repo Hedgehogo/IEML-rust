@@ -19,7 +19,7 @@ pub enum ErrorKind {
     NonexistentDocument,
 }
 
-pub type MakeError = error::Error<ErrorKind>;
+pub type Error = error::Error<ErrorKind>;
 
 impl Display for ErrorKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

@@ -1,8 +1,8 @@
-//! Deserialize IEML input to a IEML data structure.
+//! Deserialize an IEML input to an IEML data structure.
 
 pub mod cursor;
 pub mod error;
-pub mod from;
+pub mod parse_with;
 pub(crate) mod name;
 pub(crate) mod parse_alternative;
 pub(crate) mod parse_complete;
@@ -13,6 +13,7 @@ pub mod read_source;
 pub mod utils;
 
 pub use error::{marked::*, ErrorKind};
+pub use parse_with::{parse_with_reader, parse_with_reader_and_anchors};
 
 #[cfg(test)]
 mod test_utils {

@@ -6,4 +6,4 @@ pub mod data;
 pub mod de;
 pub mod error;
 
-pub use de::{from_source, from_source_with_anchors};
+pub use de::{from_source, from_source_advanced};

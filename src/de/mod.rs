@@ -1,5 +1,6 @@
-//! Deserialize IEML input to a Rust data structure.
+//! Deserialize an IEML input to a Rust data structure.
 
+pub mod from;
 pub mod parse;
 
-pub use parse::from::{from_source, from_source_with_anchors};
+pub use from::*;

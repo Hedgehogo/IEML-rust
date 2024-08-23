@@ -416,14 +416,15 @@ mod tests {
     use super::*;
     use serde::Deserialize;
     use std::{collections::HashMap, result::Result};
+    use crate::de::parse::parse_with_reader;
 
     #[test]
     fn test_number() {
-        let data = crate::from_source("10").unwrap();
+        let data = parse_with_reader("10").unwrap();
         let result = i32::deserialize(data.view());
         assert_eq!(result, Ok(10));
 
-        let data = crate::from_source("hello").unwrap();
+        let data = parse_with_reader("hello").unwrap();
         let result = i32::deserialize(data.view());
         assert_eq!(
             result,
@@ -437,11 +438,11 @@ mod tests {
 
     #[test]
     fn test_char() {
-        let data = crate::from_source("> h").unwrap();
+        let data = parse_with_reader("> h").unwrap();
         let result = char::deserialize(data.view());
         assert_eq!(result, Ok('h'));
 
-        let data = crate::from_source("> hello").unwrap();
+        let data = parse_with_reader("> hello").unwrap();
         let result = char::deserialize(data.view());
         assert_eq!(
             result,
@@ -455,11 +456,11 @@ mod tests {
 
     #[test]
     fn test_str() {
-        let data = crate::from_source("> hello").unwrap();
+        let data = parse_with_reader("> hello").unwrap();
         let result = <&str>::deserialize(data.view());
         assert_eq!(result, Ok("hello"));
 
-        let data = crate::from_source("hello").unwrap();
+        let data = parse_with_reader("hello").unwrap();
         let result = <&str>::deserialize(data.view());
         assert_eq!(
             result,
@@ -478,11 +479,11 @@ mod tests {
 
     #[test]
     fn test_option() {
-        let data = crate::from_source("= Some: 42").unwrap();
+        let data = parse_with_reader("= Some: 42").unwrap();
         let result = Option::<u8>::deserialize(data.view());
         assert_eq!(result, Ok(Some(42)));
 
-        let data = crate::from_source("Some").unwrap();
+        let data = parse_with_reader("Some").unwrap();
         let result = Option::<u8>::deserialize(data.view());
         assert_eq!(
             result,
@@ -500,11 +501,11 @@ mod tests {
 
     #[test]
     fn test_seq() {
-        let data = crate::from_source("[0, 2, 67]").unwrap();
+        let data = parse_with_reader("[0, 2, 67]").unwrap();
         let result = Vec::<u8>::deserialize(data.view());
         assert_eq!(result, Ok(vec![0, 2, 67]));
 
-        let data = crate::from_source("[0, 2, 457]").unwrap();
+        let data = parse_with_reader("[0, 2, 457]").unwrap();
         let result = Vec::<u8>::deserialize(data.view());
         assert_eq!(
             result,
@@ -518,11 +519,11 @@ mod tests {
 
     #[test]
     fn test_tuple() {
-        let data = crate::from_source("[2, 67]").unwrap();
+        let data = parse_with_reader("[2, 67]").unwrap();
         let result = <(u8, u8)>::deserialize(data.view());
         assert_eq!(result, Ok((2, 67)));
 
-        let data = crate::from_source("[0, 2, 457]").unwrap();
+        let data = parse_with_reader("[0, 2, 457]").unwrap();
         let result = <(u8, u8)>::deserialize(data.view());
         assert_eq!(
             result,
@@ -537,14 +538,14 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let data = crate::from_source("first: 42\nsecond: 15").unwrap();
+        let data = parse_with_reader("first: 42\nsecond: 15").unwrap();
         let result = HashMap::<String, i32>::deserialize(data.view());
         assert_eq!(
             result,
             Ok(HashMap::from([("first".into(), 42), ("second".into(), 15)]))
         );
 
-        let data = crate::from_source(r#"[["first", 42], ["second"]]"#).unwrap();
+        let data = parse_with_reader(r#"[["first", 42], ["second"]]"#).unwrap();
         let result = HashMap::<String, i32>::deserialize(data.view());
         assert_eq!(
             result,
@@ -565,11 +566,11 @@ mod tests {
 
     #[test]
     fn test_struct() {
-        let data = crate::from_source("field: 42").unwrap();
+        let data = parse_with_reader("field: 42").unwrap();
         let result = TestStruct::deserialize(data.view());
         assert_eq!(result, Ok(TestStruct { field: 42 }));
 
-        let data = crate::from_source("key: \n\tfield: 42\n\tkey: 15").unwrap();
+        let data = parse_with_reader("key: \n\tfield: 42\n\tkey: 15").unwrap();
         let view = data.view().map().unwrap().get("key").unwrap();
         let result = TestStruct::deserialize(view);
         assert_eq!(
@@ -588,11 +589,11 @@ mod tests {
 
     #[test]
     fn test_enum() {
-        let data = crate::from_source("= Ok: 42").unwrap();
+        let data = parse_with_reader("= Ok: 42").unwrap();
         let result = Result::<u8, u8>::deserialize(data.view());
         assert_eq!(result, Ok(Ok(42)));
 
-        let data = crate::from_source("key: 15").unwrap();
+        let data = parse_with_reader("key: 15").unwrap();
         let view = data.view().map().unwrap().get("key").unwrap();
         let result = Result::<u8, u8>::deserialize(view);
         assert_eq!(

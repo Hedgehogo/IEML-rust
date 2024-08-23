@@ -68,7 +68,8 @@ mod tests {
         analyse_anchors::AnalyseAnchors, buffer_anchors::BufferAnchors, deserializer::Result,
         view::View,
     };
-    use crate::from_source;
+    use crate::de::parse::parse_with_reader;
+    use indoc::indoc;
     use serde::Deserialize;
     use std::{any::type_name, cell::RefCell, collections::hash_map::HashMap};
 
@@ -121,7 +122,7 @@ mod tests {
     fn test() {
         let buffer = TestBuffer::new(HashMap::new());
         let bufferiser = TestBufferiser::new(&buffer);
-        let data = from_source("@anchor: > Hello").unwrap();
+        let data = parse_with_reader("@anchor: > Hello").unwrap();
         let view = data.view_with_analyse(bufferiser);
         let result = AnchorId::<String>::deserialize(view).unwrap();
 
@@ -130,15 +131,15 @@ mod tests {
 
     #[test]
     fn test_multi() {
-        let input = r#"
-- @anchor: > Value
-- @anchor
-- > No anchor
-"#;
+        let input = indoc! {"
+            - @anchor: > Value
+            - @anchor
+            - > No anchor
+        "};
 
         let buffer = TestBuffer::new(HashMap::new());
         let bufferiser = TestBufferiser::new(&buffer);
-        let data = from_source(input).unwrap();
+        let data = parse_with_reader(input).unwrap();
         let view = data.view_with_analyse(bufferiser);
         let result = <[AnchorId<String>; 3]>::deserialize(view).unwrap();
 

@@ -8,23 +8,23 @@ use std::path::Path;
 pub type AnchorsResult<'maker> =
     Result<make::MapToken<'maker>, RateError<'maker, ErrorKind, make::MapToken<'maker>>>;
 
-/// Creates Data using a source reader (implements [`ReadSource`]).
+/// Creates [`Data`] using a source reader (implements [`ReadSource`]).
 /// Accepts a closure that generates external anchors that will be available in the document.
 ///
 /// # Arguments
 /// * `reader` The source reader.
-/// * `anchors` The closure that generates external anchors.
+/// * `anchors` The closure that generates external anchors. (More information in [`make_document`][crate::data::make::combinator::make_document])
 ///
 /// *Note*: The source reader can access the document system.
 ///
 /// # Example
 ///
 /// ```rust
-/// use serde_ieml::from_source_with_anchors;
+/// use serde_ieml::de::parse::parse_with_reader_and_anchors;
 /// use serde_ieml::data::name::Name;
 /// use serde_ieml::data::make;
 ///
-/// let data = from_source_with_anchors("@anchor", |token| {
+/// let data = parse_with_reader_and_anchors("@anchor", |token| {
 ///     let (token, _) = token.add(
 ///         Default::default(),
 ///         Name::new("anchor").unwrap(),
@@ -37,7 +37,7 @@ pub type AnchorsResult<'maker> =
 /// assert_eq!(anchor_view.name().as_str(), "anchor");
 /// assert!(anchor_view.view().is_null());
 /// ```
-pub fn from_source_with_anchors<R: ReadSource + ?Sized, A>(
+pub fn parse_with_reader_and_anchors<R: ReadSource + ?Sized, A>(
     reader: &R,
     anchors: A,
 ) -> Result<Data, Error>
@@ -72,20 +72,20 @@ where
 /// # Arguments
 /// * `reader` The source reader.
 ///
-/// *Note*: The source reader can access the document system. A more generic version of this function is [`from_source_with_anchors`].
+/// *Note*: The source reader can access the document system. A more generic version of this function is [`parse_with_reader_and_anchors`].
 ///
 /// # Example
 ///
 /// ```rust
-/// use serde_ieml::from_source;
+/// use serde_ieml::de::parse::parse_with_reader;
 /// use serde_ieml::data::make;
 ///
-/// let data = from_source("> hello").unwrap();
+/// let data = parse_with_reader("> hello").unwrap();
 /// 
 /// assert_eq!(data.view().string().unwrap().string(), "hello");
 /// ```
-pub fn from_source<R: ReadSource + ?Sized>(reader: &R) -> Result<Data, Error> {
-    from_source_with_anchors(reader, |token| Ok(token))
+pub fn parse_with_reader<R: ReadSource + ?Sized>(reader: &R) -> Result<Data, Error> {
+    parse_with_reader_and_anchors(reader, |token| Ok(token))
 }
 
 #[cfg(test)]
@@ -97,7 +97,7 @@ mod tests {
     fn test_from_source() {
         let begin_mark = Default::default();
 
-        let data = from_source("> hello").unwrap();
+        let data = parse_with_reader("> hello").unwrap();
 
         let result_f = make::string::<_, ErrorKind, _>(begin_mark, (), "hello");
         let (result, _) = make::make(begin_mark, result_f).unwrap();

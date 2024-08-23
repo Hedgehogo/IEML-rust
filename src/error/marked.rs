@@ -29,7 +29,7 @@ impl<E: Debug + Display> Error for MarkedError<E> {}
 
 // Add after specializations appear
 /*impl<F, I: From<F>> From<WithMarkError<F>> for WithMarkError<I> {
-    fn from(value: WithMarkError<F>) -> Self {
+    default fn from(value: WithMarkError<F>) -> Self {
         WithMarkError::new(value.mark, value.data.into())
     }
 }*/
