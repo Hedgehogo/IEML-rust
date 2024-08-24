@@ -11,7 +11,7 @@ use super::{
     init::init,
     maker::Maker,
 };
-use std::{error::Error, path::PathBuf};
+use std::error::Error;
 
 pub use super::maker::{ListToken, MapToken, Token};
 
@@ -295,13 +295,13 @@ where
 /// let mark = Default::default();
 /// let (data, _) = make::make::<_, Infallible, _>(mark, make::document(
 ///     mark,
-///     Path::new("test.ieml").to_path_buf(),
+///     "test.ieml".into(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// )).unwrap();
 ///
 /// let document_view = data.view().clear_step_document().unwrap().document().unwrap();
-/// assert_eq!(document_view.path(), Path::new("test.ieml"));
+/// assert_eq!(document_view.path(), "test.ieml");
 ///
 /// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
@@ -309,7 +309,7 @@ where
 /// ```
 pub fn document<O, E, F, A>(
     begin_mark: Mark,
-    path: PathBuf,
+    path: String,
     anchors: A,
     f: F,
 ) -> impl FnOnce(Token) -> marked::Result<O, E>
@@ -477,7 +477,7 @@ where
     E: Error + PartialEq + Eq,
     F: FnOnce(Token) -> marked::Result<O, E>,
 {
-    let mut maker = Maker::new(PathBuf::new());
+    let mut maker = Maker::new(String::new());
 
     let result = Token::new(&mut maker).child(|token| {
         f(token).map(|(used_token, output)| {
@@ -542,13 +542,13 @@ where
 /// let mark = Default::default();
 /// let (data, _) = make::make_document::<_, Infallible, _, _>(
 ///     mark,
-///     Path::new("test.ieml").to_path_buf(),
+///     "test.ieml".into(),
 ///     |token| token.add(mark, Name::new("anchor").unwrap(), make::null(mark, ())),
 ///     make::null(mark, ()),
 /// ).unwrap();
 ///
 /// let document_view = data.view().document().unwrap();
-/// assert_eq!(document_view.path(), Path::new("test.ieml"));
+/// assert_eq!(document_view.path(), "test.ieml");
 ///
 /// let anchors = document_view.anchors().document_anchors();
 /// assert_eq!(anchors.len(), 1);
@@ -556,7 +556,7 @@ where
 /// ```
 pub fn make_document<O, E, F, A>(
     begin_mark: Mark,
-    path: PathBuf,
+    path: String,
     anchors: A,
     f: F,
 ) -> Result<(Data, O), marked::Error<E>>
@@ -711,7 +711,7 @@ mod tests {
         assert_eq!(clear_view.node_type(), NodeType::Document);
         assert_eq!(
             clear_view.document().unwrap().path(),
-            PathBuf::from("dir/name.ieml").as_path()
+            "dir/name.ieml"
         );
 
         let anchors = clear_view.document().unwrap().anchors().document_anchors();

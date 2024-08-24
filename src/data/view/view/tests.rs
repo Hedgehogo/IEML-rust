@@ -3,12 +3,12 @@ use super::super::super::{
     node::node::{AnchorNode, DocumentNode, ListNode, MapNode, MarkedNode, Node, TaggedNode},
 };
 use super::*;
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 fn test_data() -> Data {
     let name = |i: &str| Name::new(i.into()).unwrap();
     Data::new([
-        MarkedNode::new(Node::Null, Mark { line: 2, symbol: 5 }),
+        MarkedNode::new(Node::Null, Mark::new(2, 5)),
         MarkedNode::new(Node::Raw("hello".into()), Default::default()),
         MarkedNode::new(Node::String("hello".into()), Default::default()),
         MarkedNode::new(Node::List(ListNode::new(vec![0, 1])), Default::default()),
@@ -27,7 +27,7 @@ fn test_data() -> Data {
         MarkedNode::new(
             Node::Document(DocumentNode {
                 node_index: 5,
-                path: PathBuf::from("dir/name.ieml"),
+                path: "dir/name.ieml".into(),
                 anchors: Default::default(),
                 document_anchors: Default::default(),
                 parent: None,
@@ -416,7 +416,7 @@ fn test_anchor_creation() {
 
     assert!(view.tagged().is_err());
     assert!(view.document().is_err());
-    
+
     if let Node::Anchor(node) = &data.get(7).node {
         assert_eq!(
             view.anchor(),
@@ -448,7 +448,7 @@ fn test_anchor_request() {
     assert!(view.raw().is_err());
     assert!(view.string().is_err());
     assert!(view.list().is_err());
-    
+
     if let Node::Map(node) = &data.get(4).node {
         assert_eq!(
             view.map(),
@@ -460,7 +460,7 @@ fn test_anchor_request() {
 
     assert!(view.tagged().is_err());
     assert!(view.document().is_err());
-    
+
     if let Node::Anchor(node) = &data.get(8).node {
         assert_eq!(
             view.anchor(),

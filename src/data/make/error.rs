@@ -1,9 +1,7 @@
 //! Type definition [`Error`]
 
-use std::fmt::{Display, Formatter};
-use std::path::PathBuf;
-
 use super::super::name::Name;
+use std::fmt::{Display, Formatter};
 
 /// Type of error kind returned by the combinator system to create Data.
 #[derive(PartialEq, Eq, Debug)]
@@ -41,20 +39,20 @@ impl<E: std::error::Error + PartialEq + Eq> From<E> for ErrorKind<E> {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Error<E: std::error::Error + PartialEq + Eq> {
     /// Path to the document in which the error occurred.
-    pub path: PathBuf,
+    pub path: String,
     /// Error kind.
     pub kind: ErrorKind<E>,
 }
 
 impl<E: std::error::Error + PartialEq + Eq> Error<E> {
-    pub fn new(path: PathBuf, kind: ErrorKind<E>) -> Self {
+    pub fn new(path: String, kind: ErrorKind<E>) -> Self {
         Self { path, kind }
     }
 }
 
 impl<E: std::error::Error + PartialEq + Eq> Display for Error<E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if !self.path.as_os_str().is_empty() {
+        if !self.path.is_empty() {
             write!(
                 f,
                 "Failed to parse the data in the document {:?}. {}",
@@ -105,9 +103,8 @@ where
 pub mod marked {
     use super::super::{
         super::{error::marked::MarkedError, mark::Mark},
-        maker::{ListToken, MapToken, Token, UsedToken, ErrorToken},
+        maker::{ErrorToken, ListToken, MapToken, Token, UsedToken},
     };
-    use std::path::PathBuf;
     use std::result;
 
     pub type Error<E> = MarkedError<super::Error<E>>;
@@ -126,7 +123,7 @@ pub mod marked {
     impl<E: std::error::Error + PartialEq + Eq> Error<E> {
         pub fn new_with<P, R>(mark: Mark, path: P, kind: R) -> Self
         where
-            P: Into<PathBuf>,
+            P: Into<String>,
             R: Into<super::ErrorKind<E>>,
         {
             Self::new(mark, super::Error::new(path.into(), kind.into()))

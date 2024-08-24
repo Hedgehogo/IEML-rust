@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
     parse_node::parse_node,
@@ -15,14 +13,14 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn lex_special<'input>(
-    path: &'input Path,
+fn lex_special<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     error_kind: ErrorKind,
 ) -> LexResult<'input, ()> {
     match tuple((char('-'), skip_space))(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
-        Err(_) => Err(Error::new_with(cursor.mark, path, error_kind)),
+        Err(_) => Err(Error::new_with(cursor.mark, reader.path(), error_kind)),
     }
 }
 
@@ -32,7 +30,7 @@ fn parse_list_item<'input, R: ReadSource + ?Sized>(
     indent: usize,
     error_kind: ErrorKind,
 ) -> impl FnOnce(make::ListToken) -> ListResult<'_, 'input> {
-    move |token| match lex_special(reader.path(), cursor, error_kind) {
+    move |token| match lex_special(reader, cursor, error_kind) {
         Ok((cursor, _)) => token.add(parse_node(reader, cursor, indent + 1)),
         Err(error) => Err(RateError::Recoverable((token, error))),
     }
@@ -96,17 +94,19 @@ pub(crate) fn parse_list<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use crate::data::mark::Mark;
-
     use super::*;
+
+    use crate::data::mark::Mark;
+    use std::path::Path;
 
     #[test]
     fn test_parse_list_one() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "- null";
-            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 6)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -117,7 +117,7 @@ mod tests {
         }
         {
             let input = "- null\n\t\t- null";
-            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\t- null", Mark::new(0, 6)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -128,7 +128,7 @@ mod tests {
         }
         {
             let input = "-null";
-            let data_f = parse_list_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list_one(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -144,10 +144,11 @@ mod tests {
     #[test]
     fn test_parse_list() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "- null";
-            let data_f = parse_list(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 6)).into();
             let result_f = make::list(begin_mark, |token| {
@@ -158,7 +159,7 @@ mod tests {
         }
         {
             let input = "- null\n\t\t- > hello";
-            let data_f = parse_list(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 11)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -171,7 +172,7 @@ mod tests {
         }
         {
             let input = "- null\n# hello\n\t\t- > hello";
-            let data_f = parse_list(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(2, 11)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -184,7 +185,7 @@ mod tests {
         }
         {
             let input = "- null\n# hello\n\t\t-> hello";
-            let data_f = parse_list(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -197,7 +198,7 @@ mod tests {
         }
         {
             let input = "-null";
-            let data_f = parse_list(path, (input, begin_mark).into(), 2);
+            let data_f = parse_list(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),

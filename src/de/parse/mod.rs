@@ -2,12 +2,12 @@
 
 pub mod cursor;
 pub mod error;
-pub mod parse_with;
 pub(crate) mod name;
 pub(crate) mod parse_alternative;
 pub(crate) mod parse_complete;
 pub(crate) mod parse_node;
 pub(crate) mod parse_scalar;
+pub mod parse_with;
 pub(crate) mod primitive;
 pub mod read_source;
 pub mod utils;
@@ -17,7 +17,7 @@ pub use parse_with::{parse_with_reader, parse_with_reader_and_anchors};
 
 #[cfg(test)]
 mod test_utils {
-    use std::{collections::HashMap, path::Path};
+    use std::collections::HashMap;
 
     use crate::data::{make, name::Name};
     use cursor::Cursor;
@@ -25,16 +25,16 @@ mod test_utils {
 
     use super::*;
 
-    pub(super) type Documents<'path> = HashMap<&'path Path, String>;
+    pub(super) type Documents<'path> = HashMap<&'path str, String>;
 
     #[derive(Clone)]
     pub(super) struct Reader<'documents, 'path> {
         documents: &'documents Documents<'path>,
-        path: &'path Path,
+        path: &'path str,
     }
 
     impl<'documents, 'path> Reader<'documents, 'path> {
-        pub(super) fn new(documents: &'documents Documents<'path>, path: &'path Path) -> Self {
+        pub(super) fn new(documents: &'documents Documents<'path>, path: &'path str) -> Self {
             Self { documents, path }
         }
     }
@@ -59,7 +59,7 @@ mod test_utils {
         fn read_child<'maker, F, R>(
             &self,
             token: make::Token<'maker>,
-            path: &Path,
+            path: &str,
             f: F,
         ) -> ReadResult<'maker, R>
         where
@@ -75,8 +75,8 @@ mod test_utils {
             }
         }
 
-        fn path(&self) -> &Path {
-            &self.path
+        fn path(&self) -> String {
+            self.path.into()
         }
     }
 

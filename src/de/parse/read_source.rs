@@ -31,13 +31,13 @@ pub trait ReadSource {
     fn read_child<'maker, F, T>(
         &self,
         token: Token<'maker>,
-        path: &Path,
+        path: &str,
         f: F,
     ) -> ReadResult<'maker, T>
     where
         F: for<'input> FnOnce(Token<'maker>, &Self::Child, Cursor<'input>) -> T;
 
-    fn path(&self) -> &Path;
+    fn path(&self) -> String;
 }
 
 impl ReadSource for Path {
@@ -56,13 +56,13 @@ impl ReadSource for Path {
     fn read_child<'maker, F, T>(
         &self,
         token: Token<'maker>,
-        path: &Path,
+        path: &str,
         f: F,
     ) -> ReadResult<'maker, T>
     where
         F: for<'input> FnOnce(Token<'maker>, &Self::Child, Cursor<'input>) -> T,
     {
-        match read_document(self, path) {
+        match read_document(self, Path::new(path)) {
             Some((path, content)) => {
                 let cursor = (content.as_str(), Default::default()).into();
                 Ok(f(token, path.as_path(), cursor))
@@ -71,8 +71,8 @@ impl ReadSource for Path {
         }
     }
 
-    fn path(&self) -> &Path {
-        self
+    fn path(&self) -> String {
+        self.as_os_str().to_string_lossy().to_string()
     }
 }
 
@@ -89,16 +89,16 @@ impl ReadSource for str {
     fn read_child<'maker, F, T>(
         &self,
         token: Token<'maker>,
-        path: &Path,
+        path: &str,
         f: F,
     ) -> ReadResult<'maker, T>
     where
         F: for<'input> FnOnce(Token<'maker>, &Self::Child, Cursor<'input>) -> T,
     {
-        path.read_source(token, |token, cursor| f(token, path, cursor))
+        path.read_source(token, |token, cursor| f(token, Path::new(path), cursor))
     }
 
-    fn path(&self) -> &Path {
-        Path::new("")
+    fn path(&self) -> String {
+        "".into()
     }
 }

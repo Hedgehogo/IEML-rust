@@ -20,7 +20,7 @@ pub(crate) fn parse_node_on_own_line<'input, R: ReadSource + ?Sized>(
         |reader, cursor, _indent, token| parse_short_list(reader, cursor)(token),
         |reader, cursor, indent, token| parse_list(reader, cursor, indent)(token),
         |reader, cursor, indent, token| parse_map(reader, cursor, indent)(token),
-        |reader, cursor, indent, token| parse_scalar(reader.path(), cursor, indent)(token),
+        |reader, cursor, indent, token| parse_scalar(reader, cursor, indent)(token),
     ];
 
     parse_alternative(reader, cursor, indent, parsers.into_iter())
@@ -43,7 +43,7 @@ pub(crate) fn parse_node<'input, R: ReadSource + ?Sized>(
             |reader, cursor, _indent, token| parse_short_list(reader, cursor)(token),
             |reader, cursor, indent, token| parse_list_one(reader, cursor, indent)(token),
             |reader, cursor, indent, token| parse_map_one(reader, cursor, indent)(token),
-            |reader, cursor, indent, token| parse_scalar(reader.path(), cursor, indent)(token),
+            |reader, cursor, indent, token| parse_scalar(reader, cursor, indent)(token),
         ];
 
         match skip_whitespace(cursor) {
@@ -55,21 +55,22 @@ pub(crate) fn parse_node<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use crate::{
         data::mark::Mark,
         de::parse::{test_utils::*, Error, ErrorKind},
     };
     use std::path::Path;
 
-    use super::*;
-
     #[test]
     fn test_parse_node() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "null # hello";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 12)).into();
             let result_f = make::null::<_, ErrorKind>(begin_mark, result_output);
@@ -78,7 +79,7 @@ mod tests {
         }
         {
             let input = "- null # hello\n\t\t- null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\t- null", Mark::new(0, 14)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -89,7 +90,7 @@ mod tests {
         }
         {
             let input = "[null, null]";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 12)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -102,7 +103,7 @@ mod tests {
         }
         {
             let input = "first: null # hello\n\t\tsecond: null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\tsecond: null", Mark::new(0, 19)).into();
             let result_f = make::map::<_, ErrorKind, _>(begin_mark, |token| {
@@ -117,7 +118,7 @@ mod tests {
         }
         {
             let input = "= tag: null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 11)).into();
             let result_f = make::tagged::<_, ErrorKind, _, _>(
@@ -130,17 +131,17 @@ mod tests {
         }
         {
             let documents = Documents::from([
-                (Path::new("test.ieml"), "< subtest\n\t\tanchor: null".into()),
-                (Path::new("subtest"), "null".into()),
+                ("test.ieml", "< subtest\n\t\tanchor: null".into()),
+                ("subtest", "null".into()),
             ]);
             let reader = Reader::new(&documents, path);
-            let input = documents.get(reader.path()).unwrap().as_str();
+            let input = documents.get(reader.path().as_str()).unwrap().as_str();
             let data_f = parse_node(&reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
             let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
-                Path::new("subtest").into(),
+                "subtest".into(),
                 |token| {
                     let mark = Mark::new(1, 10);
                     token.add(mark, name("anchor"), make::null(mark, result_output))
@@ -152,7 +153,7 @@ mod tests {
         }
         {
             let input = "@anchor: null\nhello";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(0, 13)).into();
             let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
@@ -163,11 +164,9 @@ mod tests {
             let result = make::make(begin_mark, result_f).unwrap();
             assert_eq!(data, result);
         }
-        let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
         {
             let input = "\n\t\tnull # hello";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
             let result_f = make::null::<_, ErrorKind>(Mark::new(1, 2), result_output);
@@ -176,7 +175,7 @@ mod tests {
         }
         {
             let input = "\n\t\t- null # hello\n\t\t- null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(2, 8)).into();
             let result_f = make::list::<_, ErrorKind, _>(Mark::new(1, 2), |token| {
@@ -189,7 +188,7 @@ mod tests {
         }
         {
             let input = "\n\t\t[null, null]";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
             let result_f = make::list::<_, ErrorKind, _>(Mark::new(1, 2), |token| {
@@ -202,7 +201,7 @@ mod tests {
         }
         {
             let input = "\n\t\tfirst: null # hello\n\t\tsecond: null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(2, 14)).into();
             let result_f = make::map::<_, ErrorKind, _>(Mark::new(1, 2), |token| {
@@ -223,7 +222,7 @@ mod tests {
         }
         {
             let input = "\n\t\t= tag: null";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(1, 13)).into();
             let result_f = make::tagged::<_, ErrorKind, _, _>(
@@ -236,20 +235,17 @@ mod tests {
         }
         {
             let documents = Documents::from([
-                (
-                    Path::new("test.ieml"),
-                    "\n\t\t< subtest\n\t\tanchor: null".into(),
-                ),
-                (Path::new("subtest"), "null".into()),
+                ("test.ieml", "\n\t\t< subtest\n\t\tanchor: null".into()),
+                ("subtest", "null".into()),
             ]);
             let reader = Reader::new(&documents, path);
-            let input = documents.get(reader.path()).unwrap().as_str();
+            let input = documents.get(reader.path().as_str()).unwrap().as_str();
             let data_f = parse_node(&reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(2, 14)).into();
             let result_f = make::document::<_, ErrorKind, _, _>(
                 Mark::new(1, 2),
-                Path::new("subtest").into(),
+                "subtest".into(),
                 |token| {
                     let mark = Mark::new(2, 10);
                     token.add(mark, name("anchor"), make::null(mark, result_output))
@@ -261,7 +257,7 @@ mod tests {
         }
         {
             let input = "\n\t\t@anchor: null\nhello";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(1, 15)).into();
             let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
@@ -274,7 +270,7 @@ mod tests {
         }
         {
             let input = "<hello";
-            let data_f = parse_node(path, (input, begin_mark).into(), 2);
+            let data_f = parse_node(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),

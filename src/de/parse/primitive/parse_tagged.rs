@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor, name::name, parse_node::parse_node, read_source::ReadSource,
     utils::combinator::cursor::char,
@@ -10,18 +8,18 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn lex_tag<'input>(
-    path: &'input Path,
+fn lex_tag<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, Name<&'input str>> {
     match tuple((char('='), char(' ')))(cursor) {
         Ok((cursor, _)) => {
-            let (cursor, (result, _)) = name(path, cursor, false)?;
+            let (cursor, (result, _)) = name(reader, cursor, false)?;
             Ok((cursor, result))
         }
         Err(_) => {
             let error_kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, error_kind))
+            Err(Error::new_with(cursor.mark, reader.path(), error_kind))
         }
     }
 }
@@ -31,7 +29,7 @@ pub(crate) fn parse_tagged<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_tag(reader.path(), cursor) {
+    move |token| match lex_tag(reader, cursor) {
         Ok((new_cursor, tag)) => {
             let f = parse_node(reader, new_cursor, indent);
             make::tagged(cursor.mark, tag, f)(token)
@@ -42,20 +40,22 @@ pub(crate) fn parse_tagged<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use crate::{
         data::mark::Mark,
         de::parse::{test_utils::name, Error, ErrorKind},
     };
-
-    use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_parse_tagged() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "= tag: null";
-            let data_f = parse_tagged(path, (input, begin_mark).into(), 2);
+            let data_f = parse_tagged(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 11)).into();
             let result_f = make::tagged::<_, ErrorKind, _, _>(
@@ -68,7 +68,7 @@ mod tests {
         }
         {
             let input = "= : null\n\t\thello";
-            let data_f = parse_tagged(path, (input, begin_mark).into(), 2);
+            let data_f = parse_tagged(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\thello", Mark::new(0, 8)).into();
             let result_f = make::tagged::<_, ErrorKind, _, _>(
@@ -81,7 +81,7 @@ mod tests {
         }
         {
             let input = "=tag: null";
-            let data_f = parse_tagged(path, (input, begin_mark).into(), 2);
+            let data_f = parse_tagged(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),

@@ -1,7 +1,6 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
+    read_source::ReadSource,
     utils::combinator::{
         cursor::char,
         parse::{match_line, skip_blank_line, skip_indent, skip_line_ending},
@@ -45,19 +44,19 @@ fn parse(input: &str, indent: usize, lines: usize, result: &mut String) {
     }
 }
 
-pub(crate) fn lex_not_escaped_string<'input>(
-    path: &'input Path,
+pub(crate) fn lex_not_escaped_string<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> LexResult<'input, String> {
     let (cursor, _) = tuple((char('>'), char('>')))(cursor)
-        .map_err(|_| Error::new_with(cursor.mark, path, ErrorKind::FailedDetermineType))?;
+        .map_err(|_| Error::new_with(cursor.mark, reader.path(), ErrorKind::FailedDetermineType))?;
     let cursor = skip_blank_line(cursor);
 
     let (cursor, _) = skip_line_ending(cursor)
-        .map_err(|_| Error::new_with(cursor.mark, path, ErrorKind::IncompleteString))?;
+        .map_err(|_| Error::new_with(cursor.mark, reader.path(), ErrorKind::IncompleteString))?;
     let (cursor, _) = skip_indent(indent)(cursor)
-        .map_err(|_| Error::new_with(cursor.mark, path, ErrorKind::ExpectedTab))?;
+        .map_err(|_| Error::new_with(cursor.mark, reader.path(), ErrorKind::ExpectedTab))?;
     let (cursor, line) = match_line(cursor);
 
     let capacity = line.input.len() + 1;
@@ -70,12 +69,12 @@ pub(crate) fn lex_not_escaped_string<'input>(
     Ok((output, result))
 }
 
-pub(crate) fn parse_not_escaped_string<'input>(
-    path: &'input Path,
+pub(crate) fn parse_not_escaped_string<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token: make::Token| match lex_not_escaped_string(path, cursor, indent) {
+    move |token: make::Token| match lex_not_escaped_string(reader, cursor, indent) {
         Ok((output, string)) => make::string(cursor.mark, output, string)(token),
         Err(error) => match error.data.kind {
             make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) => {
@@ -88,19 +87,21 @@ pub(crate) fn parse_not_escaped_string<'input>(
 
 #[cfg(test)]
 mod tests {
-    use crate::data::mark::Mark;
-
     use super::*;
+
+    use crate::data::mark::Mark;
+    use std::path::Path;
 
     #[test]
     fn test_lex_not_escaped_string() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = r#">>
 		hello"#;
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
@@ -108,7 +109,7 @@ mod tests {
             let input = r#">>
 			hello"#;
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Ok((("", Mark::new(1, 8)).into(), "\thello".into()))
             );
         }
@@ -117,7 +118,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(1, 7)).into(), "hello".into()))
             );
         }
@@ -127,7 +128,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
@@ -137,7 +138,7 @@ mod tests {
 		hello
 	hello"#;
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Ok((("\n\thello", Mark::new(2, 7)).into(), "hello\nhello".into()))
             );
         }
@@ -148,7 +149,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(0, 4);
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Err(Error::new_with(
                     error_mark,
                     path,
@@ -161,7 +162,7 @@ mod tests {
 	hello"#;
             let error_mark = Mark::new(1, 0);
             assert_eq!(
-                lex_not_escaped_string(path, (input, begin_mark).into(), 2),
+                lex_not_escaped_string(reader, (input, begin_mark).into(), 2),
                 Err(Error::new_with(error_mark, path, ErrorKind::ExpectedTab))
             );
         }

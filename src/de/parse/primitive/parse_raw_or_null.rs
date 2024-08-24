@@ -1,7 +1,6 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
+    read_source::ReadSource,
     utils::combinator::{
         cursor::{char, none_of, recognize},
         parse::skip_blank_line,
@@ -13,8 +12,8 @@ use crate::{
 };
 use nom::{combinator::eof, multi::many1_count, sequence::tuple};
 
-pub(crate) fn lex_raw_or_null<'input>(
-    path: &'input Path,
+pub(crate) fn lex_raw_or_null<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, Cursor<'input>> {
     let match_special = many1_count(none_of("\"\n<>"));
@@ -22,16 +21,16 @@ pub(crate) fn lex_raw_or_null<'input>(
         Ok((input, result)) => Ok((input, result)),
         Err(_) => {
             let kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, kind))
+            Err(Error::new_with(cursor.mark, reader.path(), kind))
         }
     }
 }
 
-pub(crate) fn parse_raw_or_null<'input>(
-    path: &'input Path,
+pub(crate) fn parse_raw_or_null<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_raw_or_null(path, cursor) {
+    move |token| match lex_raw_or_null(reader, cursor) {
         Ok((output, result)) => {
             let null = tuple((char('n'), char('u'), char('l'), char('l')));
             let blank_line = |cursor| Ok((skip_blank_line(cursor), ()));
@@ -46,24 +45,26 @@ pub(crate) fn parse_raw_or_null<'input>(
 
 #[cfg(test)]
 mod tests {
-    use crate::data::mark::Mark;
-
     use super::*;
+
+    use crate::data::mark::Mark;
+    use std::path::Path;
 
     #[test]
     fn test_raw_or_null() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         assert_eq!(
-            lex_raw_or_null(path, ("hello", begin_mark).into()),
+            lex_raw_or_null(reader, ("hello", begin_mark).into()),
             Ok((("", Mark::new(0, 5)).into(), ("hello", begin_mark).into()))
         );
         assert_eq!(
-            lex_raw_or_null(path, ("hello\n", begin_mark).into()),
+            lex_raw_or_null(reader, ("hello\n", begin_mark).into()),
             Ok((("\n", Mark::new(0, 5)).into(), ("hello", begin_mark).into()))
         );
         assert_eq!(
-            lex_raw_or_null(path, ("< \n", begin_mark).into()),
+            lex_raw_or_null(reader, ("< \n", begin_mark).into()),
             Err(Error::new_with(
                 begin_mark,
                 path,

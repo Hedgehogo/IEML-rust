@@ -12,17 +12,16 @@ use super::{
 use std::{
     collections::HashMap,
     error::Error,
-    path::{Path, PathBuf},
 };
 
 pub(super) struct Maker {
     data: Data,
     anchors: MapNode,
-    path: PathBuf,
+    path: String,
 }
 
 impl Maker {
-    pub(super) fn new(path: PathBuf) -> Self {
+    pub(super) fn new(path: String) -> Self {
         Self {
             data: Default::default(),
             anchors: Default::default(),
@@ -34,8 +33,8 @@ impl Maker {
         self.data
     }
 
-    pub(super) fn path(&self) -> &Path {
-        self.path.as_path()
+    pub(super) fn path(&self) -> &str {
+        self.path.as_str()
     }
 }
 
@@ -84,7 +83,7 @@ impl<'maker> Token<'maker> {
         match self.maker.anchors.data.insert(name.clone(), index) {
             None => Ok((self, ())),
             Some(_) => {
-                let path = PathBuf::from(self.maker.path());
+                let path = String::from(self.maker.path());
                 let kind = ErrorKind::AnchorAlreadyExist(name);
                 let error = marked::Error::new_with(mark, path, kind);
                 Err((self, error))
@@ -264,7 +263,7 @@ impl<'maker> MapToken<'maker> {
                     None => Ok((self, output)),
 
                     Some(_) => {
-                        let path = PathBuf::from(self.maker.path());
+                        let path = String::from(self.maker.path());
                         let error = marked::Error::new_with(mark, path, ErrorKind::RepeatedKey);
                         Err(RateError::Recoverable((self, error)))
                     }

@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor, name::name, parse_node::parse_node, read_source::ReadSource,
     utils::combinator::cursor::char,
@@ -9,15 +7,15 @@ use crate::{
     de::parse::{Error, ErrorKind, LexResult, RateError, Result},
 };
 
-fn lex_anchor_name<'input>(
-    path: &'input Path,
+fn lex_anchor_name<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, (Name<&'input str>, bool)> {
     match char('@')(cursor) {
-        Ok((cursor, _)) => name(path, cursor, true),
+        Ok((cursor, _)) => name(reader, cursor, true),
         Err(_) => {
             let kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, kind))
+            Err(Error::new_with(cursor.mark, reader.path(), kind))
         }
     }
 }
@@ -27,7 +25,7 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_anchor_name(reader.path(), cursor) {
+    move |token| match lex_anchor_name(reader, cursor) {
         Ok((output, (name, true))) => {
             let f = parse_node(reader, output, indent);
             make::anchor_creation(cursor.mark, name, f)(token)
@@ -44,20 +42,22 @@ pub(crate) fn parse_anchor<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use crate::{
         data::mark::Mark,
         de::parse::{test_utils::name, ErrorKind},
     };
-
-    use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_lex_parse_anchor() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "@anchor: null\nhello";
-            let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
+            let data_f = parse_anchor(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\nhello", Mark::new(0, 13)).into();
             let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
@@ -70,7 +70,7 @@ mod tests {
         }
         {
             let input = "@: null\n\t\thello";
-            let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
+            let data_f = parse_anchor(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\thello", Mark::new(0, 7)).into();
             let result_f = make::anchor_creation::<_, ErrorKind, _, _>(
@@ -83,7 +83,7 @@ mod tests {
         }
         {
             let input = ": null";
-            let data_f = parse_anchor(path, (input, begin_mark).into(), 2);
+            let data_f = parse_anchor(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),

@@ -6,10 +6,7 @@ use super::super::{
     anchors::Anchors,
     view::View,
 };
-use std::{
-    fmt::{self, Debug, Formatter},
-    path::Path,
-};
+use std::fmt;
 
 /// Structure for reading Document node data.
 #[derive(Clone, Eq)]
@@ -41,8 +38,8 @@ impl<'data, A: AnalyseAnchors<'data>> DocumentView<'data, A> {
     }
 
     /// Gets the path.
-    pub fn path(&self) -> &'data Path {
-        self.node.path.as_path()
+    pub fn path(&self) -> &'data str {
+        self.node.path.as_str()
     }
 
     /// Gets the view on the child node.
@@ -65,8 +62,8 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for DocumentView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Debug for DocumentView<'data, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl<'data, A: AnalyseAnchors<'data>> fmt::Debug for DocumentView<'data, A> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "DocumentView {{ mark: {:?}, path: {:?}, anchors: {:?}, view: {:?} }}",

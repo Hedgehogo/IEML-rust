@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
     parse_complete::parse_complete,
@@ -16,15 +14,18 @@ use crate::{
 };
 use nom::sequence::tuple;
 
-fn lex_path<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, &'input Path> {
+fn lex_path<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
+    cursor: Cursor<'input>,
+) -> LexResult<'input, &'input str> {
     match tuple((char('<'), char(' ')))(cursor) {
         Ok((cursor, _)) => {
             let (cursor, result) = match_line(cursor);
-            return Ok((cursor, Path::new(result.input)));
+            return Ok((cursor, result.input));
         }
         Err(_) => {
             let error_kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, error_kind))
+            Err(Error::new_with(cursor.mark, reader.path(), error_kind))
         }
     }
 }
@@ -64,7 +65,7 @@ fn parse_anchors<'input, R: ReadSource + ?Sized>(
 fn parse_child<'input, R: ReadSource + ?Sized>(
     reader: &'input R,
     cursor: Cursor<'input>,
-    path: &'input Path,
+    path: &'input str,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
         let f = move |token, reader: &R::Child, inner_cursor: Cursor<'_>| {
@@ -87,7 +88,7 @@ pub(crate) fn parse_document<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
     indent: usize,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_path(reader.path(), cursor) {
+    move |token| match lex_path(reader, cursor) {
         Ok((new_cursor, path)) => {
             let anchors = parse_anchors(reader, new_cursor, indent);
 
@@ -101,21 +102,24 @@ pub(crate) fn parse_document<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::{path::Path, result};
+    use super::*;
 
     use crate::{
         data::{data::Data, make, mark::Mark},
         de::parse::test_utils::*,
     };
-
-    use super::*;
+    use std::result;
 
     fn parse<'input>(
         begin_mark: Mark,
         reader: &'input Reader,
         documents: &'input Documents,
     ) -> result::Result<(Data, Cursor<'input>), Error> {
-        let cursor = (documents.get(reader.path()).unwrap().as_str(), begin_mark).into();
+        let cursor = (
+            documents.get(reader.path().as_str()).unwrap().as_str(),
+            begin_mark,
+        )
+            .into();
         let data_f = parse_document(reader, cursor, 2);
         make::make(begin_mark, data_f)
     }
@@ -123,18 +127,16 @@ pub(crate) mod tests {
     #[test]
     fn test_parse_document() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test");
+        let path = "test";
         {
-            let documents = Documents::from([
-                (Path::new("test"), "< subtest".into()),
-                (Path::new("subtest"), "null".into()),
-            ]);
+            let documents =
+                Documents::from([("test", "< subtest".into()), ("subtest", "null".into())]);
             let reader = Reader::new(&documents, path);
             let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
             let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
-                Path::new("subtest").into(),
+                "subtest".into(),
                 |token| Ok((token, result_output)),
                 make::null(begin_mark, ("", Mark::new(0, 4)).into()),
             );
@@ -143,15 +145,15 @@ pub(crate) mod tests {
         }
         {
             let documents = Documents::from([
-                (Path::new("test"), "< subtest\n\t\tanchor: null".into()),
-                (Path::new("subtest"), "null".into()),
+                ("test", "< subtest\n\t\tanchor: null".into()),
+                ("subtest", "null".into()),
             ]);
             let reader = Reader::new(&documents, path);
             let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(1, 14)).into();
             let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
-                Path::new("subtest").into(),
+                "subtest".into(),
                 |token| {
                     let mark = Mark::new(1, 10);
                     token.add(mark, name("anchor"), make::null(mark, result_output))
@@ -163,18 +165,15 @@ pub(crate) mod tests {
         }
         {
             let documents = Documents::from([
-                (
-                    Path::new("test"),
-                    "< subtest\n# hello\n\t\tanchor: null".into(),
-                ),
-                (Path::new("subtest"), "null".into()),
+                ("test", "< subtest\n# hello\n\t\tanchor: null".into()),
+                ("subtest", "null".into()),
             ]);
             let reader = Reader::new(&documents, path);
             let data = parse(begin_mark, &reader, &documents).unwrap();
             let result_output = ("", Mark::new(2, 14)).into();
             let result_f = make::document::<_, ErrorKind, _, _>(
                 begin_mark,
-                Path::new("subtest").into(),
+                "subtest".into(),
                 |token| {
                     let mark = Mark::new(2, 10);
                     token.add(mark, name("anchor"), make::null(mark, result_output))
@@ -185,10 +184,8 @@ pub(crate) mod tests {
             assert_eq!(data, result);
         }
         {
-            let documents = Documents::from([
-                (Path::new("test"), "< nonexistent".into()),
-                (Path::new("subtest"), "null".into()),
-            ]);
+            let documents =
+                Documents::from([("test", "< nonexistent".into()), ("subtest", "null".into())]);
             let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
@@ -202,8 +199,8 @@ pub(crate) mod tests {
         }
         {
             let documents = Documents::from([
-                (Path::new("test"), "< subtest\n\t\tanchor".into()),
-                (Path::new("subtest"), "null".into()),
+                ("test", "< subtest\n\t\tanchor".into()),
+                ("subtest", "null".into()),
             ]);
             let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(1, 2);
@@ -214,8 +211,8 @@ pub(crate) mod tests {
         }
         {
             let documents = Documents::from([
-                (Path::new("test"), "< subtest".into()),
-                (Path::new("subtest"), "null\nhello".into()),
+                ("test", "< subtest".into()),
+                ("subtest", "null\nhello".into()),
             ]);
             let reader = Reader::new(&documents, path);
             let error_mark = Mark::new(1, 0);
@@ -223,7 +220,7 @@ pub(crate) mod tests {
                 parse(begin_mark, &reader, &documents),
                 Err(Error::new_with(
                     error_mark,
-                    Path::new("subtest"),
+                    "subtest",
                     ErrorKind::IncompleteDocument
                 ))
             );

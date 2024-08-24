@@ -87,7 +87,7 @@ mod tests {
     }
 
     impl<'data, 'buffer> AnalyseAnchors<'data> for TestBufferiser<'buffer> {
-        fn child(&self, _path: &'data std::path::Path) -> Self {
+        fn child(&self, _path: &'data str) -> Self {
             self.clone()
         }
 

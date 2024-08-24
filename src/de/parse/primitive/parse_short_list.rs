@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
     read_source::ReadSource,
@@ -21,18 +19,24 @@ use nom::{
     IResult, Parser,
 };
 
-fn lex_beginning<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, ()> {
+fn lex_beginning<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
+    cursor: Cursor<'input>,
+) -> LexResult<'input, ()> {
     match char('[')(cursor) {
         Ok((cursor, _)) => Ok((cursor, ())),
 
         Err(_) => {
             let kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, kind))
+            Err(Error::new_with(cursor.mark, reader.path(), kind))
         }
     }
 }
 
-fn lex_special<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<'input, bool> {
+fn lex_special<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
+    cursor: Cursor<'input>,
+) -> LexResult<'input, bool> {
     let ending = char(']');
     let separator = tuple((char(','), char(' ')));
 
@@ -41,7 +45,7 @@ fn lex_special<'input>(path: &'input Path, cursor: Cursor<'input>) -> LexResult<
 
         Err(_) => {
             let kind = ErrorKind::IncompleteShortList;
-            Err(Error::new_with(cursor.mark, path, kind))
+            Err(Error::new_with(cursor.mark, reader.path(), kind))
         }
     }
 }
@@ -53,8 +57,8 @@ fn not_any_ending(cursor: Cursor) -> IResult<Cursor, ()> {
     not(alt((ending, separator, comment)))(cursor)
 }
 
-fn lex_raw_or_null<'input>(
-    path: &'input Path,
+fn lex_raw_or_null<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, &'input str> {
     let lexer = many1_count(tuple((not_any_ending, none_of("\"\n<>"))));
@@ -64,24 +68,24 @@ fn lex_raw_or_null<'input>(
 
         Err(_) => {
             let kind = ErrorKind::FailedDetermineType;
-            Err(Error::new_with(cursor.mark, path, kind))
+            Err(Error::new_with(cursor.mark, reader.path(), kind))
         }
     }
 }
 
-fn parse_raw_or_null<'input>(
-    path: &'input Path,
+fn parse_raw_or_null<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_raw_or_null(path, cursor) {
+    move |token| match lex_raw_or_null(reader, cursor) {
         Ok((output, "null")) => make::null(cursor.mark, output)(token),
         Ok((output, result)) => make::raw(cursor.mark, output, result)(token),
         Err(error) => Err(RateError::Recoverable((token, error))),
     }
 }
 
-fn lex_anchor_request<'input>(
-    path: &'input Path,
+fn lex_anchor_request<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> LexResult<'input, Name<&'input str>> {
     let name = many1_count(tuple((not_any_ending, anychar)));
@@ -94,14 +98,14 @@ fn lex_anchor_request<'input>(
         Err(_) => ErrorKind::FailedDetermineType,
     };
 
-    Err(Error::new_with(cursor.mark, path, error_kind))
+    Err(Error::new_with(cursor.mark, reader.path(), error_kind))
 }
 
-fn parse_anchor_request<'input>(
-    path: &'input Path,
+fn parse_anchor_request<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
-    move |token| match lex_anchor_request(path, cursor) {
+    move |token| match lex_anchor_request(reader, cursor) {
         Ok((output, name)) => make::anchor_request(cursor.mark, output, name)(token),
 
         Err(error) => match error.data.kind {
@@ -122,10 +126,10 @@ fn parse_short_list_item<'input, R: ReadSource + ?Sized>(
         type Closure<'input, 'maker, R> =
             fn(&'input R, Cursor<'input>, make::ListToken<'maker>) -> ListResult<'maker, 'input>;
         let parsers: [Closure<'_, '_, R>; 4] = [
-            |reader, cursor, token| token.add(parse_anchor_request(reader.path(), cursor)),
+            |reader, cursor, token| token.add(parse_anchor_request(reader, cursor)),
             |reader, cursor, token| token.add(parse_short_list(reader, cursor)),
-            |reader, cursor, token| token.add(parse_classic_string(reader.path(), cursor, 0)),
-            |reader, cursor, token| token.add(parse_raw_or_null(reader.path(), cursor)),
+            |reader, cursor, token| token.add(parse_classic_string(reader, cursor, 0)),
+            |reader, cursor, token| token.add(parse_raw_or_null(reader, cursor)),
         ];
 
         let mut token = token;
@@ -154,13 +158,13 @@ pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
     cursor: Cursor<'input>,
 ) -> impl FnOnce(make::Token) -> Result<'_, 'input> {
     move |token| {
-        let item_cursor = match lex_beginning(reader.path(), cursor) {
+        let item_cursor = match lex_beginning(reader, cursor) {
             Ok((item_cursor, _)) => item_cursor,
             Err(error) => return Err(RateError::Recoverable((token, error))),
         };
 
         make::list(cursor.mark, |token| {
-            if let Ok((output, false)) = lex_special(reader.path(), item_cursor) {
+            if let Ok((output, false)) = lex_special(reader, item_cursor) {
                 return Ok((token, output));
             }
 
@@ -170,7 +174,7 @@ pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
             let (token, cursor) = loop {
                 (token, cursor) = {
                     let (token, cursor) = parse_short_list_item(reader, cursor)(token)?;
-                    match lex_special(reader.path(), cursor) {
+                    match lex_special(reader, cursor) {
                         Ok((cursor, true)) => (token, cursor),
                         Ok((cursor, false)) => break (token, cursor),
                         Err(error) => return Err(RateError::Unrecoverable((token.error(), error))),
@@ -188,17 +192,19 @@ pub(crate) fn parse_short_list<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
-    use crate::data::mark::Mark;
-
     use super::*;
+
+    use crate::data::mark::Mark;
+    use std::path::Path;
 
     #[test]
     fn test_parse_short_list() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "[]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 2)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -209,7 +215,7 @@ mod tests {
         }
         {
             let input = "[null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 6)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -220,7 +226,7 @@ mod tests {
         }
         {
             let input = "[null, hello]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(0, 13)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -233,7 +239,7 @@ mod tests {
         }
         {
             let input = "[null , hello]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(0, 14)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -247,7 +253,7 @@ mod tests {
         }
         {
             let input = "[\"hello\", null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(0, 15)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -261,7 +267,7 @@ mod tests {
         }
         {
             let input = "[[null, null], null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(0, 20)).into();
             let result_f = make::list::<_, ErrorKind, _>(begin_mark, |token| {
@@ -278,7 +284,7 @@ mod tests {
         }
         {
             let input = "[\"\n\", null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let error_mark = Mark::new(0, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -291,7 +297,7 @@ mod tests {
         }
         {
             let input = "[null# , null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let error_mark = Mark::new(0, 5);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -304,7 +310,7 @@ mod tests {
         }
         {
             let input = "[, null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let error_mark = Mark::new(0, 1);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -317,7 +323,7 @@ mod tests {
         }
         {
             let input = "]null]";
-            let data_f = parse_short_list(path, (input, begin_mark).into());
+            let data_f = parse_short_list(reader, (input, begin_mark).into());
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),

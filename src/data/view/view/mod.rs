@@ -70,7 +70,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
                 TaggedView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
             Node::Document(i) => ToMatchView::Document({
-                let anchor_analyser = self.anchor_analyser.child(i.path.as_path());
+                let anchor_analyser = self.anchor_analyser.child(i.path.as_str());
                 DocumentView::new(self.node.mark, i, self.data, anchor_analyser)
             }),
             Node::Anchor(i) => ToMatchView::Anchor({
@@ -144,7 +144,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
             Node::Document(i) => Some(Self::new(
                 self.data.get(i.node_index),
                 self.data,
-                self.anchor_analyser.child(i.path.as_path()),
+                self.anchor_analyser.child(i.path.as_str()),
             )),
             _ => None,
         }
@@ -328,7 +328,7 @@ impl<'data, A: AnalyseAnchors<'data>> View<'data, A> {
         let clear = self.clear_advanced::<(Tagged, Anchor)>();
         match &clear.node.node {
             Node::Document(i) => Ok({
-                let anchor_analyser = self.anchor_analyser.child(i.path.as_path());
+                let anchor_analyser = self.anchor_analyser.child(i.path.as_str());
                 DocumentView::new(clear.node.mark, i, clear.data, anchor_analyser)
             }),
             _ => {

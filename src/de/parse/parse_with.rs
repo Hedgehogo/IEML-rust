@@ -3,7 +3,6 @@ use crate::{
     data::{data::Data, make},
     de::parse::{Error, ErrorKind, RateError},
 };
-use std::path::Path;
 
 pub type AnchorsResult<'maker> =
     Result<make::MapToken<'maker>, RateError<'maker, ErrorKind, make::MapToken<'maker>>>;
@@ -32,7 +31,7 @@ pub type AnchorsResult<'maker> =
 ///     )?;
 ///     Ok(token)
 /// }).unwrap();
-/// 
+///
 /// let anchor_view = data.view().anchor().unwrap();
 /// assert_eq!(anchor_view.name().as_str(), "anchor");
 /// assert!(anchor_view.view().is_null());
@@ -46,11 +45,11 @@ where
 {
     make::make_document(
         Default::default(),
-        reader.path().to_path_buf(),
+        reader.path(),
         |token| Ok((anchors(token)?, Cursor::default())),
         |token| {
             let result = reader.read_source(token, |token, inner_cursor| {
-                let (token, _) = parse_complete(reader.path(), inner_cursor)(token)?;
+                let (token, _) = parse_complete(reader, inner_cursor)(token)?;
                 Ok((token, Default::default()))
             });
 
@@ -58,7 +57,7 @@ where
                 Ok(i) => i,
                 Err(token) => {
                     let error_kind = ErrorKind::NonexistentDocument;
-                    let error = Error::new_with(Default::default(), Path::new(""), error_kind);
+                    let error = Error::new_with(Default::default(), "", error_kind);
                     Err(RateError::Unrecoverable((token.error(), error)))
                 }
             }
@@ -81,7 +80,7 @@ where
 /// use serde_ieml::data::make;
 ///
 /// let data = parse_with_reader("> hello").unwrap();
-/// 
+///
 /// assert_eq!(data.view().string().unwrap().string(), "hello");
 /// ```
 pub fn parse_with_reader<R: ReadSource + ?Sized>(reader: &R) -> Result<Data, Error> {

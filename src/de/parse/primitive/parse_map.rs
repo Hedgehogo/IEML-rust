@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::super::{
     cursor::Cursor,
     name::name,
@@ -12,12 +10,12 @@ use crate::{
     de::parse::{ErrorKind, LexResult, MapResult, RateError, Result},
 };
 
-fn lex_key<'input>(
-    path: &'input Path,
+fn lex_key<'input, R: ReadSource + ?Sized>(
+    reader: &'input R,
     cursor: Cursor<'input>,
     error_kind: ErrorKind,
 ) -> LexResult<'input, Name<&'input str>> {
-    match name(path, cursor, false) {
+    match name(reader, cursor, false) {
         Ok((cursor, (result, _))) => Ok((cursor, result)),
         Err(mut e) => {
             if let make::error::ErrorKind::Parse(ErrorKind::FailedDetermineType) = e.data.kind {
@@ -34,7 +32,7 @@ pub(crate) fn parse_map_item<'input, R: ReadSource + ?Sized>(
     indent: usize,
     error: ErrorKind,
 ) -> impl FnOnce(make::MapToken) -> MapResult<'_, 'input> {
-    move |token| match lex_key(reader.path(), cursor, error) {
+    move |token| match lex_key(reader, cursor, error) {
         Ok((new_cursor, key)) => {
             let f = parse_node(reader, new_cursor, indent + 1);
             token.add(cursor.mark, key, f)
@@ -101,18 +99,20 @@ pub(crate) fn parse_map<'input, R: ReadSource + ?Sized>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     use super::super::super::Error;
     use crate::{data::mark::Mark, de::parse::test_utils::name};
-
-    use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_parse_map_one() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "key: null";
-            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
             let result_f = make::map::<_, ErrorKind, _>(begin_mark, |token| {
@@ -127,7 +127,7 @@ mod tests {
         }
         {
             let input = "first: null\n\t\tsecond: null";
-            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("\n\t\tsecond: null", Mark::new(0, 11)).into();
             let result_f = make::map::<_, ErrorKind, _>(begin_mark, |token| {
@@ -142,7 +142,7 @@ mod tests {
         }
         {
             let input = "key:null";
-            let data_f = parse_map_one(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map_one(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -158,10 +158,11 @@ mod tests {
     #[test]
     fn test_parse_map() {
         let begin_mark = Mark::new(0, 0);
-        let path = Path::new("test.ieml");
+        let path = "test.ieml";
+        let reader = Path::new(path);
         {
             let input = "key: null";
-            let data_f = parse_map(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_output = ("", Mark::new(0, 9)).into();
             let result_f = make::map(begin_mark, |token| {
@@ -176,7 +177,7 @@ mod tests {
         }
         {
             let input = "first: null\n\t\tsecond: > hello";
-            let data_f = parse_map(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(1, 17)).into();
             let result_f = make::map::<_, ErrorKind, _>(begin_mark, |token| {
@@ -197,7 +198,7 @@ mod tests {
         }
         {
             let input = "first: null\n# hello\n\t\tsecond: > hello";
-            let data_f = parse_map(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(reader, (input, begin_mark).into(), 2);
             let data = make::make(begin_mark, data_f).unwrap();
             let result_cursor = ("", Mark::new(2, 17)).into();
             let result_f = make::map::<_, ErrorKind, _>(begin_mark, |token| {
@@ -218,7 +219,7 @@ mod tests {
         }
         {
             let input = "first: null\n# hello\n\t\tsecond:> hello";
-            let data_f = parse_map(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(2, 2);
             assert_eq!(
                 make::make(begin_mark, data_f),
@@ -227,7 +228,7 @@ mod tests {
         }
         {
             let input = "-null";
-            let data_f = parse_map(path, (input, begin_mark).into(), 2);
+            let data_f = parse_map(reader, (input, begin_mark).into(), 2);
             let error_mark = Mark::new(0, 0);
             assert_eq!(
                 make::make(begin_mark, data_f),
