@@ -3,6 +3,7 @@
 use serde::{de, Deserialize};
 use std::marker::PhantomData;
 
+/// Visitor for [`AnchorId`]
 pub struct AnchorVisitor<T> {
     phantom: PhantomData<T>,
 }
@@ -34,6 +35,7 @@ impl<'de, T> de::Visitor<'de> for AnchorVisitor<T> {
     }
 }
 
+/// Structure for storing bufferised structures like anchors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AnchorId<T> {
     pub value: usize,
@@ -63,12 +65,12 @@ impl<'de, T> Deserialize<'de> for AnchorId<T> {
 mod tests {
     use super::*;
 
-    use super::super::super::error::marked;
-    use super::super::{
-        analyse_anchors::AnalyseAnchors, buffer_anchors::BufferAnchors, deserializer::Result,
-        view::View,
+    use super::super::super::parse::parse_with_reader;
+    use super::super::{buffer_anchors::BufferAnchors, Deserializer, Result};
+    use crate::data::{
+        error::marked,
+        view::{analyse_anchors::AnalyseAnchors, View},
     };
-    use crate::de::parse::parse_with_reader;
     use indoc::indoc;
     use serde::Deserialize;
     use std::{any::type_name, cell::RefCell, collections::hash_map::HashMap};
@@ -106,7 +108,7 @@ mod tests {
                 let buffer = view.anchor_analyser().buffer;
                 let id = view.id();
                 if !buffer.borrow().contains_key(&id) {
-                    let result: String = String::deserialize(view)?;
+                    let result: String = String::deserialize(Deserializer::new(view))?;
                     buffer.borrow_mut().insert(id, result);
                 }
                 visitor.visit_u128(id as u128)
@@ -124,7 +126,7 @@ mod tests {
         let bufferiser = TestBufferiser::new(&buffer);
         let data = parse_with_reader("@anchor: > Hello").unwrap();
         let view = data.view_with_analyse(bufferiser);
-        let result = AnchorId::<String>::deserialize(view).unwrap();
+        let result = AnchorId::<String>::deserialize(Deserializer::new(view)).unwrap();
 
         assert_eq!(buffer.borrow().get(&result.value), Some(&"Hello".into()));
     }
@@ -141,7 +143,7 @@ mod tests {
         let bufferiser = TestBufferiser::new(&buffer);
         let data = parse_with_reader(input).unwrap();
         let view = data.view_with_analyse(bufferiser);
-        let result = <[AnchorId<String>; 3]>::deserialize(view).unwrap();
+        let result = <[AnchorId<String>; 3]>::deserialize(Deserializer::new(view)).unwrap();
 
         assert_eq!(result[0], result[1]);
 

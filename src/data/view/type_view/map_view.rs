@@ -1,27 +1,21 @@
 //! Type definition [`MapView`]
 
-use crate::data::{error::InvalidTypeError, node_type::NodeType};
-
 use super::super::{
     super::{
         data::Data,
-        error::{marked, CustomError, DeserializeError, InvalidValueError, MissingKeyError},
+        error::{marked, MissingKeyError},
         mark::Mark,
         name::Name,
         node::map_node::MapNode,
     },
-    buffer_anchors::BufferAnchors,
     analyse_anchors::AnalyseAnchors,
     view::View,
 };
-use serde::de::{self, value::StrDeserializer};
 use std::{
     borrow::Borrow,
     collections::hash_map,
     fmt::{self, Debug, Formatter},
 };
-
-type Error = marked::DeserializeError<CustomError>;
 
 /// Structure for reading Map node data.
 #[derive(Clone, Eq)]
@@ -177,92 +171,9 @@ impl<'data, A: AnalyseAnchors<'data>> Iterator for MapIter<'data, A> {
     }
 }
 
-impl<'data, A: BufferAnchors<'data>> MapView<'data, A> {
-    pub(in super::super) fn access(self) -> impl de::MapAccess<'data, Error = Error> {
-        MapAccess::new(self.mark, self.iter())
-    }
-}
-
-struct MapAccess<'data, A: BufferAnchors<'data>> {
-    mark: Mark,
-    last: Option<(&'data Name<Box<str>>, usize)>,
-    iter: hash_map::Iter<'data, Name<Box<str>>, usize>,
-    data: &'data Data,
-    anchor_analyser: A,
-}
-
-impl<'data, A: BufferAnchors<'data>> MapAccess<'data, A> {
-    fn new(mark: Mark, iter: MapIter<'data, A>) -> Self {
-        Self {
-            mark,
-            last: None,
-            data: iter.data,
-            iter: iter.iter,
-            anchor_analyser: iter.anchor_analyser,
-        }
-    }
-
-    fn next(&mut self) {
-        self.last = self.iter.next().map(|(key, i)| (key, *i));
-    }
-
-    fn last_key(&self) -> Option<&'data Name<Box<str>>> {
-        self.last.map(|(key, _)| key)
-    }
-
-    fn last_value(&self) -> Option<View<'data, A>> {
-        self.last.map(|(_, i)| {
-            let node = self.data.get(i);
-            View::new(node, self.data, self.anchor_analyser.clone())
-        })
-    }
-}
-
-impl<'data, A: BufferAnchors<'data>> de::MapAccess<'data> for MapAccess<'data, A> {
-    type Error = Error;
-
-    fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
-    where
-        K: de::DeserializeSeed<'data>,
-    {
-        self.next();
-        match self.last_key() {
-            Some(i) => match seed.deserialize(StrDeserializer::<Self::Error>::new(i.as_ref())) {
-                Ok(i) => Ok(Some(i)),
-
-                Err(i) => match i.data {
-                    DeserializeError::InvalidType(_) => {
-                        let expected = &[NodeType::List] as &[_];
-                        let invalid_type = InvalidTypeError::new(NodeType::Map, expected);
-                        let error = marked::DeserializeError::new(self.mark, invalid_type.into());
-                        Err(error)
-                    }
-
-                    _ => Err(marked::DeserializeError::new(self.mark, i.data)),
-                },
-            },
-
-            None => Ok(None),
-        }
-    }
-
-    fn next_value_seed<V>(&mut self, seed: V) -> Result<V::Value, Self::Error>
-    where
-        V: de::DeserializeSeed<'data>,
-    {
-        match self.last_value() {
-            Some(i) => return seed.deserialize(i),
-
-            None => {
-                let invalid_value = InvalidValueError::new("value".into(), None);
-                let error = marked::DeserializeError::new(self.mark, invalid_value.into());
-                Err(error)
-            }
-        }
-    }
-
-    fn size_hint(&self) -> Option<usize> {
-        Some(self.iter.len())
+impl<'data, A: AnalyseAnchors<'data>> ExactSizeIterator for MapIter<'data, A> {
+    fn len(&self) -> usize {
+        self.iter.len()
     }
 }
 

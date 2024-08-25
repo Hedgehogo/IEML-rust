@@ -2,5 +2,6 @@
 
 pub mod from;
 pub mod parse;
+pub mod deserialize;
 
 pub use from::*;

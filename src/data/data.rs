@@ -4,6 +4,7 @@ use super::{
     node::node::MarkedNode,
     view::{analyse_anchors::AnalyseAnchors, DocumentView, View},
 };
+use crate::de::deserialize::{buffer_anchors::BufferAnchors, Deserializer};
 use std::fmt;
 
 /// Structure intended exclusively for IEML data storage
@@ -28,13 +29,7 @@ impl Data {
 
     /// Gets the view on the top document node.
     pub fn view(&self) -> View {
-        View::new(
-            self.data
-                .last()
-                .expect("Incorrect structure, the node does not exist."),
-            self,
-            (),
-        )
+        self.view_with_analyse(())
     }
 
     /// Gets the view on the top document node, passing the anchor analyzer to it.
@@ -53,9 +48,7 @@ impl Data {
 
     /// Gets the document view on the top document node.
     pub fn document_view(&self) -> DocumentView<'_, ()> {
-        self.view()
-            .document()
-            .expect("Incorrect structure, the top node is not a document.")
+        self.document_view_with_analyse(())
     }
 
     /// Gets the document view on the top document node, passing the anchor analyzer to it.
@@ -66,6 +59,19 @@ impl Data {
         self.view_with_analyse(anchor_analyser)
             .document()
             .expect("Incorrect structure, the top node is not a document.")
+    }
+
+    /// Gets the deserializer, passing the anchor analyzer to it.
+    pub fn deserializer(&self) -> Deserializer<()> {
+        self.deserializer_with_bufferiser(())
+    }
+
+    /// Gets the deserializer, passing the anchor analyzer to it.
+    pub fn deserializer_with_bufferiser<'data, B: BufferAnchors<'data>>(
+        &'data self,
+        anchor_bufferiser: B,
+    ) -> Deserializer<'data, B> {
+        Deserializer::new(self.view_with_analyse(anchor_bufferiser))
     }
 }
 

@@ -3,25 +3,15 @@
 use super::super::{
     super::{
         data::Data,
-        error::{
-            expected::Expected, invalid_length::Origin, marked, CustomError, InvalidLengthError,
-            UnknownTagError,
-        },
+        error::{expected::Expected, marked, UnknownTagError},
         mark::Mark,
         name::Name,
         node::tag_node::TaggedNode,
     },
     analyse_anchors::AnalyseAnchors,
-    buffer_anchors::BufferAnchors,
     view::View,
 };
-use serde::{
-    de::{self, value::StrDeserializer},
-    Deserializer,
-};
-use std::fmt::{self, Debug, Formatter};
-
-type Error = marked::DeserializeError<CustomError>;
+use std::fmt;
 
 /// Structure for reading Tagged node data.
 #[derive(Clone, Eq)]
@@ -94,8 +84,8 @@ impl<'data, A: AnalyseAnchors<'data>> PartialEq for TaggedView<'data, A> {
     }
 }
 
-impl<'data, A: AnalyseAnchors<'data>> Debug for TaggedView<'data, A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl<'data, A: AnalyseAnchors<'data>> fmt::Debug for TaggedView<'data, A> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "TaggedView {{ mark: {:?}, tag: {:?}, view: {:?} }}",
@@ -103,79 +93,5 @@ impl<'data, A: AnalyseAnchors<'data>> Debug for TaggedView<'data, A> {
             self.tag(),
             self.view()
         )
-    }
-}
-
-impl<'data, A: BufferAnchors<'data>> TaggedView<'data, A> {
-    pub(in super::super) fn access(self) -> EnumAccess<'data, A> {
-        EnumAccess::new(self)
-    }
-}
-
-pub(in super::super) struct EnumAccess<'data, A: BufferAnchors<'data>> {
-    tagged: TaggedView<'data, A>,
-}
-
-impl<'data, A: BufferAnchors<'data>> EnumAccess<'data, A> {
-    fn new(tagged: TaggedView<'data, A>) -> Self {
-        Self { tagged }
-    }
-}
-
-impl<'data, A: BufferAnchors<'data>> de::EnumAccess<'data> for EnumAccess<'data, A> {
-    type Error = Error;
-
-    type Variant = Self;
-
-    fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant), Self::Error>
-    where
-        V: de::DeserializeSeed<'data>,
-    {
-        let variant_deserializer = StrDeserializer::<Self::Error>::new(self.tagged.tag().as_str());
-        match seed.deserialize(variant_deserializer) {
-            Ok(i) => Ok((i, self)),
-            Err(i) => Err(Error::new(self.tagged.mark(), i.data)),
-        }
-    }
-}
-
-impl<'data, A: BufferAnchors<'data>> de::VariantAccess<'data> for EnumAccess<'data, A> {
-    type Error = Error;
-
-    fn unit_variant(self) -> Result<(), Self::Error> {
-        let list = self.tagged.view().list()?;
-        if !list.is_empty() {
-            let invalid_length = InvalidLengthError::new(list.len(), Some(Origin::List), Some(0));
-            let error = Error::new(list.mark(), invalid_length.into());
-            Err(error)
-        } else {
-            Ok(())
-        }
-    }
-
-    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Self::Error>
-    where
-        T: de::DeserializeSeed<'data>,
-    {
-        seed.deserialize(self.tagged.view())
-    }
-
-    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'data>,
-    {
-        self.tagged.view().deserialize_tuple(len, visitor)
-    }
-
-    fn struct_variant<V>(
-        self,
-        _fields: &'static [&'static str],
-        visitor: V,
-    ) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'data>,
-    {
-        let map = self.tagged.view().map()?;
-        visitor.visit_map(map.access())
     }
 }

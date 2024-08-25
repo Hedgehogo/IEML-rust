@@ -1,12 +1,7 @@
 //! Type definition [`AnchorView`]
 
-use crate::data::error::deserialize::marked;
-
-use super::super::super::{
-    data::Data, error::CustomError, mark::Mark, name::Name, node::anchor_node::AnchorNode,
-};
-use super::super::{analyse_anchors::AnalyseAnchors, buffer_anchors::BufferAnchors, view::View};
-use serde::de;
+use super::super::super::{data::Data, mark::Mark, name::Name, node::anchor_node::AnchorNode};
+use super::super::{analyse_anchors::AnalyseAnchors, view::View};
 use std::fmt;
 
 /// Structure for reading Anchor node data.
@@ -84,88 +79,4 @@ impl<'data, A: AnalyseAnchors<'data>> fmt::Debug for AnchorView<'data, A> {
             )
         }
     }
-}
-
-impl<'data, A: BufferAnchors<'data>> AnchorView<'data, A> {
-    pub(in super::super) fn deserializer(self) -> AnchorDeserializer<'data, A> {
-        AnchorDeserializer::new(self.mark, self.view(), Some(self.name().as_str()))
-    }
-}
-
-pub(in super::super) struct AnchorDeserializer<'data, A: BufferAnchors<'data>> {
-    mark: Mark,
-    view: View<'data, A>,
-    name: Option<&'data str>,
-}
-
-impl<'data, A: BufferAnchors<'data>> AnchorDeserializer<'data, A> {
-    pub(in super::super) fn new(
-        mark: Mark,
-        view: View<'data, A>,
-        name: Option<&'data str>,
-    ) -> Self {
-        Self { mark, view, name }
-    }
-
-    fn error(self) -> marked::DeserializeError<CustomError> {
-        let custom_error = CustomError::new("incorrect access to the anchor".into());
-        marked::DeserializeError::new(self.mark, custom_error.into())
-    }
-}
-
-macro_rules! impl_error_deserialize {
-    ($($name:ident($($a:ident: $t:ty),*)),* $(,)?) => {
-        $(
-            fn $name<V>(self, $($a: $t,)* _visitor: V) -> Result<V::Value, Self::Error>
-            where
-                V: de::Visitor<'data>,
-            {
-                Err(self.error())
-            }
-        )*
-    };
-}
-
-impl<'data, A: BufferAnchors<'data>> de::Deserializer<'data> for AnchorDeserializer<'data, A> {
-    type Error = marked::DeserializeError<CustomError>;
-
-    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
-    where
-        V: de::Visitor<'data>,
-    {
-        A::entry(self.view, self.name, visitor)
-    }
-
-    impl_error_deserialize!(
-        deserialize_any(),
-        deserialize_bool(),
-        deserialize_i8(),
-        deserialize_i16(),
-        deserialize_i32(),
-        deserialize_i64(),
-        deserialize_i128(),
-        deserialize_u8(),
-        deserialize_u16(),
-        deserialize_u32(),
-        deserialize_u64(),
-        deserialize_u128(),
-        deserialize_f32(),
-        deserialize_f64(),
-        deserialize_char(),
-        deserialize_str(),
-        deserialize_string(),
-        deserialize_bytes(),
-        deserialize_byte_buf(),
-        deserialize_unit(),
-        deserialize_unit_struct(_name: &'static str),
-        deserialize_newtype_struct(_name: &'static str),
-        deserialize_seq(),
-        deserialize_tuple(_len: usize),
-        deserialize_tuple_struct(_name: &'static str, _len: usize),
-        deserialize_map(),
-        deserialize_struct(_name: &'static str, _fields: &'static [&'static str]),
-        deserialize_enum(_name: &'static str, _variants: &'static [&'static str]),
-        deserialize_identifier(),
-        deserialize_ignored_any(),
-    );
 }

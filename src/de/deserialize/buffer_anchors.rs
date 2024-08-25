@@ -1,7 +1,10 @@
 //! Trait definition [`BufferAnchors`]
 
-use super::super::error::{marked, CustomError};
-use super::{analyse_anchors::AnalyseAnchors, deserializer::Result, View};
+use super::Result;
+use crate::data::{
+    error::{marked, CustomError},
+    view::{analyse_anchors::AnalyseAnchors, View},
+};
 use serde::de;
 
 /// Trait allowing to buffer values available by anchor without duplication.
