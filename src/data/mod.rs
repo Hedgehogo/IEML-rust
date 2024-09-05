@@ -8,3 +8,6 @@ pub mod name;
 pub(crate) mod node;
 pub mod node_type;
 pub mod view;
+
+pub use data::Data;
+pub use view::View;
