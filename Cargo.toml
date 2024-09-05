@@ -1,6 +1,6 @@
 [package]
 name = "serde_ieml"
-version = "0.2.1"
+version = "0.3.0"
 categories = ["decoding", "parser-implementations"]
 edition = "2021"
 keywords = ["ieml", "serde", "deserialization"]
