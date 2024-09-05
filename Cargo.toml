@@ -1,9 +1,12 @@
 [package]
 name = "serde_ieml"
 version = "0.2.1"
+categories = ["decoding", "parser-implementations"]
 edition = "2021"
+keywords = ["ieml", "serde", "deserialization"]
 description = "Implementing the IEML config parser for Rust. IEML (Interface Engine Markup Language) - A simple but powerful config with support for file uploads, inter-file anchors and tags."
-license = "MIT"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Hedgehogo/IEML-rust"
 
 [dependencies]
 num-traits = "0.2"
