@@ -41,7 +41,7 @@ There are three common ways that you might find yourself needing to work with IE
 ```toml
 [dependencies]
 serde = "1"
-serde_ieml = "0.2"
+serde_ieml = "0.3"
 ```
 
 ## Operating on loosely typed IEML data
