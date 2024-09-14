@@ -156,7 +156,7 @@
 //!                         make::raw(mark, (), "+44 1234567")
 //!                     )?;
 //!                     let (token, _) = token.add(
-//!                         make::raw(mark, (), "+44 1234567")
+//!                         make::raw(mark, (), "+44 2345678")
 //!                     )?;
 //!                     Ok((token, ()))
 //!                 }
@@ -172,10 +172,6 @@
 //!
 //! // Getting an object to view the map.
 //! let map = view.map().unwrap();
-//!
-//! // Getting an object to view the list contained
-//! // in the map.
-//! let list = map.get("phones").unwrap().list().unwrap();
 //!
 //! assert_eq!("John Doe", map.get("name").unwrap().string().unwrap().string());
 //! ```
